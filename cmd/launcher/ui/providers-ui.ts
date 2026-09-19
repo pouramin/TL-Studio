@@ -98,7 +98,7 @@
     <div class="settings-panel-head providers-panel-head">
       <div>
         <h3>Providers</h3>
-        <p>Add OpenAI-compatible, OpenAI Responses, or Anthropic-compatible endpoints to TL Agent. Models saved here appear in TL Agent's model selector.</p>
+        <p>Add OpenAI-compatible, OpenAI Responses, or Anthropic-compatible endpoints to TL Studio. Models saved here appear in TL Studio's model selector.</p>
       </div>
       <button id="providerAddButton" class="primary provider-add-button" type="button">Add provider</button>
     </div>
@@ -106,7 +106,7 @@
     <div id="providerList" class="provider-list"></div>
     <form id="providerForm" class="provider-form hidden">
       <div class="provider-form-head">
-        <div><strong id="providerFormTitle">Add provider</strong><span>Configuration is saved globally by TL Agent and is available across projects.</span></div>
+        <div><strong id="providerFormTitle">Add provider</strong><span>Configuration is saved globally by TL Studio and is available across projects.</span></div>
         <button id="providerFormCancelTop" class="icon-button" type="button" aria-label="Close provider form">×</button>
       </div>
       <div class="provider-form-grid">
@@ -124,7 +124,7 @@
         <label><input id="providerToolCallInput" type="checkbox" checked /> <span>Tool calling</span></label>
         <label><input id="providerReasoningInput" type="checkbox" /> <span>Reasoning</span></label>
       </div>
-      <div class="provider-security-note">TL Agent keeps API keys out of its provider config. Credentials are currently delegated to the local runtime credential store and are never saved in browser storage.</div>
+      <div class="provider-security-note">TL Studio keeps API keys out of its provider config. Credentials are currently delegated to the local runtime credential store and are never saved in browser storage.</div>
       <div class="provider-limit-note">For custom models, set context/output limits when you know them. Automatic context compaction may be unavailable when a model has no known context limit.</div>
       <div class="dialog-actions provider-form-actions"><button id="providerFormCancel" class="ghost" type="button">Cancel</button><button id="providerFormSave" class="primary" type="submit">Save provider</button></div>
     </form>
@@ -330,7 +330,7 @@
       const loaded = K.state.models.some((model) => model.providerID === id && model.id === clean(value.modelID));
       notice(loaded
         ? `${value.name} saved. ${clean(value.modelID)} is now available in the model selector.`
-        : `${value.name} was saved by TL Agent, but the active runtime did not load ${clean(value.modelID)}. Check the endpoint, protocol, and model ID.`, !loaded);
+        : `${value.name} was saved by TL Studio, but the active runtime did not load ${clean(value.modelID)}. Check the endpoint, protocol, and model ID.`, !loaded);
     } catch (err) {
       notice(`Could not save provider: ${err.message || String(err)}`, true);
       try { providerConfig = await K.api.providers.config(); renderList(); } catch {}
@@ -347,7 +347,7 @@
     try {
       await K.api.providers.remove(entry.id);
 
-      // The delete has already succeeded in TL Agent's provider registry.
+      // The delete has already succeeded in TL Studio's provider registry.
       // Update the visible state immediately instead of waiting on a runtime
       // catalog refresh, which can briefly fail while the runtime reloads.
       providerConfig = withoutProvider(providerConfig, entry.id);
@@ -370,12 +370,12 @@
         providerConfig = await K.api.providers.config();
         renderList();
       } catch (error) {
-        console.warn("[TL Agent] Provider registry refresh after delete failed", error);
+        console.warn("[TL Studio] Provider registry refresh after delete failed", error);
       }
       try {
         await K.loadCatalog();
       } catch (error) {
-        console.warn("[TL Agent] Runtime catalog refresh after provider delete failed", error);
+        console.warn("[TL Studio] Runtime catalog refresh after provider delete failed", error);
       }
     } catch (error) {
       notice(`Could not delete provider: ${error.message || String(error)}`, true);

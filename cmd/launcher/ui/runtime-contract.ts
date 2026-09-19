@@ -53,7 +53,7 @@ interface RuntimeHostedProviderContract {
   disconnect(): Promise<unknown>;
 }
 
-interface TLAgentRuntimeContract {
+interface TLStudioRuntimeContract {
   readonly version: string;
   readonly hosted: RuntimeHostedProviderContract;
   health(): Promise<unknown>;
@@ -71,7 +71,7 @@ interface TLAgentRuntimeContract {
 declare global {
   interface Window {
     KLU: {
-      api?: TLAgentRuntimeContract;
+      api?: TLStudioRuntimeContract;
       [key: string]: unknown;
     };
   }

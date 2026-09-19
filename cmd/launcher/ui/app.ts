@@ -77,67 +77,67 @@
     await loadScript(
       "/ide-foundation.js",
       () => K.__ideFoundationInstalled,
-      "[TL Agent] Browser IDE reconciliation extension failed to load",
+      "[TL Studio] Browser IDE reconciliation extension failed to load",
     );
     await loadScript(
       "/editor-enhancements.js",
       () => K.__editorEnhancementsInstalled,
-      "[TL Agent] Editor enhancements failed to load",
+      "[TL Studio] Editor enhancements failed to load",
     );
     await loadScript(
       "/terminal.js",
       () => K.__terminalInstalled,
-      "[TL Agent] Integrated terminal failed to load",
+      "[TL Studio] Integrated terminal failed to load",
     );
     await loadScript(
       "/preview.js",
       () => K.__previewInstalled,
-      "[TL Agent] Live preview failed to load",
+      "[TL Studio] Live preview failed to load",
     );
     await loadScript(
       "/preview-floating.js",
       () => K.__previewFloatingInstalled,
-      "[TL Agent] Floating preview layout failed to load",
+      "[TL Studio] Floating preview layout failed to load",
     );
     await loadScript(
       "/search.js",
       () => K.__projectSearchInstalled,
-      "[TL Agent] Project search UI failed to load",
+      "[TL Studio] Project search UI failed to load",
     );
     await loadScript(
       "/settings-enhancements.js",
       () => K.__settingsEnhancementsInstalled,
-      "[TL Agent] Editor and font settings failed to load",
+      "[TL Studio] Editor and font settings failed to load",
     );
     await loadScript(
       "/attachments.js",
       () => K.__attachmentsInstalled,
-      "[TL Agent] Composer attachments failed to load",
+      "[TL Studio] Composer attachments failed to load",
     );
     await loadScript(
       "/diagnostics-ui.js",
       () => K.__diagnosticsUiInstalled,
-      "[TL Agent] Session diagnostics UI failed to load",
+      "[TL Studio] Session diagnostics UI failed to load",
     );
     await loadScript(
       "/provider-recovery-ui.js",
       () => K.__providerRecoveryInstalled,
-      "[TL Agent] Provider recovery UI failed to load",
+      "[TL Studio] Provider recovery UI failed to load",
     );
     await loadScript(
       "/providers-ui.js",
       () => K.__providersUiInstalled,
-      "[TL Agent] Custom provider settings UI failed to load",
+      "[TL Studio] Custom provider settings UI failed to load",
     );
     await loadScript(
       "/providers-settings-bridge.js",
       () => K.__providersSettingsBridgeInstalled,
-      "[TL Agent] Custom provider settings bridge failed to load",
+      "[TL Studio] Custom provider settings bridge failed to load",
     );
     await loadScript(
       "/legacy-sessions.js",
       () => K.__legacySessionsInstalled,
-      "[TL Agent] Legacy session recovery failed to load",
+      "[TL Studio] Legacy session recovery failed to load",
     );
   };
 

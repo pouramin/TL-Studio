@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise TL Agent's custom-provider routes against the pinned Kilo runtime."""
+"""Exercise TL Studio's custom-provider routes against the pinned Kilo runtime."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def main() -> int:
     local = request(base, "/local/status")
     require(isinstance(local, dict) and isinstance(local.get("project"), str), "local/status.project missing")
     project = local["project"]
-    provider_id = "tl-agent-contract-provider"
+    provider_id = "tl-studio-contract-provider"
     model_id = "contract-model"
     overlay_path = f"/runtime/config/overlay?{query(project, scope='global')}"
 
@@ -75,7 +75,7 @@ def main() -> int:
 
     providers = dict(original)
     providers[provider_id] = {
-        "name": "TL Agent Contract Provider",
+        "name": "TL Studio Contract Provider",
         "npm": "@ai-sdk/openai-compatible",
         "options": {"baseURL": "http://127.0.0.1:9/v1"},
         "models": {
@@ -97,7 +97,7 @@ def main() -> int:
 
         auth = unwrap(request(base, f"/runtime/auth/{urllib.parse.quote(provider_id, safe='')}", method="PUT", payload={
             "type": "api",
-            "key": "tl-agent-contract-key",
+            "key": "tl-studio-contract-key",
         }))
         require(auth is True, f"auth.set mismatch: {auth!r}")
 

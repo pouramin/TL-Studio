@@ -32,7 +32,7 @@ jobs:
         working-directory: packaging/npm/dist
         run: |
           set -euo pipefail
-          node --check tl-agent.cjs
+          node --check tl-studio.cjs
           npm pack --dry-run --ignore-scripts
 
       - name: Publish to npmjs with trusted publishing

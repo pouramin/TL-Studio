@@ -45,7 +45,7 @@
     </div>
     <div id="previewEmpty" class="preview-empty">
       <strong>Preview this project</strong>
-      <span id="previewHint">TL Agent can preview a root index.html or run a package.json dev script.</span>
+      <span id="previewHint">TL Studio can preview a root index.html or run a package.json dev script.</span>
       <pre id="previewLogs" class="preview-logs hidden"></pre>
     </div>
     <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
@@ -225,11 +225,11 @@
         && parsed.origin === window.location.origin
         && (parsed.pathname === "/local/file" || parsed.pathname === "/local/entry")
         && ["PUT", "POST", "PATCH", "DELETE"].includes(method);
-      if (workspaceMutation) window.dispatchEvent(new Event("tl-agent:project-file-changed"));
+      if (workspaceMutation) window.dispatchEvent(new Event("tl-studio:project-file-changed"));
     } catch {}
     return response;
   };
-  window.addEventListener("tl-agent:project-file-changed", scheduleStaticReload);
+  window.addEventListener("tl-studio:project-file-changed", scheduleStaticReload);
 
   const baseHandleRuntimeEvent = K.handleRuntimeEvent;
   if (typeof baseHandleRuntimeEvent === "function") {

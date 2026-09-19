@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
-  <meta name="description" content="TL Agent is a local browser-based coding agent workspace." />
-  <title>TL Agent</title>
-  <link rel="icon" type="image/svg+xml" href="/tl-agent-mark.svg" />
+  <meta name="description" content="TL Studio is a fast local browser-based development workspace with AI built in." />
+  <title>TL Studio</title>
+  <link rel="icon" type="image/svg+xml" href="/tl-studio-mark.svg" />
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/polish.css" />
   <link rel="stylesheet" href="/files.css" />
@@ -17,8 +17,8 @@
   <div id="app" class="app-shell">
     <aside class="sidebar">
       <div class="brand-row">
-        <div class="brand-mark"><img src="/tl-agent-mark.svg" alt="TL Agent" /></div>
-        <div><strong>TL Agent</strong><span class="muted tiny">Local coding workspace</span></div>
+        <div class="brand-mark"><img src="/tl-studio-mark.svg" alt="TL Studio" /></div>
+        <div><strong>TL Studio</strong><span class="muted tiny">Local coding workspace</span></div>
       </div>
 
       <section class="project-card">
@@ -62,14 +62,14 @@
       </header>
 
       <section id="emptyState" class="empty-state">
-        <div class="empty-icon"><img src="/tl-agent-mark.svg" alt="" /></div>
-        <h1>Your local coding agent, without the IDE.</h1>
-        <p>TL Agent runs a local coding agent on this computer. The browser is your workspace.</p>
+        <div class="empty-icon"><img src="/tl-studio-mark.svg" alt="" /></div>
+        <h1>Your local development workspace, with AI built in.</h1>
+        <p>Edit code yourself, run commands, preview the project, or hand work to the local agent — all from TL Studio.</p>
         <div class="empty-actions">
           <button id="emptyNewSession" class="primary">Start a session</button>
           <button id="emptyPickProject" class="ghost">Choose project</button>
         </div>
-        <div class="privacy-note">Project files stay on this computer. Model traffic is handled by the provider selected in TL Agent.</div>
+        <div class="privacy-note">Project files stay on this computer. Model traffic is handled by the provider selected in TL Studio.</div>
       </section>
 
       <section id="conversation" class="conversation hidden" aria-live="polite"></section>
@@ -117,7 +117,7 @@
       <section class="composer-wrap">
         <div id="errorBanner" class="error-banner hidden"></div>
         <div class="composer">
-          <textarea id="prompt" rows="1" placeholder="Ask TL Agent to build, debug, review, or explain…" aria-label="Prompt"></textarea>
+          <textarea id="prompt" rows="1" placeholder="Ask TL Studio to build, debug, review, or explain…" aria-label="Prompt"></textarea>
           <div class="composer-bottom">
             <div class="composer-context-controls">
               <label><span>Agent</span><select id="agentSelect" aria-label="Agent"><option value="">Default</option></select></label>
@@ -158,7 +158,7 @@
       <div class="settings-header">
         <div>
           <h2>Settings</h2>
-          <p>Manage TL Agent preferences and product information.</p>
+          <p>Manage TL Studio preferences and product information.</p>
         </div>
         <button id="settingsCloseIcon" class="icon-button settings-close-icon" type="button" aria-label="Close settings">×</button>
       </div>
@@ -179,7 +179,7 @@
           <section class="settings-panel" data-settings-panel="general">
             <div class="settings-panel-head">
               <h3>General</h3>
-              <p>Personalize how TL Agent looks on this browser.</p>
+              <p>Personalize how TL Studio looks on this browser.</p>
             </div>
             <div class="settings-section-title">Appearance</div>
             <div class="settings-row">
@@ -203,24 +203,24 @@
           <section class="settings-panel hidden" data-settings-panel="about">
             <div class="settings-panel-head">
               <h3>About</h3>
-              <p>TL Agent project information and official links.</p>
+              <p>TL Studio project information and official links.</p>
             </div>
 
             <div class="about-product-card">
-              <div class="about-product-mark"><img src="/tl-agent-mark.svg" alt="" /></div>
+              <div class="about-product-mark"><img src="/tl-studio-mark.svg" alt="" /></div>
               <div class="about-product-copy">
-                <strong>TL Agent</strong>
+                <strong>TL Studio</strong>
                 <span>Local browser-based coding agent workspace.</span>
               </div>
               <span id="versionLabel" class="about-version">Local runtime</span>
             </div>
 
-            <div class="about-links" aria-label="TL Agent links">
-              <a class="about-link" href="https://github.com/pouramin/TL-Agent" target="_blank" rel="noopener noreferrer">
+            <div class="about-links" aria-label="TL Studio links">
+              <a class="about-link" href="https://github.com/pouramin/TL-Studio" target="_blank" rel="noopener noreferrer">
                 <span class="about-link-icon github-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2.2c-3.4.7-4.1-1.4-4.1-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.4-5.5-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C14.7 4.8 15.8 5 15.8 5c.6 1.5.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.8 5.4-5.5 5.7.4.4.8 1.1.8 2.1v3.5c0 .4.2.7.8.6A11.5 11.5 0 0 0 12 .7Z"/></svg>
                 </span>
-                <span class="about-link-copy"><strong>GitHub</strong><small>github.com/pouramin/TL-Agent</small></span>
+                <span class="about-link-copy"><strong>GitHub</strong><small>github.com/pouramin/TL-Studio</small></span>
                 <span class="about-link-arrow" aria-hidden="true">↗</span>
               </a>
 

@@ -15,7 +15,7 @@
   const head = panel?.querySelector(".preview-head");
   if (!panel || !head) return;
 
-  const KEY = "tl-agent.preview-window";
+  const KEY = "tl-studio.preview-window";
   const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
   const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 

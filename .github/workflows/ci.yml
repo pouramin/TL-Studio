@@ -37,7 +37,7 @@ jobs:
         run: |
           node --check scripts/npx-launch.cjs
           npm pack --dry-run --ignore-scripts
-      - name: Enforce TL Agent runtime boundary
+      - name: Enforce TL Studio runtime boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -61,11 +61,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o /tmp/tl-agent.exe ./cmd/launcher
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/tl-agent-linux-x64 ./cmd/launcher
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /tmp/tl-agent-linux-arm64 ./cmd/launcher
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o /tmp/tl-agent-darwin-x64 ./cmd/launcher
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o /tmp/tl-agent-darwin-arm64 ./cmd/launcher
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o /tmp/tl-studio.exe ./cmd/launcher
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/tl-studio-linux-x64 ./cmd/launcher
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /tmp/tl-studio-linux-arm64 ./cmd/launcher
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o /tmp/tl-studio-darwin-x64 ./cmd/launcher
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o /tmp/tl-studio-darwin-arm64 ./cmd/launcher
 
   runtime-product-contract:
     runs-on: ubuntu-latest
@@ -79,7 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/tl-contract/bin /tmp/tl-runtime-upstream
-          go build -trimpath -o /tmp/tl-contract/tl-agent ./cmd/launcher
+          go build -trimpath -o /tmp/tl-contract/tl-studio ./cmd/launcher
           KILO_VERSION="$(tr -d '[:space:]' < KILO_VERSION)"
           ASSET="kilo-linux-x64.tar.gz"
           curl --fail --location --retry 3 \
@@ -89,7 +89,7 @@ jobs:
           KILO_BIN="$(find /tmp/tl-runtime-upstream -type f -name kilo | head -n 1)"
           test -n "$KILO_BIN"
           cp "$KILO_BIN" /tmp/tl-contract/bin/kilo
-          chmod +x /tmp/tl-contract/tl-agent /tmp/tl-contract/bin/kilo
+          chmod +x /tmp/tl-contract/tl-studio /tmp/tl-contract/bin/kilo
       - name: Run real-runtime product API contract test
         shell: bash
         run: |
@@ -97,7 +97,7 @@ jobs:
           LOG="$(mktemp)"
           START_DIR="$PWD"
           cd /tmp
-          /tmp/tl-contract/tl-agent --no-browser --project "$GITHUB_WORKSPACE" >"$LOG" 2>&1 &
+          /tmp/tl-contract/tl-studio --no-browser --project "$GITHUB_WORKSPACE" >"$LOG" 2>&1 &
           PID=$!
           cd "$START_DIR"
           cleanup() {
@@ -132,7 +132,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/tl-e2e/bin /tmp/tl-runtime-upstream
-          go build -trimpath -o /tmp/tl-e2e/tl-agent ./cmd/launcher
+          go build -trimpath -o /tmp/tl-e2e/tl-studio ./cmd/launcher
           KILO_VERSION="$(tr -d '[:space:]' < KILO_VERSION)"
           ASSET="kilo-linux-x64.tar.gz"
           curl --fail --location --retry 3 \
@@ -142,7 +142,7 @@ jobs:
           KILO_BIN="$(find /tmp/tl-runtime-upstream -type f -name kilo | head -n 1)"
           test -n "$KILO_BIN"
           cp "$KILO_BIN" /tmp/tl-e2e/bin/kilo
-          chmod +x /tmp/tl-e2e/tl-agent /tmp/tl-e2e/bin/kilo
+          chmod +x /tmp/tl-e2e/tl-studio /tmp/tl-e2e/bin/kilo
       - name: Run product prompt and real write-tool E2E
         shell: bash
         run: |
@@ -202,7 +202,7 @@ jobs:
           unset KILO_CONFIG_CONTENT || true
           START_DIR="$PWD"
           cd /tmp
-          /tmp/tl-e2e/tl-agent --no-browser --project "$PROJECT_DIR" >"$LAUNCHER_LOG" 2>&1 &
+          /tmp/tl-e2e/tl-studio --no-browser --project "$PROJECT_DIR" >"$LAUNCHER_LOG" 2>&1 &
           LAUNCHER_PID=$!
           cd "$START_DIR"
 

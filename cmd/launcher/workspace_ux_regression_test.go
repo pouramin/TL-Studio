@@ -17,7 +17,7 @@ func TestWorkspaceUXEnhancementsContract(t *testing.T) {
 	}
 
 	floating := read("preview-floating.js")
-	for _, required := range []string{"tl-agent.preview-window", "pointerdown", "ResizeObserver", "previewWindow", "localStorage"} {
+	for _, required := range []string{"tl-studio.preview-window", "pointerdown", "ResizeObserver", "previewWindow", "localStorage"} {
 		if !strings.Contains(floating, required) { t.Fatalf("preview-floating.js missing %q", required) }
 	}
 
@@ -27,7 +27,7 @@ func TestWorkspaceUXEnhancementsContract(t *testing.T) {
 	}
 
 	settings := read("settings-enhancements.js")
-	for _, required := range []string{"Editor color theme", "UI Font", "Code Font", "Terminal Font", "resetPreviewWindow", "tl-agent.editor-theme"} {
+	for _, required := range []string{"Editor color theme", "UI Font", "Code Font", "Terminal Font", "resetPreviewWindow", "tl-studio.editor-theme"} {
 		if !strings.Contains(settings, required) { t.Fatalf("settings-enhancements.js missing %q", required) }
 	}
 

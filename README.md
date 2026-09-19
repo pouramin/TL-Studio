@@ -1,26 +1,26 @@
 [English](./README.md) | [فارسی](./README.fa_IR.md)
 
 <p align="center">
-  <img src="./media/tl-agent-logo.svg" width="300" alt="TL Agent">
+  <img src="./media/tl-studio-logo.svg" width="300" alt="TL Studio">
 </p>
 
-<h1 align="center">TL Agent</h1>
+<h1 align="center">TL Studio</h1>
 
 <p align="center">
-  A local, standalone coding-agent workspace — no IDE required.
+  A fast local development workspace with AI built in.
 </p>
 
 <p align="center">
-  <a href="https://github.com/pouramin/TL-Agent/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Agent?sort=semver" alt="Release"></a>
-  <a href="https://github.com/pouramin/TL-Agent/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Agent/ci.yml?branch=main&label=CI" alt="CI"></a>
-  <a href="https://www.npmjs.com/package/tl-agent"><img src="https://img.shields.io/npm/v/tl-agent" alt="npm"></a>
-  <a href="https://github.com/pouramin/TL-Agent/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Agent/total" alt="Downloads"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Agent" alt="License"></a>
+  <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
+  <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
+  <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
 </p>
 
-**TL Agent** gives coding agents a dedicated browser workspace for local projects. Open a folder, choose an agent and model, attach files, inspect tool activity and changes, manage sessions, answer permission requests, and keep the workspace on your own computer.
+**TL Studio** is a local browser-based development workspace where you can edit code yourself and work alongside an AI agent. Open a project, browse and edit files, search across the codebase, run commands, preview the app, choose models/providers, and hand work to the agent — all on your own computer.
 
-No VS Code, JetBrains, Cursor, Docker, hosted TL Agent backend, database, or project-owned cloud service is required.
+No VS Code, JetBrains, Cursor, Docker, hosted TL Studio backend, database, or project-owned cloud service is required.
 
 ## Quick Start
 
@@ -29,38 +29,38 @@ No VS Code, JetBrains, Cursor, Docker, hosted TL Agent backend, database, or pro
 If Node.js/npm is installed, run this inside the project directory you want to work on:
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
-The npm package is only a lightweight launcher. It detects the operating system and architecture, downloads the matching official TL Agent GitHub Release, verifies its SHA-256 checksum, caches it locally, and opens TL Agent with the current directory selected.
+The npm package is only a lightweight launcher. It detects the operating system and architecture, downloads the matching official TL Studio GitHub Release, verifies its SHA-256 checksum, caches it locally, and opens TL Studio with the current directory selected.
 
 Run without automatically opening the browser:
 
 ```bash
-npx --yes tl-agent --no-browser
+npx --yes tl-studio --no-browser
 ```
 
 Prerelease channels can still be launched explicitly when available, for example:
 
 ```bash
-npx --yes tl-agent@alpha
+npx --yes tl-studio@alpha
 ```
 
 ### Portable release
 
-Node.js is not required for the portable build. Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Agent/releases)**, extract it, and run:
+Node.js is not required for the portable build. Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
 
 ```text
-Windows:  tl-agent.exe
-Linux:    ./tl-agent
-macOS:    ./tl-agent
+Windows:  tl-studio.exe
+Linux:    ./tl-studio
+macOS:    ./tl-studio
 ```
 
 The release already includes the pinned local agent runtime.
 
 ## Features
 
-- **Standalone local workspace** — dedicated coding-agent UI in the browser without an IDE.
+- **Standalone local development workspace** — edit files, search the project, run commands, preview the app, and work with an AI agent in one browser workspace.
 - **Local project picker** — open project folders with the operating-system folder picker.
 - **Agent & model selection** — switch agents and available provider models from the composer.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
@@ -77,7 +77,7 @@ The release already includes the pinned local agent runtime.
 - **Live Preview** — local static or Node dev-server preview in a movable/resizable browser window.
 - **Appearance & editor settings** — System, Dark, and Light themes plus editor theme and separate UI/code/terminal font controls.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
-- **No TL Agent telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
+- **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
 
 ## Architecture
 
@@ -85,9 +85,9 @@ The release already includes the pinned local agent runtime.
 Browser workspace
     │ localhost only
     ▼
-TL Agent launcher (Go)
+TL Studio launcher (Go)
     │
-    ├─ TL Agent provider/model registry
+    ├─ TL Studio provider/model registry
     ├─ project files / search / terminal / preview
     │
     └─ authenticated runtime adapter
@@ -98,17 +98,17 @@ TL Agent launcher (Go)
             └─ provider execution / model inference
 ```
 
-TL Agent owns the workspace, product UI, local launcher, provider/model definitions, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Agent's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Agent's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
 
-The selected project stays on the user's computer, and TL Agent does not proxy model traffic through project-owned infrastructure.
+The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
 ## Runtime boundary
 
-TL Agent's browser and product UI depend on TL Agent-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, project files, search, terminal, preview, and related workspace behavior are owned by TL Agent.
+TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio.
 
-The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. That engine is an implementation detail behind TL Agent's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. That engine is an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
-CI validates the pinned engine through TL Agent's public runtime boundary for project routing, agent/provider/session APIs, async prompts, live events, permissions, provider configuration, tool execution, and real file writes.
+CI validates the pinned engine through TL Studio's public runtime boundary for project routing, agent/provider/session APIs, async prompts, live events, permissions, provider configuration, tool execution, and real file writes.
 
 ## Supported builds
 
@@ -121,8 +121,8 @@ CI validates the pinned engine through TL Agent's public runtime boundary for pr
 ## Release package
 
 ```text
-tl-agent/
-├─ tl-agent[.exe]
+tl-studio/
+├─ tl-studio[.exe]
 ├─ bin/
 │  └─ kilo[.exe]
 ├─ LICENSE
@@ -158,7 +158,7 @@ Use `--no-browser` to suppress automatic browser launch.
 
 ## Zero-infrastructure rule
 
-TL Agent is intentionally designed so the maintainer does not need to pay for a VPS, application hosting, database, API gateway, model inference, or telemetry backend. Source, issues, CI, release definitions, downloadable builds, and the lightweight npm launcher are distributed through GitHub/npm infrastructure.
+TL Studio is intentionally designed so the maintainer does not need to pay for a VPS, application hosting, database, API gateway, model inference, or telemetry backend. Source, issues, CI, release definitions, downloadable builds, and the lightweight npm launcher are distributed through GitHub/npm infrastructure.
 
 Any paid AI usage is between the user and the provider they configure.
 
@@ -173,14 +173,14 @@ The launcher:
 5. rejects cross-origin browser requests, and
 6. serves the UI with a restrictive Content Security Policy.
 
-The agent runtime can read/write files and execute commands when permissions allow it. Only run TL Agent on projects and machines you trust.
+The agent runtime can read/write files and execute commands when permissions allow it. Only run TL Studio on projects and machines you trust.
 
 ## Status
 
-TL Agent keeps the stable production line on `main` and experimental development on `dev`. Stable releases are promoted only after automated CI plus hands-on validation on a real Windows machine. The core path covered before promotion includes:
+TL Studio keeps the stable production line on `main` and experimental development on `dev`. Stable releases are promoted only after automated CI plus hands-on validation on a real Windows machine. The core path covered before promotion includes:
 
 ```text
-TL Agent UI
+TL Studio UI
 → local agent runtime
 → selected model
 → tool call
@@ -193,8 +193,8 @@ Experimental builds continue on explicit prerelease channels without changing th
 
 ## License & attribution
 
-TL Agent launcher/UI code is MIT licensed. The bundled Kilo Code runtime is also MIT licensed and remains a separate upstream project. Release archives retain its license notice; see [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+TL Studio launcher/UI code is MIT licensed. The bundled Kilo Code runtime is also MIT licensed and remains a separate upstream project. Release archives retain its license notice; see [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
-TL Agent is an independent project and is not an official product of its runtime upstream.
+TL Studio is an independent project and is not an official product of its runtime upstream.
 
 Built under the **TunnelLab** identity.

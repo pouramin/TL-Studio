@@ -1,40 +1,40 @@
-# TL Agent
+# TL Studio
 
-This npm package is a lightweight launcher for **TL Agent**, a local, standalone coding-agent workspace.
+This npm package is a lightweight launcher for **TL Studio**, a fast local development workspace with AI built in.
 
-It does not bundle or replace the TL Agent application. The launcher detects the current OS/architecture, downloads the matching official GitHub Release, verifies its SHA-256 checksum, caches it locally, and runs it in the current project directory.
+It does not bundle or replace the TL Studio application. The launcher detects the current OS/architecture, downloads the matching official GitHub Release, verifies its SHA-256 checksum, caches it locally, and runs it in the current project directory.
 
-Each npm package version is pinned to the matching TL Agent GitHub Release. For example, `tl-agent@0.1.0` launches `v0.1.0`, keeping runs reproducible.
+Each npm package version is pinned to the matching TL Studio GitHub Release. For example, `tl-studio@0.1.0` launches `v0.1.0`, keeping runs reproducible.
 
 ## Quick start
 
-Run TL Agent from the current project directory:
+Run TL Studio from the current project directory:
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
 Run without automatically opening the browser:
 
 ```bash
-npx --yes tl-agent --no-browser
+npx --yes tl-studio --no-browser
 ```
 
-Prerelease builds, when available, use explicit dist-tags such as `alpha` and can be launched with commands such as `npx --yes tl-agent@alpha`.
+Prerelease builds, when available, use explicit dist-tags such as `alpha` and can be launched with commands such as `npx --yes tl-studio@alpha`.
 
 ## What gets stored locally?
 
-The npm package itself uses the normal npm/npx cache. TL Agent release files are cached separately:
+The npm package itself uses the normal npm/npx cache. TL Studio release files are cached separately:
 
-- Windows: `%LOCALAPPDATA%\\TL-Agent\\cache`
-- Linux/macOS: `${XDG_CACHE_HOME:-~/.cache}/tl-agent`
+- Windows: `%LOCALAPPDATA%\\TL-Studio\\cache`
+- Linux/macOS: `${XDG_CACHE_HOME:-~/.cache}/tl-studio`
 
 Nothing is installed as a Windows service, system package, or global CLI unless you explicitly choose to install the npm package globally.
 
 ## Source and releases
 
-- Source: https://github.com/pouramin/TL-Agent
-- Releases: https://github.com/pouramin/TL-Agent/releases
-- Issues: https://github.com/pouramin/TL-Agent/issues
+- Source: https://github.com/pouramin/TL-Studio
+- Releases: https://github.com/pouramin/TL-Studio/releases
+- Issues: https://github.com/pouramin/TL-Studio/issues
 
-TL Agent is MIT licensed. See the repository for third-party notices and runtime attribution.
+TL Studio is MIT licensed. See the repository for third-party notices and runtime attribution.
