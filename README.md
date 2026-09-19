@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
@@ -20,6 +21,22 @@
 No VS Code, JetBrains, Cursor, Docker, hosted TL Studio backend, database, or project-owned cloud service is required.
 
 ## Quick Start
+
+### One-command launch
+
+If Node.js/npm is installed, run this inside the project directory you want to work on:
+
+```bash
+npx --yes tl-studio
+```
+
+The npm package is a lightweight launcher pinned to the matching stable TL Studio GitHub Release. It detects the operating system and architecture, downloads the official archive, verifies its SHA-256 checksum, caches it locally, and opens TL Studio with the current directory selected.
+
+Run without automatically opening the browser:
+
+```bash
+npx --yes tl-studio --no-browser
+```
 
 ### Portable release
 
