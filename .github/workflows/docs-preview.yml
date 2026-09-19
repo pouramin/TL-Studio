@@ -38,7 +38,7 @@ jobs:
       - name: Build static preview
         env:
           DEPLOY_TARGET: static
-          NEXT_PUBLIC_BASE_PATH: /TL-Agent
+          NEXT_PUBLIC_BASE_PATH: /TL-Studio
         run: npm run build
       - name: Verify static output
         run: test -f out/index.html && test -f out/docs/index.html && test -f out/llms.txt
