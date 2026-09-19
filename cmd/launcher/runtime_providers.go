@@ -74,14 +74,14 @@ func newProviderRegistryStore(filePath string) *providerRegistryStore {
 }
 
 func providerRegistryPath() string {
-	if dir := strings.TrimSpace(os.Getenv("TL_AGENT_STATE_DIR")); dir != "" {
+	if dir := strings.TrimSpace(os.Getenv("TL_STUDIO_STATE_DIR")); dir != "" {
 		return filepath.Join(dir, "providers.json")
 	}
 	base, err := os.UserConfigDir()
 	if err != nil || strings.TrimSpace(base) == "" {
 		base = os.TempDir()
 	}
-	return filepath.Join(base, "TL Agent", "providers.json")
+	return filepath.Join(base, "TL Studio", "providers.json")
 }
 
 func cloneProviderDefinition(input tlProviderDefinition) tlProviderDefinition {
@@ -921,7 +921,7 @@ func registerRuntimeProviderRoutes(mux *http.ServeMux, manager *runtimeProviderM
 			writeProviderManagerError(w, err)
 			return
 		} else if !ok {
-			writeJSON(w, http.StatusNotFound, jsonError{Error: "provider is not managed by TL Agent"})
+			writeJSON(w, http.StatusNotFound, jsonError{Error: "provider is not managed by TL Studio"})
 			return
 		}
 		if err := manager.deleteRuntimeProvider(r.Context(), id); err != nil {

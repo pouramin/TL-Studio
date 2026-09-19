@@ -18,7 +18,7 @@ Kilo Code names and trademarks are not granted by the MIT software license. This
 
 ## Monaco Editor
 
-TL Agent's enhanced local code editor bundles Monaco Editor 0.56.0 from:
+TL Studio's enhanced local code editor bundles Monaco Editor 0.56.0 from:
 
 https://github.com/microsoft/monaco-editor
 
@@ -29,4 +29,4 @@ Copyright (c) 2016 - present Microsoft Corporation
 The Monaco Editor MIT license is included in `third_party/MONACO_LICENSE.txt`.
 Its upstream third-party notices are included in `third_party/MONACO_THIRD_PARTY_NOTICES.txt`.
 
-Monaco is bundled locally into TL Agent release assets. TL Agent does not load Monaco from a CDN.
+Monaco is bundled locally into TL Studio release assets. TL Studio does not load Monaco from a CDN.

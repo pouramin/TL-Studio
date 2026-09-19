@@ -26,7 +26,7 @@ fs.writeFileSync(path.join(out, "package.json"), `${JSON.stringify(manifest, nul
 fs.copyFileSync(launcherFile, path.join(out, "launcher.cjs"));
 fs.copyFileSync(readmeFile, path.join(out, "README.md"));
 
-const wrapper = `#!/usr/bin/env node\n"use strict";\n\n// Pin this npm package to the matching TL Agent GitHub Release.\n// Users can still override it explicitly with TL_AGENT_VERSION.\nif (!process.env.TL_AGENT_VERSION) process.env.TL_AGENT_VERSION = "v${version}";\nrequire("./launcher.cjs");\n`;
-fs.writeFileSync(path.join(out, "tl-agent.cjs"), wrapper, { mode: 0o755 });
+const wrapper = `#!/usr/bin/env node\n"use strict";\n\n// Pin this npm package to the matching TL Studio GitHub Release.\n// Users can still override it explicitly with TL_STUDIO_VERSION.\nif (!process.env.TL_STUDIO_VERSION) process.env.TL_STUDIO_VERSION = "v${version}";\nrequire("./launcher.cjs");\n`;
+fs.writeFileSync(path.join(out, "tl-studio.cjs"), wrapper, { mode: 0o755 });
 
 console.log(`Prepared ${manifest.name}@${manifest.version} -> v${version} in ${out}`);

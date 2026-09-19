@@ -10,7 +10,7 @@ import (
 // browser client before the Kilo subprocess inherits the launcher's environment.
 //
 // These settings deliberately keep the bundled runtime local-first:
-//   - PostHog and OpenTelemetry are disabled for TL-Agent-launched Kilo.
+//   - PostHog and OpenTelemetry are disabled for TL-Studio-launched Kilo.
 //   - the Question tool is enabled because this client implements its host UI.
 //   - Kilo watches the launcher PID so a hard-killed launcher does not leave an
 //     orphaned backend process behind.

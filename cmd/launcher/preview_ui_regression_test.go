@@ -31,7 +31,7 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"previewFrame",
 		"previewReload",
 		"previewExternal",
-		"tl-agent:project-file-changed",
+		"tl-studio:project-file-changed",
 		"startsWith(\"file.\")",
 		"keepalive: true",
 	} {
