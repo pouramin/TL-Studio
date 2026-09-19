@@ -1,10 +1,8 @@
 [English](./README.md) | [فارسی](./README.fa_IR.md)
 
 <p align="center">
-  <img src="./media/tl-studio-logo.svg" width="300" alt="TL Studio">
+  <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
-
-<h1 align="center">TL Studio</h1>
 
 <p align="center">
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
@@ -13,7 +11,6 @@
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
-  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
 </p>
@@ -24,31 +21,9 @@
 
 ## شروع سریع
 
-### اجرا با یک دستور
-
-اگر Node.js و npm نصب هستند، داخل فولدر پروژه‌ای که می‌خواهید روی آن کار کنید این دستور را اجرا کنید:
-
-```bash
-npx --yes tl-studio
-```
-
-پکیج npm فقط یک Launcher سبک است. سیستم‌عامل و معماری را تشخیص می‌دهد، Release رسمی و متناظر TL Studio را از GitHub دانلود می‌کند، SHA-256 آن را بررسی می‌کند، فایل را به‌صورت محلی Cache می‌کند و TL Studio را با فولدر فعلی به‌عنوان Project باز می‌کند.
-
-برای جلوگیری از بازشدن خودکار مرورگر:
-
-```bash
-npx --yes tl-studio --no-browser
-```
-
-نسخه‌های آزمایشی همچنان می‌توانند با Channel مشخص اجرا شوند، برای مثال:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
 ### نسخه‌ی Portable
 
-برای نسخه‌ی Portable نیازی به Node.js نیست. فایل مناسب سیستم خود را از **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)** دانلود و Extract کنید، سپس اجرا کنید:
+فایل مناسب سیستم خود را از **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)** دانلود و Extract کنید، سپس اجرا کنید:
 
 ```text
 Windows:  tl-studio.exe

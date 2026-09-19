@@ -1,10 +1,8 @@
 [English](./README.md) | [فارسی](./README.fa_IR.md)
 
 <p align="center">
-  <img src="./media/tl-studio-logo.svg" width="300" alt="TL Studio">
+  <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
-
-<h1 align="center">TL Studio</h1>
 
 <p align="center">
   A fast local development workspace with AI built in.
@@ -13,7 +11,6 @@
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
-  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
 </p>
@@ -24,31 +21,9 @@ No VS Code, JetBrains, Cursor, Docker, hosted TL Studio backend, database, or pr
 
 ## Quick Start
 
-### One-command launch
-
-If Node.js/npm is installed, run this inside the project directory you want to work on:
-
-```bash
-npx --yes tl-studio
-```
-
-The npm package is only a lightweight launcher. It detects the operating system and architecture, downloads the matching official TL Studio GitHub Release, verifies its SHA-256 checksum, caches it locally, and opens TL Studio with the current directory selected.
-
-Run without automatically opening the browser:
-
-```bash
-npx --yes tl-studio --no-browser
-```
-
-Prerelease channels can still be launched explicitly when available, for example:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
 ### Portable release
 
-Node.js is not required for the portable build. Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
+Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
 
 ```text
 Windows:  tl-studio.exe
