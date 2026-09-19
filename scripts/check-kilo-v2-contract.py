@@ -4,7 +4,7 @@
 Usage:
     python3 scripts/check-kilo-v2-contract.py http://127.0.0.1:12345
 
-The base URL is the TL-Agent launcher URL, not Kilo's password-protected backend.
+The base URL is the TL-Studio launcher URL, not Kilo's password-protected backend.
 """
 
 from __future__ import annotations
@@ -127,7 +127,7 @@ def main() -> int:
         require(isinstance(provider.get("api"), dict), "Provider.Info.api must be an object")
         require(isinstance(provider.get("request"), dict), "Provider.Info.request must be an object")
 
-    # Official provider HttpApi used by Kilo's own clients. TL-Agent uses only
+    # Official provider HttpApi used by Kilo's own clients. TL-Studio uses only
     # connection/default state from this route; model enumeration stays on v2.
     provider_runtime = request(base, "/runtime/provider")
     if isinstance(provider_runtime, dict) and isinstance(provider_runtime.get("data"), dict):

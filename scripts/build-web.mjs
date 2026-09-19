@@ -77,4 +77,4 @@ for (const name of required) {
   const info = await stat(path.join(webDir, name));
   sizes.push(`${name}=${Math.ceil(info.size / 1024)}KB`);
 }
-console.log(`TL Agent local Monaco bundle ready: ${sizes.join(" · ")}`);
+console.log(`TL Studio local Monaco bundle ready: ${sizes.join(" · ")}`);

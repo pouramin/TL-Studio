@@ -22,35 +22,35 @@ jobs:
           - name: windows-x64
             goos: windows
             goarch: amd64
-            launcher: tl-agent.exe
+            launcher: tl-studio.exe
             kilo_asset: kilo-windows-x64.zip
             kilo_binary: kilo.exe
             kind: zip
           - name: linux-x64
             goos: linux
             goarch: amd64
-            launcher: tl-agent
+            launcher: tl-studio
             kilo_asset: kilo-linux-x64.tar.gz
             kilo_binary: kilo
             kind: tar
           - name: linux-arm64
             goos: linux
             goarch: arm64
-            launcher: tl-agent
+            launcher: tl-studio
             kilo_asset: kilo-linux-arm64.tar.gz
             kilo_binary: kilo
             kind: tar
           - name: macos-x64
             goos: darwin
             goarch: amd64
-            launcher: tl-agent
+            launcher: tl-studio
             kilo_asset: kilo-darwin-x64.zip
             kilo_binary: kilo
             kind: zip
           - name: macos-arm64
             goos: darwin
             goarch: arm64
-            launcher: tl-agent
+            launcher: tl-studio
             kilo_asset: kilo-darwin-arm64.zip
             kilo_binary: kilo
             kind: zip
@@ -121,7 +121,7 @@ jobs:
         run: |
           set -euo pipefail
           LOG="$(mktemp)"
-          BINARY="$GITHUB_WORKSPACE/staging/package/tl-agent"
+          BINARY="$GITHUB_WORKSPACE/staging/package/tl-studio"
           START_DIR="$PWD"
           cd /tmp
           "$BINARY" --no-browser --project "$GITHUB_WORKSPACE" >"$LOG" 2>&1 &
@@ -150,9 +150,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            (cd staging/package && zip -qr "../../dist/tl-agent-${RELEASE_TAG}-${{ matrix.name }}.zip" .)
+            (cd staging/package && zip -qr "../../dist/tl-studio-${RELEASE_TAG}-${{ matrix.name }}.zip" .)
           else
-            tar -C staging/package -czf "dist/tl-agent-${RELEASE_TAG}-${{ matrix.name }}.tar.gz" .
+            tar -C staging/package -czf "dist/tl-studio-${RELEASE_TAG}-${{ matrix.name }}.tar.gz" .
           fi
       - uses: actions/upload-artifact@v4
         with:

@@ -61,7 +61,7 @@ assert.equal(definition.models[0].toolCall, true);
 assert.equal(definition.models[0].reasoning, true);
 assert.equal(definition.models[0].contextLimit, 128000);
 assert.equal(definition.models[0].outputLimit, 16384);
-assert.equal(JSON.stringify(definition).includes("super-secret"), false, "API keys must not enter TL Agent provider config");
+assert.equal(JSON.stringify(definition).includes("super-secret"), false, "API keys must not enter TL Studio provider config");
 
 const existing = {
   id: "example-provider",
@@ -78,7 +78,7 @@ const merged = hooks.buildProviderDefinition({
   outputLimit: "",
 }, existing);
 assert.equal(merged.baseURL, "https://api.example.com/v1");
-assert.ok(merged.models.some((model) => model.id === "other-model"), "editing one model must preserve other TL Agent model definitions");
+assert.ok(merged.models.some((model) => model.id === "other-model"), "editing one model must preserve other TL Studio model definitions");
 assert.ok(merged.models.some((model) => model.id === "example-model"));
 
 const entries = hooks.customProviderEntries({
@@ -90,7 +90,7 @@ const entries = hooks.customProviderEntries({
 assert.deepEqual(Array.from(entries, (entry) => entry.id), ["example-provider", "z-provider"]);
 
 const removed = hooks.withoutProvider({ providers: [definition, { id: "keep-me", name: "Keep", models: [] }] }, "example-provider");
-assert.deepEqual(Array.from(removed.providers, (provider) => provider.id), ["keep-me"], "successful delete must remove the provider from visible TL Agent state immediately");
+assert.deepEqual(Array.from(removed.providers, (provider) => provider.id), ["keep-me"], "successful delete must remove the provider from visible TL Studio state immediately");
 
 assert.match(productSource, /settingsDialog\?\.querySelectorAll\("\[data-settings-section\]"\)/, "settings navigation must query dynamic sections so Providers cannot stay highlighted beside General/About");
 assert.match(productSource, /settingsDialog\?\.querySelectorAll\("\[data-settings-panel\]"\)/, "settings navigation must query dynamic panels");
