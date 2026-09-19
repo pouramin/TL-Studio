@@ -1,34 +1,12 @@
 ---
 title: Installation
-description: Install TL Studio with the stable npm launcher or a portable release build.
+description: Install TL Studio from the stable portable release build.
 icon: Download
 ---
 
-## One-command launch
-
-If Node.js/npm is installed, open a terminal in the project directory you want to work on and run:
-
-```bash
-npx --yes tl-studio
-```
-
-The npm package is a lightweight launcher. It detects your operating system and architecture, downloads the matching official TL Studio GitHub Release, verifies its SHA-256 checksum, caches it locally, and starts TL Studio with the current directory selected.
-
-Run without automatically opening the browser:
-
-```bash
-npx --yes tl-studio --no-browser
-```
-
-The default npm path follows the stable channel. Prerelease channels can still be launched explicitly when available, for example:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
 ## Portable release
 
-Node.js is not required for portable use. Download the archive for your platform from GitHub Releases, extract it, and run:
+Download the archive for your platform from GitHub Releases, extract it, and run:
 
 ```text
 Windows:  tl-studio.exe
