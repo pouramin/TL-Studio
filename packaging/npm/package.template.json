@@ -1,7 +1,7 @@
 {
   "name": "tl-studio",
   "version": "0.0.0",
-  "description": "Quick launcher for the TL Studio local coding-agent workspace",
+  "description": "Quick launcher for the TL Studio local development workspace",
   "license": "MIT",
   "type": "commonjs",
   "bin": {
