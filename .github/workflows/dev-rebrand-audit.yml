@@ -1,0 +1,23 @@
+name: Dev Rebrand Audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no legacy TL Agent branding remains
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONTENT="$(grep -RInE 'TL Agent|TL-Agent|tl-agent|TL_AGENT|TLAgent|tlAgent' .             --exclude-dir=.git             --exclude='*.sum'             --exclude='dev-rebrand-audit.yml'             || true)"
+          FILES="$(find . -path './.git' -prune -o \( -iname '*tl-agent*' -o -iname '*TL-Agent*' \) -print)"
+          printf '%s\n' "$CONTENT"
+          printf '%s\n' "$FILES"
+          test -z "$CONTENT"
+          test -z "$FILES"
