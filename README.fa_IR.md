@@ -21,31 +21,9 @@
 
 ## شروع سریع
 
-### اجرا با یک دستور
-
-اگر Node.js و npm نصب هستند، داخل فولدر پروژه‌ای که می‌خواهید روی آن کار کنید این دستور را اجرا کنید:
-
-```bash
-npx --yes tl-studio
-```
-
-پکیج npm فقط یک Launcher سبک است. سیستم‌عامل و معماری را تشخیص می‌دهد، Release رسمی و متناظر TL Studio را از GitHub دانلود می‌کند، SHA-256 آن را بررسی می‌کند، فایل را به‌صورت محلی Cache می‌کند و TL Studio را با فولدر فعلی به‌عنوان Project باز می‌کند.
-
-برای جلوگیری از بازشدن خودکار مرورگر:
-
-```bash
-npx --yes tl-studio --no-browser
-```
-
-نسخه‌های آزمایشی همچنان می‌توانند با Channel مشخص اجرا شوند، برای مثال:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
 ### نسخه‌ی Portable
 
-برای نسخه‌ی Portable نیازی به Node.js نیست. فایل مناسب سیستم خود را از **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)** دانلود و Extract کنید، سپس اجرا کنید:
+فایل مناسب سیستم خود را از **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)** دانلود و Extract کنید، سپس اجرا کنید:
 
 ```text
 Windows:  tl-studio.exe
