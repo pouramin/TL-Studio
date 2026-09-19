@@ -1,10 +1,8 @@
 [English](./README.md) | [فارسی](./README.fa_IR.md)
 
 <p align="center">
-  <img src="./media/tl-studio-logo.svg" width="300" alt="TL Studio">
+  <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
-
-<h1 align="center">TL Studio</h1>
 
 <p align="center">
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
@@ -13,7 +11,6 @@
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
-  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
 </p>
