@@ -1,0 +1,22 @@
+name: Remove public alpha release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/remove-public-alpha.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove public alpha release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release delete v0.3.0-alpha.3             --repo "${{ github.repository }}"             --cleanup-tag             --yes
