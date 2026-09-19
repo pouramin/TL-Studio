@@ -1,0 +1,69 @@
+name: Prepare npm bootstrap package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/npm-bootstrap-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Ensure current npm CLI
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1
+          node --version
+          npm --version
+
+      - name: Build isolated npm package
+        run: node packaging/npm/build.cjs
+
+      - name: Verify package contents
+        working-directory: packaging/npm/dist
+        run: |
+          set -euo pipefail
+          node --check tl-studio.cjs
+          node --check launcher.cjs
+          npm pack --dry-run --ignore-scripts
+
+      - name: Pack bootstrap tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          cd packaging/npm/dist
+          FILE="$(npm pack --ignore-scripts --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s)[0].filename))")"
+          test "$FILE" = "tl-studio-${VERSION}.tgz"
+          mv "$FILE" "$GITHUB_WORKSPACE/tl-studio-${VERSION}.tgz"
+          tar -tzf "$GITHUB_WORKSPACE/tl-studio-${VERSION}.tgz"
+          echo "BOOTSTRAP_TARBALL=tl-studio-${VERSION}.tgz" >> "$GITHUB_ENV"
+          echo "BOOTSTRAP_RELEASE=v${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Attach bootstrap tarball to stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view "$BOOTSTRAP_RELEASE"
+          gh release upload "$BOOTSTRAP_RELEASE" "$BOOTSTRAP_TARBALL" --clobber
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-bootstrap-tl-studio
+          path: tl-studio-*.tgz
+          if-no-files-found: error
+          retention-days: 14
