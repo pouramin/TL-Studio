@@ -104,7 +104,7 @@
     if (refreshTimer) window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(() => {
       refreshTimer = null;
-      refreshOpenTabs().catch((error) => console.warn("[TL Agent] Workspace reconciliation failed", error));
+      refreshOpenTabs().catch((error) => console.warn("[TL Studio] Workspace reconciliation failed", error));
     }, 140);
   };
 

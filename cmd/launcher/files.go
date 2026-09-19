@@ -288,7 +288,7 @@ func registerLocalFileRoutes(mux *http.ServeMux, state *appState) {
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("X-TL-Agent-Deleted-Path", rel)
+		w.Header().Set("X-TL-Studio-Deleted-Path", rel)
 		w.WriteHeader(http.StatusNoContent)
 	})
 }

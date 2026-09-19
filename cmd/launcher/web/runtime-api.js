@@ -46,7 +46,7 @@
       const decoded = JSON.parse(event.data);
       handler(decoded?.payload || decoded);
     } catch (error) {
-      console.warn("[TL Agent] Ignoring invalid SSE payload", error);
+      console.warn("[TL Studio] Ignoring invalid SSE payload", error);
     }
   };
 
@@ -137,7 +137,7 @@
       abort: (sessionID, { scope, directory } = {}) => request(route(`/session/${enc(sessionID)}/abort`, { scope }, directory), { method: "POST" }),
     },
 
-    // Read-only compatibility bridge for sessions created during TL Agent's
+    // Read-only compatibility bridge for sessions created during TL Studio's
     // short Protocol v2 alpha window. New sessions and all normal coding stay
     // on the production Session API above.
     legacySessions: {

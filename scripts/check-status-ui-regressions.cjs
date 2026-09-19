@@ -249,7 +249,7 @@ assert.equal(
 );
 assert.equal(hooks.lastRecordedModelBefore(3).label, "google/gemini-2.5-pro");
 
-// Resume still exists in Kilo's session context, but TL Agent should not render
+// Resume still exists in Kilo's session context, but TL Studio should not render
 // the repeated continuation prompt as another visible user message.
 const originalUserRow = new FakeElement("article");
 const firstResumeRow = new FakeElement("article");

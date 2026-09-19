@@ -31,7 +31,7 @@ func TestLegacySessionRecoveryContract(t *testing.T) {
 
 	legacyText := string(legacy)
 	for _, required := range []string{
-		"__legacy", "Legacy TL Agent session · read-only", "K.api.legacySessions.messages",
+		"__legacy", "Legacy TL Studio session · read-only", "K.api.legacySessions.messages",
 		"This legacy session is read-only", "legacy-session", "sessionDirectory",
 	} {
 		if !strings.Contains(legacyText, required) {

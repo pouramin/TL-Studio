@@ -13,7 +13,7 @@ func TestBrowserRuntimeBoundaryHidesImplementationRoute(t *testing.T) {
   if err != nil { t.Fatal(err) }
   source := string(runtimeAPI)
   if !strings.Contains(source, "/runtime") {
-    t.Fatal("runtime adapter must use the TL Agent /runtime boundary")
+    t.Fatal("runtime adapter must use the TL Studio /runtime boundary")
   }
   if strings.Contains(source, "`/kilo${path}`") || strings.Contains(source, "`/kilo${route(path)}`") {
     t.Fatal("browser adapter must not call the implementation proxy prefix")

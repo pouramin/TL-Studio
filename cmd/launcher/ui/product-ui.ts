@@ -19,8 +19,8 @@
     accountClose: $("accountClose"),
   };
 
-  const THEME_KEY = "tl-agent.appearance";
-  const FONT_KEY = "tl-agent.font-size";
+  const THEME_KEY = "tl-studio.appearance";
+  const FONT_KEY = "tl-studio.font-size";
   const systemTheme = window.matchMedia?.("(prefers-color-scheme: light)");
   const hostedConnected = () => K.state.hostedAuth?.authenticated ?? K.state.connectedProviders.has(K.api.hosted.providerID);
 
@@ -62,17 +62,17 @@
     if (readSetting(THEME_KEY, "system") === "system") applyAppearance("system");
   });
 
-  // The bundled runtime scopes session listing to a directory. TL Agent keeps
+  // The bundled runtime scopes session listing to a directory. TL Studio keeps
   // only a small persistent history of project paths, then asks the runtime for the
   // authoritative root sessions in every known project and merges the results.
-  // Session content itself never lives in TL Agent's history file.
+  // Session content itself never lives in TL Studio's history file.
   const scopedLoadSessions = K.loadSessions;
   K.loadSessions = async () => {
     let history;
     try {
       history = await K.request("/local/projects");
     } catch (error) {
-      console.warn("[TL Agent] Recent-project history unavailable; falling back to current project", error);
+      console.warn("[TL Studio] Recent-project history unavailable; falling back to current project", error);
       return scopedLoadSessions();
     }
 
@@ -86,7 +86,7 @@
     results.forEach((result, index) => {
       const directory = projects[index];
       if (result.status !== "fulfilled") {
-        console.warn(`[TL Agent] Could not read sessions for ${directory}`, result.reason);
+        console.warn(`[TL Studio] Could not read sessions for ${directory}`, result.reason);
         return;
       }
       for (const raw of Array.isArray(result.value?.data) ? result.value.data : []) {

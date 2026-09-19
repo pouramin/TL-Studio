@@ -288,7 +288,7 @@
       wrapper.append(open, close);
       ui.tabs.appendChild(wrapper);
     }
-    window.dispatchEvent(new CustomEvent("tl-agent:editor-tabs", {
+    window.dispatchEvent(new CustomEvent("tl-studio:editor-tabs", {
       detail: { paths: K.state.editorTabs.map((tab) => tab.path) },
     }));
   };
@@ -340,7 +340,7 @@
   };
 
   const notifyEditorRender = (tab) => {
-    window.dispatchEvent(new CustomEvent("tl-agent:editor-render", {
+    window.dispatchEvent(new CustomEvent("tl-studio:editor-render", {
       detail: {
         path: tab?.path || "",
         content: tab?.content || "",
@@ -660,7 +660,7 @@
     ui.editor.scrollTop = scrollTop;
     if (ui.gutter) ui.gutter.scrollTop = scrollTop;
     updateCursor();
-    window.dispatchEvent(new CustomEvent("tl-agent:editor-reveal", {
+    window.dispatchEvent(new CustomEvent("tl-studio:editor-reveal", {
       detail: { path: tab.path, line: lineIndex + 1, column: runeColumn + 1, match: String(match || "") },
     }));
   };

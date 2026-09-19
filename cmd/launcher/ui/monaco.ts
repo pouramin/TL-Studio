@@ -54,7 +54,7 @@
               : ["typescript", "javascript"].includes(label)
                 ? "/monaco-ts-worker.js"
                 : "/monaco-editor-worker.js";
-        return new Worker(file, { name: `TL Agent ${label || "editor"} worker` });
+        return new Worker(file, { name: `TL Studio ${label || "editor"} worker` });
       },
     };
   };
@@ -93,7 +93,7 @@
 
   const modelUri = (monaco, path) => {
     const encoded = String(path || "").replace(/\\/g, "/").split("/").filter(Boolean).map(encodeURIComponent).join("/");
-    return monaco.Uri.parse(`tl-agent://workspace/${encoded || "untitled"}`);
+    return monaco.Uri.parse(`tl-studio://workspace/${encoded || "untitled"}`);
   };
 
   const syncSelectionToFallback = () => {
@@ -172,7 +172,7 @@
         });
         state.editor.onDidChangeCursorSelection(syncSelectionToFallback);
         state.editor.addAction({
-          id: "tl-agent-save",
+          id: "tl-studio-save",
           label: "Save file",
           keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
           run: () => document.getElementById("saveFile")?.click(),
@@ -188,7 +188,7 @@
         state.surface.classList.remove("monaco-loading", "monaco-ready");
         state.textarea.removeAttribute("aria-hidden");
         state.loading = null;
-        console.warn("TL Agent enhanced editor unavailable; keeping lightweight editor fallback.", error);
+        console.warn("TL Studio enhanced editor unavailable; keeping lightweight editor fallback.", error);
         throw error;
       }
     })();
@@ -271,8 +271,8 @@
     }
   };
 
-  window.addEventListener("tl-agent:editor-render", (event) => handleRender(event.detail));
-  window.addEventListener("tl-agent:editor-tabs", (event) => {
+  window.addEventListener("tl-studio:editor-render", (event) => handleRender(event.detail));
+  window.addEventListener("tl-studio:editor-tabs", (event) => {
     const keep = new Set((event.detail?.paths || []).map(pathKey));
     for (const [key, model] of state.models) {
       if (keep.has(key)) continue;
@@ -281,7 +281,7 @@
       state.models.delete(key);
     }
   });
-  window.addEventListener("tl-agent:editor-reveal", async (event) => {
+  window.addEventListener("tl-studio:editor-reveal", async (event) => {
     state.pendingReveal = event.detail;
     if (revealInEditor(event.detail)) state.pendingReveal = null;
     else if (event.detail?.path) {

@@ -16,10 +16,10 @@
   };
 
   const KEYS = {
-    theme: "tl-agent.editor-theme",
-    uiFont: "tl-agent.ui-font",
-    codeFont: "tl-agent.code-font",
-    terminalFont: "tl-agent.terminal-font",
+    theme: "tl-studio.editor-theme",
+    uiFont: "tl-studio.ui-font",
+    codeFont: "tl-studio.code-font",
+    terminalFont: "tl-studio.terminal-font",
   };
 
   const fonts = {
@@ -50,7 +50,7 @@
   const holder = document.createElement("div");
   holder.innerHTML = `
     <div class="settings-row">
-      <div class="settings-copy"><strong>Editor color theme</strong><span>Choose syntax colors independently from the main TL Agent appearance.</span></div>
+      <div class="settings-copy"><strong>Editor color theme</strong><span>Choose syntax colors independently from the main TL Studio appearance.</span></div>
       <select id="editorThemeSelect" aria-label="Editor color theme">
         <option value="midnight">Midnight</option>
         <option value="github-dark">GitHub Dark</option>

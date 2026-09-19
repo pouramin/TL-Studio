@@ -171,7 +171,7 @@
       const payload = await K.api.sessions.diff(K.state.session.id);
       aggregate = Array.isArray(payload?.data) ? payload.data : [];
     } catch (error) {
-      console.warn("[TL Agent] Could not load aggregate session diff", error);
+      console.warn("[TL Studio] Could not load aggregate session diff", error);
     }
     K.state.changes = aggregate.length ? mergeChanges(aggregate) : changesFromMessages();
     K.state.changesLoading = false;
@@ -321,7 +321,7 @@
         }
         K.refreshWorkspaceControls();
       } catch (error) {
-        console.warn("[TL Agent] SSE reconciliation failed", error);
+        console.warn("[TL Studio] SSE reconciliation failed", error);
       }
     }, 5000);
   };

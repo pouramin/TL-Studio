@@ -30,7 +30,7 @@ func testProviderDefinition() tlProviderDefinition {
 	}
 }
 
-func TestProviderRegistryPersistsTLAgentSchema(t *testing.T) {
+func TestProviderRegistryPersistsTLStudioSchema(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "providers.json")
 	store := newProviderRegistryStore(path)
 	if err := store.put(testProviderDefinition()); err != nil {
@@ -43,11 +43,11 @@ func TestProviderRegistryPersistsTLAgentSchema(t *testing.T) {
 	text := string(data)
 	for _, forbidden := range []string{"@ai-sdk/", "apiKey", "kilo-auto/free"} {
 		if strings.Contains(text, forbidden) {
-			t.Fatalf("TL Agent provider registry leaked runtime detail %q: %s", forbidden, text)
+			t.Fatalf("TL Studio provider registry leaked runtime detail %q: %s", forbidden, text)
 		}
 	}
 	if !strings.Contains(text, `"protocol": "openai-compatible"`) {
-		t.Fatalf("registry missing TL Agent protocol: %s", text)
+		t.Fatalf("registry missing TL Studio protocol: %s", text)
 	}
 
 	reloaded := newProviderRegistryStore(path)
@@ -60,10 +60,10 @@ func TestProviderRegistryPersistsTLAgentSchema(t *testing.T) {
 	}
 }
 
-func TestRuntimeProviderRoutesTranslateTLAgentConfig(t *testing.T) {
+func TestRuntimeProviderRoutesTranslateTLStudioConfig(t *testing.T) {
 	project := t.TempDir()
 	stateDir := t.TempDir()
-	t.Setenv("TL_AGENT_STATE_DIR", stateDir)
+	t.Setenv("TL_STUDIO_STATE_DIR", stateDir)
 
 	var mu sync.Mutex
 	var lastPatch map[string]any
@@ -161,7 +161,7 @@ func TestRuntimeProviderRoutesTranslateTLAgentConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(registryData), "top-secret") || strings.Contains(string(registryData), "@ai-sdk") {
-		t.Fatalf("TL Agent registry must not persist credential/runtime package details: %s", registryData)
+		t.Fatalf("TL Studio registry must not persist credential/runtime package details: %s", registryData)
 	}
 
 	catalogRes, err := http.Get(server.URL + "/runtime/providers/catalog?directory=" + url.QueryEscape(project))
@@ -177,7 +177,7 @@ func TestRuntimeProviderRoutesTranslateTLAgentConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	if catalog.Hosted.ProviderID != "kilo" || len(catalog.Hosted.PreferredModels) != 1 || catalog.Hosted.PreferredModels[0] != "kilo-auto/free" {
-		t.Fatalf("hosted metadata missing from TL Agent catalog: %#v", catalog.Hosted)
+		t.Fatalf("hosted metadata missing from TL Studio catalog: %#v", catalog.Hosted)
 	}
 	foundCustom := false
 	for _, provider := range catalog.All {
@@ -186,7 +186,7 @@ func TestRuntimeProviderRoutesTranslateTLAgentConfig(t *testing.T) {
 		}
 	}
 	if !foundCustom {
-		t.Fatalf("custom provider was not marked as TL Agent-managed: %#v", catalog.All)
+		t.Fatalf("custom provider was not marked as TL Studio-managed: %#v", catalog.All)
 	}
 
 	deleteReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/runtime/providers/config/example-provider", nil)

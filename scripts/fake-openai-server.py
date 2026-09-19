@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tiny OpenAI-compatible streaming fixture used by TL Agent CI.
+"""Tiny OpenAI-compatible streaming fixture used by TL Studio CI.
 
 When FAKE_WRITE_PATH is set, the first provider turn calls Kilo's `write` tool
 for that exact path. After Kilo sends the tool result back, the fixture emits
@@ -15,13 +15,13 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 REPLY = "E2E_PRODUCT_OK"
-WRITE_CONTENT = "TL_AGENT_E2E_OK"
+WRITE_CONTENT = "TL_STUDIO_E2E_OK"
 WRITE_PATH = os.environ.get("FAKE_WRITE_PATH", "")
 
 
 def chat_chunk(delta=None, finish=None, usage=None):
     item = {
-        "id": "chatcmpl-tl-agent",
+        "id": "chatcmpl-tl-studio",
         "object": "chat.completion.chunk",
         "choices": [{"index": 0, "delta": delta or {}}],
     }

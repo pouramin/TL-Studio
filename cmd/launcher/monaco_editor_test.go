@@ -19,7 +19,7 @@ func TestMonacoEditorIsLocalLazyAndFallbackSafe(t *testing.T) {
 		"/monaco-editor.js",
 		"/monaco-editor.css",
 		"/monaco-editor-worker.js",
-		"tl-agent:editor-render",
+		"tl-studio:editor-render",
 		"lightweight editor fallback",
 	} {
 		if !strings.Contains(source, required) {
@@ -42,7 +42,7 @@ func TestMonacoEditorIsLocalLazyAndFallbackSafe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(files), "tl-agent:editor-render") {
+	if !strings.Contains(string(files), "tl-studio:editor-render") {
 		t.Fatal("workspace editor does not publish Monaco render state")
 	}
 }

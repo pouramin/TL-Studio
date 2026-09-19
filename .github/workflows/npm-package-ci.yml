@@ -35,7 +35,7 @@ jobs:
 
       - name: Verify launcher syntax
         run: |
-          node --check packaging/npm/dist/tl-agent.cjs
+          node --check packaging/npm/dist/tl-studio.cjs
           node --check packaging/npm/dist/launcher.cjs
 
       - name: Verify package metadata and contents
@@ -45,14 +45,14 @@ jobs:
           EXPECTED_VERSION="$(tr -d '[:space:]' < ../../../VERSION)"
           ACTUAL_VERSION="$(node -p "require('./package.json').version")"
           PACKAGE_NAME="$(node -p "require('./package.json').name")"
-          BIN_TARGET="$(node -p "require('./package.json').bin['tl-agent']")"
+          BIN_TARGET="$(node -p "require('./package.json').bin['tl-studio']")"
 
           test "$EXPECTED_VERSION" = "$ACTUAL_VERSION"
-          test "$PACKAGE_NAME" = "tl-agent"
-          test "$BIN_TARGET" = "tl-agent.cjs"
-          test -f tl-agent.cjs
+          test "$PACKAGE_NAME" = "tl-studio"
+          test "$BIN_TARGET" = "tl-studio.cjs"
+          test -f tl-studio.cjs
           test -f launcher.cjs
           test -f README.md
-          grep -F "TL_AGENT_VERSION = \"v${EXPECTED_VERSION}\"" tl-agent.cjs
+          grep -F "TL_STUDIO_VERSION = \"v${EXPECTED_VERSION}\"" tl-studio.cjs
 
           npm pack --dry-run --ignore-scripts

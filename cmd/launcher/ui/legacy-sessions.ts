@@ -55,7 +55,7 @@
       legacyCache.set(key, sessions);
       return sessions;
     } catch (error) {
-      console.warn("[TL Agent] Legacy session recovery is unavailable", error);
+      console.warn("[TL Studio] Legacy session recovery is unavailable", error);
       return [];
     }
   };
@@ -95,7 +95,7 @@
       const meta = row.querySelector(".session-main span");
       if (meta && !/legacy/i.test(meta.textContent || "")) meta.textContent += " · legacy";
       const open = row.querySelector(".session-main");
-      if (open) open.title = `${open.title || session.title || "Session"}\nLegacy TL Agent session · read-only`;
+      if (open) open.title = `${open.title || session.title || "Session"}\nLegacy TL Studio session · read-only`;
     });
     return result;
   };
@@ -112,7 +112,7 @@
   const baseRenderSessionHeader = K.renderSessionHeader;
   K.renderSessionHeader = (...args) => {
     const result = baseRenderSessionHeader(...args);
-    if (isLegacy() && K.els.sessionMeta) K.els.sessionMeta.textContent = "Legacy TL Agent session · read-only";
+    if (isLegacy() && K.els.sessionMeta) K.els.sessionMeta.textContent = "Legacy TL Studio session · read-only";
     return result;
   };
 

@@ -261,7 +261,7 @@
         : `Attempt ${attempt} · No completed routed model was recorded in this attempt`;
       meta.title = routed
         ? "This model was recorded by the runtime on a completed LLM step inside this attempt."
-        : "The failed attempt ended before the runtime recorded a completed routed-model step, so TL Agent will not reuse a model from an earlier attempt.";
+        : "The failed attempt ended before the runtime recorded a completed routed-model step, so TL Studio will not reuse a model from an earlier attempt.";
     });
   };
 
