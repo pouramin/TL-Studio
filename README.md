@@ -1,54 +1,31 @@
 [English](./README.md) | [فارسی](./README.fa_IR.md)
 
 <p align="center">
-  <img src="./media/tl-studio-logo.svg" width="300" alt="TL Studio">
+  <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
-
-<h1 align="center">TL Studio</h1>
 
 <p align="center">
-  A local, standalone coding-agent workspace — no IDE required.
+  A fast local development workspace with AI built in.
 </p>
+
+<p align="center"><strong>Development branch: 0.3.0-alpha.2</strong> · Stable release remains v0.2.1.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
-  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
 </p>
 
-**TL Studio** gives coding agents a dedicated browser workspace for local projects. Open a folder, choose an agent and model, attach files, inspect tool activity and changes, manage sessions, answer permission requests, and keep the workspace on your own computer.
+**TL Studio** is a local browser-based development workspace where you can edit code yourself and work alongside an AI agent. Open a project, browse and edit files, search across the codebase, run commands, preview the app, choose models/providers, and hand work to the agent — all on your own computer.
 
 No VS Code, JetBrains, Cursor, Docker, hosted TL Studio backend, database, or project-owned cloud service is required.
 
 ## Quick Start
 
-### One-command launch
-
-If Node.js/npm is installed, run this inside the project directory you want to work on:
-
-```bash
-npx --yes tl-studio
-```
-
-The npm package is only a lightweight launcher. It detects the operating system and architecture, downloads the matching official TL Studio GitHub Release, verifies its SHA-256 checksum, caches it locally, and opens TL Studio with the current directory selected.
-
-Run without automatically opening the browser:
-
-```bash
-npx --yes tl-studio --no-browser
-```
-
-Prerelease channels can still be launched explicitly when available, for example:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
 ### Portable release
 
-Node.js is not required for the portable build. Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
+Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
 
 ```text
 Windows:  tl-studio.exe
@@ -60,7 +37,7 @@ The release already includes the pinned local agent runtime.
 
 ## Features
 
-- **Standalone local workspace** — dedicated coding-agent UI in the browser without an IDE.
+- **Standalone local development workspace** — edit files, search the project, run commands, preview the app, and work with an AI agent in one browser workspace.
 - **Local project picker** — open project folders with the operating-system folder picker.
 - **Agent & model selection** — switch agents and available provider models from the composer.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
