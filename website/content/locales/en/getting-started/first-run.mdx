@@ -6,11 +6,17 @@ icon: Play
 
 ## Start TL Studio
 
-Run the portable executable for your platform. TL Studio starts its local services on loopback and opens the browser workspace automatically.
+Run the portable executable for your platform, or start TL Studio from the project directory with:
+
+```bash
+npx --yes tl-studio
+```
+
+TL Studio starts its local services on loopback and opens the browser workspace automatically.
 
 ## Choose a project
 
-The normal workflow is graphical: use TL Studio's Folder Picker and choose an existing local project directory.
+The normal workflow is graphical: use TL Studio's Folder Picker and choose an existing local project directory. If you launched with `npx --yes tl-studio` from inside a project directory, that directory is selected automatically.
 
 You can also preselect a project from the CLI:
 
