@@ -2,6 +2,15 @@ name: Publish npm launcher
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - VERSION
+      - scripts/npx-launch.cjs
+      - packaging/npm/**
+      - .github/workflows/publish-npm.yml
 
 permissions:
   contents: read
