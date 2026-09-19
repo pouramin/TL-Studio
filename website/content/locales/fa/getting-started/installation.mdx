@@ -1,8 +1,24 @@
 ---
 title: نصب
-description: نصب TL Studio از نسخه Portable پایدار.
+description: نصب TL Studio با npm یا نسخه Portable پایدار.
 icon: Download
 ---
+
+## اجرا با یک دستور
+
+اگر Node.js و npm نصب هستند، داخل فولدر Project این دستور را اجرا کنید:
+
+```bash
+npx --yes tl-studio
+```
+
+پکیج npm یک Launcher سبک است که به نسخه Stable فعلی TL Studio روی GitHub Release متصل می‌شود؛ Platform را تشخیص می‌دهد، Archive رسمی را دانلود می‌کند، SHA-256 را Verify می‌کند، Local Cache می‌سازد و TL Studio را اجرا می‌کند.
+
+برای جلوگیری از بازشدن خودکار Browser:
+
+```bash
+npx --yes tl-studio --no-browser
+```
 
 ## نسخه Portable
 
