@@ -1,0 +1,21 @@
+name: Dev Rebrand Audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inventory legacy product branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== legacy content branding inventory ==="
+          grep -RInE 'TL Agent|TL-Agent|tl-agent|TL_AGENT|TLAgent|tlAgent' .             --exclude-dir=.git             --exclude='*.sum'             --exclude='dev-rebrand-audit.yml'             || true
+          echo "=== legacy filename inventory ==="
+          find . -path './.git' -prune -o \( -iname '*tl-agent*' -o -iname '*TL-Agent*' \) -print
