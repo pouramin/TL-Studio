@@ -10,7 +10,13 @@ icon: PackageCheck
 
 - `main` is the stable production line.
 - `dev` is the active next-version development line.
-Stable users install from the published GitHub Release assets. Experimental builds remain on the separate development line.
+Stable users can use the npm launcher:
+
+```bash
+npx --yes tl-studio
+```
+
+The npm launcher tracks only the stable release line. Experimental alpha builds remain private to the project on `dev` as GitHub Actions Preview Build artifacts.
 
 ## Portable releases
 
