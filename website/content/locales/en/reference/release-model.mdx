@@ -1,10 +1,10 @@
 ---
 title: Releases and bundled engine
-description: Understand TL Agent stable/prerelease channels and portable release packaging.
+description: Understand TL Studio stable/prerelease channels and portable release packaging.
 icon: PackageCheck
 ---
 
-**v0.2.0 is the current stable TL Agent release.**
+**v0.2.0 is the current stable TL Studio release.**
 
 ## Stable and development lines
 
@@ -16,24 +16,24 @@ icon: PackageCheck
 Stable launch:
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
 Prerelease launch when available:
 
 ```bash
-npx --yes tl-agent@alpha
+npx --yes tl-studio@alpha
 ```
 
-The npm package is a lightweight launcher pinned to the matching TL Agent GitHub Release. It detects OS/architecture, downloads the official archive, verifies SHA-256, caches it locally, and starts TL Agent.
+The npm package is a lightweight launcher pinned to the matching TL Studio GitHub Release. It detects OS/architecture, downloads the official archive, verifies SHA-256, caches it locally, and starts TL Studio.
 
 ## Portable releases
 
 Portable archives include:
 
-- the TL Agent executable;
+- the TL Studio executable;
 - the compatible bundled Agent engine;
-- TL Agent license files;
+- TL Studio license files;
 - required third-party notices/licenses.
 
 Users do not need to install or manage the Agent engine separately.

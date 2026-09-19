@@ -1,10 +1,10 @@
 ---
 title: Terminal
-description: Run project-scoped commands with TL Agent's local process manager.
+description: Run project-scoped commands with TL Studio's local process manager.
 icon: Terminal
 ---
 
-TL Agent includes a project-scoped command runner backed by its own local process manager.
+TL Studio includes a project-scoped command runner backed by its own local process manager.
 
 ## Project-scoped commands
 
@@ -14,7 +14,7 @@ Output is streamed into the workspace and kept in a bounded local history.
 
 ## Stop a process
 
-Long-running commands can be stopped from TL Agent. On Windows, Stop terminates the process tree so child processes such as development servers are not intentionally left behind.
+Long-running commands can be stopped from TL Studio. On Windows, Stop terminates the process tree so child processes such as development servers are not intentionally left behind.
 
 An intentional stop is treated as a stopped command rather than a mysterious crash.
 

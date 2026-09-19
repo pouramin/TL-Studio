@@ -7,7 +7,7 @@ import { site } from '@/lib/site';
 const features = [
   {
     title: 'Local-first by design',
-    description: 'TL Agent runs on your computer, works directly with your local project, and does not require a TL Agent cloud backend or database.',
+    description: 'TL Studio runs on your computer, works directly with your local project, and does not require a TL Studio cloud backend or database.',
     icon: ServerOff,
   },
   {
@@ -22,7 +22,7 @@ const features = [
   },
   {
     title: 'Provider and model control',
-    description: 'Manage compatible custom provider/model definitions in TL Agent while credentials stay out of browser storage.',
+    description: 'Manage compatible custom provider/model definitions in TL Studio while credentials stay out of browser storage.',
     icon: LockKeyhole,
   },
 ];
@@ -44,13 +44,13 @@ export default function HomePage() {
         <div className="hero-grid pointer-events-none absolute inset-0 -z-10 opacity-60" />
         <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-20 text-center md:pt-28">
           <div className="tl-brand-lockup mb-7">
-            <img src={site.logoUrl} alt="TL Agent — Code. Reason. Act." />
+            <img src={site.logoUrl} alt="TL Studio — Code. Reason. Act." />
           </div>
           <div className="mb-6 rounded-full border bg-fd-card/70 px-4 py-1.5 text-sm text-fd-muted-foreground">
-            Stable v0.2.0 · Local-first · Open source
+            Stable v0.2.1 · Local-first · Open source
           </div>
           <h1 className="max-w-4xl text-balance text-5xl font-bold tracking-tight md:text-7xl">
-            Your local coding-agent workspace.
+            Your fast local development workspace.
           </h1>
           <p className="mt-7 max-w-2xl text-balance text-lg leading-8 text-fd-muted-foreground md:text-xl">
             {site.description}
@@ -72,9 +72,9 @@ export default function HomePage() {
           </div>
 
           <div className="mt-16 w-full max-w-4xl rounded-2xl border bg-fd-card/80 p-5 text-left shadow-sm md:p-8">
-            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">How TL Agent works</div>
+            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">How TL Studio works</div>
             <div className="grid gap-3 md:grid-cols-4">
-              {['Browser IDE', 'TL Agent local core', 'Agent engine adapter', 'Models + tools'].map((label, index) => (
+              {['Browser IDE', 'TL Studio local core', 'Agent engine adapter', 'Models + tools'].map((label, index) => (
                 <div key={label} className="relative">
                   <div className="arch-line rounded-xl px-4 py-5 text-center font-medium">{label}</div>
                   {index < 3 ? <div className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-fd-muted-foreground md:block">→</div> : null}
@@ -97,9 +97,9 @@ export default function HomePage() {
         <section className="border-t bg-fd-card/35">
           <div className="mx-auto max-w-6xl px-6 py-16">
             <p className="text-sm font-medium text-fd-muted-foreground">Independent product · Replaceable engine</p>
-            <h2 className="mt-2 text-3xl font-semibold">TL Agent owns the product experience end to end.</h2>
+            <h2 className="mt-2 text-3xl font-semibold">TL Studio owns the product experience end to end.</h2>
             <p className="mt-4 max-w-3xl leading-7 text-fd-muted-foreground">
-              The editor, project filesystem, Search, Terminal, Live Preview, provider/model registry, recovery, local security, packaging, and releases belong to TL Agent. Agent execution sits behind a generic local runtime contract.
+              The editor, project filesystem, Search, Terminal, Live Preview, provider/model registry, recovery, local security, packaging, and releases belong to TL Studio. Agent execution sits behind a generic local runtime contract.
             </p>
           </div>
         </section>

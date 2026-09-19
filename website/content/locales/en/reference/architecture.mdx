@@ -1,22 +1,22 @@
 ---
 title: Architecture
-description: Understand TL Agent's local product core and replaceable Agent engine boundary.
+description: Understand TL Studio's local product core and replaceable Agent engine boundary.
 icon: Network
 ---
 
-TL Agent v0.2 separates **product capabilities owned by TL Agent** from Agent execution performed behind a generic runtime contract.
+TL Studio v0.2 separates **product capabilities owned by TL Studio** from Agent execution performed behind a generic runtime contract.
 
 ```text
 Browser IDE
   │
-  ├─ /local/* ───────► TL Agent local core
+  ├─ /local/* ───────► TL Studio local core
   │                    ├─ Project filesystem
   │                    ├─ Editor state
   │                    ├─ Project Search
   │                    ├─ Process / Terminal
   │                    └─ Live Preview control
   │
-  └─ /runtime/* ─────► TL Agent runtime contract
+  └─ /runtime/* ─────► TL Studio runtime contract
                         ↓
                     Runtime adapter
                         ↓
@@ -30,7 +30,7 @@ Live Preview
   └──────────────────► separate loopback origin
 ```
 
-## TL Agent owns
+## TL Studio owns
 
 - the standalone Browser IDE and Agent workspace;
 - local launch and lifecycle;
@@ -49,32 +49,32 @@ Live Preview
 
 The bundled Agent engine still handles Agent/session execution, Tool execution, Permission/Question internals, Provider credential persistence, and Model inference.
 
-That boundary is intentionally hidden from normal user workflows. Browser modules depend on TL Agent concepts and generic routes rather than implementation-specific endpoint names.
+That boundary is intentionally hidden from normal user workflows. Browser modules depend on TL Studio concepts and generic routes rather than implementation-specific endpoint names.
 
 ## Provider and Model ownership
 
-Custom Provider definitions are stored in TL Agent's own versioned local `providers.json`. TL Agent is the source of truth for Provider ID/name, protocol, Base URL, Model definitions, capability flags, and optional context/output limits.
+Custom Provider definitions are stored in TL Studio's own versioned local `providers.json`. TL Studio is the source of truth for Provider ID/name, protocol, Base URL, Model definitions, capability flags, and optional context/output limits.
 
-The launcher translates those definitions to the current Agent engine internally. API keys remain outside the TL Agent registry and are delegated to the engine's local credential store in v0.2.
+The launcher translates those definitions to the current Agent engine internally. API keys remain outside the TL Studio registry and are delegated to the engine's local credential store in v0.2.
 
 ## Filesystem trust boundary
 
 The Go launcher is the authority for browser filesystem operations. Paths are resolved against the selected Project; traversal, symlink escapes, root mutation, and protected Git metadata mutations are rejected.
 
-Normal saves use a SHA-256 revision token. If disk content changed after a file was read, TL Agent returns a conflict instead of silently overwriting the new version.
+Normal saves use a SHA-256 revision token. If disk content changed after a file was read, TL Studio returns a conflict instead of silently overwriting the new version.
 
 ## Search and process boundary
 
-Project Search is implemented by TL Agent itself and does not shell out to an external search command.
+Project Search is implemented by TL Studio itself and does not shell out to an external search command.
 
-Terminal commands run through a TL Agent-owned process manager with the active Project as CWD. The current Terminal is a command runner, not a full PTY.
+Terminal commands run through a TL Studio-owned process manager with the active Project as CWD. The current Terminal is a command runner, not a full PTY.
 
 ## Preview isolation
 
-Static Project code and Node dev servers are previewed on a **different loopback origin** from TL Agent's control server. Only loopback Preview URLs are accepted.
+Static Project code and Node dev servers are previewed on a **different loopback origin** from TL Studio's control server. Only loopback Preview URLs are accepted.
 
 ## Runtime abstraction
 
 The browser talks to `/runtime/*`; the launcher/runtime adapter is responsible for translating that contract to the bundled engine.
 
-The goal is replaceability: new product features should depend on Sessions, Messages, Providers, Models, Permissions, Questions, Tools, and Events as TL Agent concepts rather than on the name or API layout of one engine.
+The goal is replaceability: new product features should depend on Sessions, Messages, Providers, Models, Permissions, Questions, Tools, and Events as TL Studio concepts rather than on the name or API layout of one engine.

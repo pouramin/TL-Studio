@@ -1,18 +1,18 @@
 ---
 title: Model و Agent
-description: انتخاب Agent و Model از طریق Runtime Contract عمومی TL Agent.
+description: انتخاب Agent و Model از طریق Runtime Contract عمومی TL Studio.
 icon: Bot
 ---
 
-TL Agent، Agent Execution را پشت یک Runtime Contract عمومی و Local نگه می‌دارد و بخش بیشتری از Product Surface مربوط به Provider و Model را خودش مدیریت می‌کند.
+TL Studio، Agent Execution را پشت یک Runtime Contract عمومی و Local نگه می‌دارد و بخش بیشتری از Product Surface مربوط به Provider و Model را خودش مدیریت می‌کند.
 
 ## Agent
 
-Coding Agent در Workspace خود TL Agent انتخاب می‌شود و Engine همراه برنامه Task را پشت Adapter Boundary اجرا می‌کند.
+Coding Agent در Workspace خود TL Studio انتخاب می‌شود و Engine همراه برنامه Task را پشت Adapter Boundary اجرا می‌کند.
 
 ## Model و Provider
 
-تعریف Custom Provider و Model داده‌ی متعلق به TL Agent است. این تعریف‌ها در Local Provider Registry خود TL Agent ذخیره می‌شوند و Launcher آن‌ها را برای Engine فعال ترجمه می‌کند.
+تعریف Custom Provider و Model داده‌ی متعلق به TL Studio است. این تعریف‌ها در Local Provider Registry خود TL Studio ذخیره می‌شوند و Launcher آن‌ها را برای Engine فعال ترجمه می‌کند.
 
 Model Picker می‌تواند Modelهای Hosted یا Runtime-discovered را هم نمایش دهد. Provider ID و Preferred Routeهای مربوط به Engine به‌صورت Metadata به UI داده می‌شوند و داخل Product Moduleها Hard-code نمی‌شوند.
 
@@ -20,8 +20,8 @@ Model Picker می‌تواند Modelهای Hosted یا Runtime-discovered را �
 
 ## Hosted Account Flow
 
-وقتی Engine همراه برنامه Hosted Account Flow داشته باشد، TL Agent آن Authorization را از طریق Routeهای Local عمومی خودش نمایش می‌دهد. Browser نیازی به دانستن Endpointهای Implementation-specific ندارد.
+وقتی Engine همراه برنامه Hosted Account Flow داشته باشد، TL Studio آن Authorization را از طریق Routeهای Local عمومی خودش نمایش می‌دهد. Browser نیازی به دانستن Endpointهای Implementation-specific ندارد.
 
 ## Provider Failure
 
-Failure موقت Upstream ممکن است رخ دهد درحالی‌که خود TL Agent سالم است. اگر Retry Cycle مربوط به Engine با Error قابل‌Retry تمام شود، TL Agent می‌تواند **Resume** را نشان دهد تا Task از Workspace State حفظ‌شده ادامه پیدا کند.
+Failure موقت Upstream ممکن است رخ دهد درحالی‌که خود TL Studio سالم است. اگر Retry Cycle مربوط به Engine با Error قابل‌Retry تمام شود، TL Studio می‌تواند **Resume** را نشان دهد تا Task از Workspace State حفظ‌شده ادامه پیدا کند.

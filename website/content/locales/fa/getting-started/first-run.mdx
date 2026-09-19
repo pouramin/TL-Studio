@@ -1,34 +1,34 @@
 ---
 title: اولین اجرا
-description: اجرای TL Agent، بازکردن Project Local و آشنایی با Workspace.
+description: اجرای TL Studio، بازکردن Project Local و آشنایی با Workspace.
 icon: Play
 ---
 
-## اجرای TL Agent
+## اجرای TL Studio
 
-نسخه Portable را اجرا کنید یا از Launcher یک‌دستوری استفاده کنید. TL Agent سرویس‌های Local خودش را روی loopback بالا می‌آورد و Workspace را در Browser باز می‌کند.
+نسخه Portable را اجرا کنید یا از Launcher یک‌دستوری استفاده کنید. TL Studio سرویس‌های Local خودش را روی loopback بالا می‌آورد و Workspace را در Browser باز می‌کند.
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
 ## انتخاب Project
 
-روش معمول گرافیکی است: داخل TL Agent از Folder Picker استفاده کنید و Directory پروژه را انتخاب کنید.
+روش معمول گرافیکی است: داخل TL Studio از Folder Picker استفاده کنید و Directory پروژه را انتخاب کنید.
 
 برای Preselect کردن Project از CLI هم می‌توانید این دستور را بزنید:
 
 ```bash
-tl-agent --project /path/to/project
+tl-studio --project /path/to/project
 ```
 
 در Windows:
 
 ```powershell
-tl-agent.exe --project "C:\Users\you\Projects\my-project"
+tl-studio.exe --project "C:\Users\you\Projects\my-project"
 ```
 
-اگر `npx --yes tl-agent` را داخل Folder پروژه اجرا کنید، همان Directory به‌صورت خودکار انتخاب می‌شود.
+اگر `npx --yes tl-studio` را داخل Folder پروژه اجرا کنید، همان Directory به‌صورت خودکار انتخاب می‌شود.
 
 ## آشنایی سریع با Workspace
 
@@ -45,6 +45,6 @@ tl-agent.exe --project "C:\Users\you\Projects\my-project"
 
 ## پشت صحنه چه اجرا می‌شود؟
 
-TL Agent یک Local Control Server و Agent Engine همراه برنامه را روی loopback اجرا می‌کند. Browser فقط با TL Agent حرف می‌زند و Agent Execution از Runtime Contract عمومی TL Agent عبور می‌کند.
+TL Studio یک Local Control Server و Agent Engine همراه برنامه را روی loopback اجرا می‌کند. Browser فقط با TL Studio حرف می‌زند و Agent Execution از Runtime Contract عمومی TL Studio عبور می‌کند.
 
-با بستن TL Agent، Child Process مربوط به Engine هم متوقف می‌شود.
+با بستن TL Studio، Child Process مربوط به Engine هم متوقف می‌شود.

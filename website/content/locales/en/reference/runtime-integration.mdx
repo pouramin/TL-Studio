@@ -1,14 +1,14 @@
 ---
 title: Runtime integration
-description: Maintainer reference for TL Agent's replaceable Agent-engine compatibility boundary.
+description: Maintainer reference for TL Studio's replaceable Agent-engine compatibility boundary.
 icon: Cable
 ---
 
-TL Agent keeps implementation-specific engine details behind a local adapter. The current bundled implementation is **Kilo Code 7.6.2**. Normal users do not need to install, configure, or operate that engine separately.
+TL Studio keeps implementation-specific engine details behind a local adapter. The current bundled implementation is **Kilo Code 7.6.2**. Normal users do not need to install, configure, or operate that engine separately.
 
 ## Public local contract
 
-Browser modules use TL Agent-owned routes:
+Browser modules use TL Studio-owned routes:
 
 - `/local/*` for project files, Search, process/Terminal, and Preview;
 - `/runtime/*` for Agent/session execution and runtime-facing product concepts.
@@ -23,16 +23,16 @@ CI explicitly checks this boundary so product-facing JavaScript cannot drift bac
 
 ## Provider/model boundary
 
-Provider and Model definitions are now TL Agent-owned and stored in TL Agent's local registry. The launcher translates them into the current engine's configuration internally.
+Provider and Model definitions are now TL Studio-owned and stored in TL Studio's local registry. The launcher translates them into the current engine's configuration internally.
 
 Credentials, Agent/session execution, Tools, Permissions, Questions, and Model inference still depend on the bundled engine in v0.2.
 
 ## Advanced override
 
-Maintainers can point TL Agent at a compatible runtime binary with:
+Maintainers can point TL Studio at a compatible runtime binary with:
 
 ```bash
-tl-agent --runtime-bin /path/to/runtime
+tl-studio --runtime-bin /path/to/runtime
 ```
 
 ## Upgrade rule

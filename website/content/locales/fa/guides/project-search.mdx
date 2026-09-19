@@ -1,10 +1,10 @@
 ---
 title: Project Search
-description: جست‌وجوی متن در Project انتخاب‌شده بدون خروج از TL Agent.
+description: جست‌وجوی متن در Project انتخاب‌شده بدون خروج از TL Studio.
 icon: Search
 ---
 
-Project Search توسط خود TL Agent اجرا می‌شود و فقط Project Local فعال را Scan می‌کند.
+Project Search توسط خود TL Studio اجرا می‌شود و فقط Project Local فعال را Scan می‌کند.
 
 ## بازکردن Search
 
@@ -29,7 +29,7 @@ macOS:           Cmd + Shift + F
 
 ## Local و Bounded
 
-Search هیچ Shell Commandی نمی‌سازد و به Search Binary خارجی نیاز ندارد. Scan از Filesystem Boundary خود TL Agent انجام می‌شود.
+Search هیچ Shell Commandی نمی‌سازد و به Search Binary خارجی نیاز ندارد. Scan از Filesystem Boundary خود TL Studio انجام می‌شود.
 
 برای Security و Performance، Symlinkها Follow نمی‌شوند، Fileهای Binary/Non-UTF8 نادیده گرفته می‌شوند، اندازه File و تعداد Resultها Limit دارند و Directoryهای سنگین یا Generated زیر به‌صورت پیش‌فرض Skip می‌شوند:
 

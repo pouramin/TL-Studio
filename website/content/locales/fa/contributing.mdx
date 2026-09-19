@@ -1,14 +1,14 @@
 ---
 title: مشارکت در پروژه
-description: مشارکت با حفظ Product Boundary، Local Security و Runtime Abstraction در TL Agent.
+description: مشارکت با حفظ Product Boundary، Local Security و Runtime Abstraction در TL Studio.
 icon: GitPullRequest
 ---
 
-Application و Public Documentation در TL Agent Build Path جدا دارند.
+Application و Public Documentation در TL Studio Build Path جدا دارند.
 
 ## Product Development
 
-Go Launcher و Local APIهای متعلق به TL Agent زیر `cmd/launcher/` هستند.
+Go Launcher و Local APIهای متعلق به TL Studio زیر `cmd/launcher/` هستند.
 
 Source اصلی Browser Application به TypeScript در این مسیر قرار دارد:
 
@@ -35,12 +35,12 @@ go test ./...
 
 ## Architecture Ruleها
 
-- Project Filesystem/Search/Process/Preview باید پشت APIهای `/local/*` خود TL Agent بمانند.
-- Agent Execution Conceptها باید پشت Runtime Contract متعلق به TL Agent با `/runtime/*` بمانند.
+- Project Filesystem/Search/Process/Preview باید پشت APIهای `/local/*` خود TL Studio بمانند.
+- Agent Execution Conceptها باید پشت Runtime Contract متعلق به TL Studio با `/runtime/*` بمانند.
 - Browser Feature Module نباید Implementation-specific Route بسازد.
-- Provider/Model Definition متعلق به Registry خود TL Agent است، نه Vendor Config داخل Browser.
+- Provider/Model Definition متعلق به Registry خود TL Studio است، نه Vendor Config داخل Browser.
 - Editor/Runtime Asset جدید باید Local Bundle شود، نه CDN.
-- Preview Project Code باید روی Origin جدا از Control API خود TL Agent اجرا شود.
+- Preview Project Code باید روی Origin جدا از Control API خود TL Studio اجرا شود.
 
 ## Internal Engineering Docs
 
@@ -57,4 +57,4 @@ npm run typecheck
 npm run build
 ```
 
-متن User-facing باید روی **TL Agent** متمرکز بماند. اسم Agent Engine همراه برنامه فقط در Maintainer Compatibility Reference یا جایی که Attribution قانونی واقعاً لازم است بیاید.
+متن User-facing باید روی **TL Studio** متمرکز بماند. اسم Agent Engine همراه برنامه فقط در Maintainer Compatibility Reference یا جایی که Attribution قانونی واقعاً لازم است بیاید.

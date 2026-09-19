@@ -1,14 +1,14 @@
 ---
 title: Contributing
-description: Contribute while preserving TL Agent's product, local-security, and runtime-abstraction boundaries.
+description: Contribute while preserving TL Studio's product, local-security, and runtime-abstraction boundaries.
 icon: GitPullRequest
 ---
 
-TL Agent application code and the public documentation site use separate build paths.
+TL Studio application code and the public documentation site use separate build paths.
 
 ## Product development
 
-The Go launcher and TL Agent-owned local APIs live under `cmd/launcher/`.
+The Go launcher and TL Studio-owned local APIs live under `cmd/launcher/`.
 
 Browser application **source** lives in TypeScript under:
 
@@ -35,12 +35,12 @@ go test ./...
 
 ## Architecture rules
 
-- Project filesystem/Search/process/Preview capabilities belong behind TL Agent's `/local/*` APIs.
-- Agent execution concepts belong behind the TL Agent-owned `/runtime/*` contract.
+- Project filesystem/Search/process/Preview capabilities belong behind TL Studio's `/local/*` APIs.
+- Agent execution concepts belong behind the TL Studio-owned `/runtime/*` contract.
 - Browser feature modules must not construct implementation-specific engine routes.
-- Provider/Model product definitions belong to TL Agent's registry, not to browser-local vendor config.
+- Provider/Model product definitions belong to TL Studio's registry, not to browser-local vendor config.
 - New editor/runtime assets must remain bundled locally rather than loaded from a CDN.
-- Preview project code must stay on a separate local origin from TL Agent's control API.
+- Preview project code must stay on a separate local origin from TL Studio's control API.
 
 ## Internal engineering docs
 
@@ -57,4 +57,4 @@ npm run typecheck
 npm run build
 ```
 
-Keep user-facing language centered on **TL Agent**. Name the bundled engine only in the maintainer compatibility reference or where legal attribution genuinely requires it.
+Keep user-facing language centered on **TL Studio**. Name the bundled engine only in the maintainer compatibility reference or where legal attribution genuinely requires it.

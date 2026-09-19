@@ -1,22 +1,22 @@
 ---
 title: معماری
-description: Product Core لوکال TL Agent و مرز Replaceable Agent Engine.
+description: Product Core لوکال TL Studio و مرز Replaceable Agent Engine.
 icon: Network
 ---
 
-در v0.2 بین **قابلیت‌های متعلق به خود TL Agent** و Agent Execution پشت Runtime Contract عمومی مرز مشخص‌تری وجود دارد.
+در v0.2 بین **قابلیت‌های متعلق به خود TL Studio** و Agent Execution پشت Runtime Contract عمومی مرز مشخص‌تری وجود دارد.
 
 ```text
 Browser IDE
   │
-  ├─ /local/* ───────► TL Agent Local Core
+  ├─ /local/* ───────► TL Studio Local Core
   │                    ├─ Project Filesystem
   │                    ├─ Editor State
   │                    ├─ Project Search
   │                    ├─ Process / Terminal
   │                    └─ Live Preview Control
   │
-  └─ /runtime/* ─────► TL Agent Runtime Contract
+  └─ /runtime/* ─────► TL Studio Runtime Contract
                         ↓
                     Runtime Adapter
                         ↓
@@ -30,7 +30,7 @@ Live Preview
   └──────────────────► Separate Loopback Origin
 ```
 
-## مسئولیت TL Agent
+## مسئولیت TL Studio
 
 - Browser IDE و Agent Workspace مستقل؛
 - Local Launch و Lifecycle؛
@@ -49,32 +49,32 @@ Live Preview
 
 Agent/Session Execution، Tool Execution، جزئیات Permission/Question، نگه‌داری Provider Credential و Model Inference هنوز توسط Agent Engine همراه برنامه انجام می‌شوند.
 
-این مرز برای Workflow عادی User پنهان می‌ماند. Browser Moduleها به Conceptهای TL Agent و Routeهای عمومی وابسته‌اند، نه Endpoint Nameهای مخصوص یک Implementation.
+این مرز برای Workflow عادی User پنهان می‌ماند. Browser Moduleها به Conceptهای TL Studio و Routeهای عمومی وابسته‌اند، نه Endpoint Nameهای مخصوص یک Implementation.
 
 ## مالکیت Provider و Model
 
-Custom Provider Definition داخل فایل Versioned محلی `providers.json` متعلق به TL Agent ذخیره می‌شود. TL Agent Source of Truth مربوط به Provider ID/Name، Protocol، Base URL، Model Definition، Capability Flag و Context/Output Limit است.
+Custom Provider Definition داخل فایل Versioned محلی `providers.json` متعلق به TL Studio ذخیره می‌شود. TL Studio Source of Truth مربوط به Provider ID/Name، Protocol، Base URL، Model Definition، Capability Flag و Context/Output Limit است.
 
-Launcher این Definitionها را پشت Adapter به Config موردنیاز Engine تبدیل می‌کند. API Key داخل Registry خود TL Agent ذخیره نمی‌شود و در v0.2 هنوز به Local Credential Store مربوط به Engine سپرده شده است.
+Launcher این Definitionها را پشت Adapter به Config موردنیاز Engine تبدیل می‌کند. API Key داخل Registry خود TL Studio ذخیره نمی‌شود و در v0.2 هنوز به Local Credential Store مربوط به Engine سپرده شده است.
 
 ## Filesystem Trust Boundary
 
 Go Launcher مرجع عملیات Filesystem از سمت Browser است. Pathها نسبت به Project فعال Resolve می‌شوند و Path Traversal، Symlink Escape، Root Mutation و تغییر Protected Git Metadata رد می‌شود.
 
-Save معمولی از SHA-256 Revision استفاده می‌کند. اگر File بعد از Read روی Disk تغییر کرده باشد، TL Agent به‌جای Silent Overwrite یک Conflict برمی‌گرداند.
+Save معمولی از SHA-256 Revision استفاده می‌کند. اگر File بعد از Read روی Disk تغییر کرده باشد، TL Studio به‌جای Silent Overwrite یک Conflict برمی‌گرداند.
 
 ## Search و Process Boundary
 
-Project Search مستقیماً توسط TL Agent اجرا می‌شود و برای Search یک Shell Command خارجی نمی‌سازد.
+Project Search مستقیماً توسط TL Studio اجرا می‌شود و برای Search یک Shell Command خارجی نمی‌سازد.
 
-Terminal Commandها از TL Agent Process Manager عبور می‌کنند و CWD آن‌ها Project فعال است. Terminal فعلی Command Runner است، نه Full PTY.
+Terminal Commandها از TL Studio Process Manager عبور می‌کنند و CWD آن‌ها Project فعال است. Terminal فعلی Command Runner است، نه Full PTY.
 
 ## Preview Isolation
 
-Static Project Code و Node dev server روی **Loopback Origin جدا** از Control Server خود TL Agent Preview می‌شوند. External Preview URL پذیرفته نمی‌شود.
+Static Project Code و Node dev server روی **Loopback Origin جدا** از Control Server خود TL Studio Preview می‌شوند. External Preview URL پذیرفته نمی‌شود.
 
 ## Runtime Abstraction
 
 Browser با `/runtime/*` حرف می‌زند و Launcher/Runtime Adapter آن Contract را برای Engine همراه برنامه ترجمه می‌کند.
 
-هدف Replaceability است: Featureهای جدید باید به Conceptهایی مثل Session، Message، Provider، Model، Permission، Question، Tool و Event در TL Agent وابسته باشند، نه Product Name یا API Layout یک Engine خاص.
+هدف Replaceability است: Featureهای جدید باید به Conceptهایی مثل Session، Message، Provider، Model، Permission، Question، Tool و Event در TL Studio وابسته باشند، نه Product Name یا API Layout یک Engine خاص.

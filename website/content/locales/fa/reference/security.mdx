@@ -1,16 +1,16 @@
 ---
 title: مدل Security
-description: Network، Filesystem، Process، Preview و Credential Boundary در TL Agent.
+description: Network، Filesystem، Process، Preview و Credential Boundary در TL Studio.
 icon: ShieldCheck
 ---
 
-TL Agent به‌عنوان یک Local Application طراحی شده، نه Coding Service که از راه دور Expose شود.
+TL Studio به‌عنوان یک Local Application طراحی شده، نه Coding Service که از راه دور Expose شود.
 
 ## Loopback-only Control Surface
 
 Browser Server فقط Loopback Address را قبول می‌کند. Agent Engine همراه برنامه هم روی Loopback اجرا می‌شود و به‌عنوان Endpoint عمومی جدا در اختیار Browser قرار نمی‌گیرد.
 
-هر اجرا یک Backend Credential تصادفی تازه می‌سازد که سمت Server باقی می‌ماند و TL Agent Authentication لازم را از داخل Adapter تزریق می‌کند.
+هر اجرا یک Backend Credential تصادفی تازه می‌سازد که سمت Server باقی می‌ماند و TL Studio Authentication لازم را از داخل Adapter تزریق می‌کند.
 
 ## Browser Origin Check
 
@@ -20,7 +20,7 @@ Requestهای Browser با Local Control Origin بررسی می‌شوند و UI
 
 عملیات File از Browser به Project انتخاب‌شده محدود است.
 
-TL Agent، Path Traversal، Symlink-parent Escape، Project-root Mutation و تغییر Protected Git Metadata را رد می‌کند. Symlink مستقیم مثل File عادی قابل‌Edit در نظر گرفته نمی‌شود.
+TL Studio، Path Traversal، Symlink-parent Escape، Project-root Mutation و تغییر Protected Git Metadata را رد می‌کند. Symlink مستقیم مثل File عادی قابل‌Edit در نظر گرفته نمی‌شود.
 
 Save معمولی Revision Token دارد تا External Change بی‌صدا Overwrite نشود.
 
@@ -38,7 +38,7 @@ Terminal Commandها با Permissionهای User سیستم اجرا می‌شو�
 
 ## Provider Credential
 
-Custom Provider Definition متعلق به TL Agent است، اما در v0.2 نگه‌داری API Key هنوز به Local Credential Store مربوط به Agent Engine سپرده شده است. Key داخل `providers.json` خود TL Agent یا Browser Storage قرار نمی‌گیرد.
+Custom Provider Definition متعلق به TL Studio است، اما در v0.2 نگه‌داری API Key هنوز به Local Credential Store مربوط به Agent Engine سپرده شده است. Key داخل `providers.json` خود TL Studio یا Browser Storage قرار نمی‌گیرد.
 
 ## Agent Permission
 

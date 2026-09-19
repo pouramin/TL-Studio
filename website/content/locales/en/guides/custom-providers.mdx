@@ -1,10 +1,10 @@
 ---
 title: Custom providers
-description: Manage compatible Provider and Model definitions in TL Agent's own local registry.
+description: Manage compatible Provider and Model definitions in TL Studio's own local registry.
 icon: Cable
 ---
 
-TL Agent manages compatible custom Provider definitions from **Settings → Providers** without requiring a TL Agent-hosted gateway.
+TL Studio manages compatible custom Provider definitions from **Settings → Providers** without requiring a TL Studio-hosted gateway.
 
 ## Supported provider APIs
 
@@ -30,21 +30,21 @@ Open **Settings → Providers → Add provider** and enter:
 - Tool Calling support;
 - Reasoning support.
 
-After saving, the Provider/Model definitions become part of TL Agent's local configuration and are translated to the active Agent engine behind the runtime adapter.
+After saving, the Provider/Model definitions become part of TL Studio's local configuration and are translated to the active Agent engine behind the runtime adapter.
 
-## TL Agent owns the provider registry
+## TL Studio owns the provider registry
 
-Custom Provider definitions are persisted by TL Agent in a versioned `providers.json` file under TL Agent's local application state.
+Custom Provider definitions are persisted by TL Studio in a versioned `providers.json` file under TL Studio's local application state.
 
-That file contains TL Agent concepts only: Provider ID/name, protocol, Base URL, Model definitions, capability flags, and optional limits. Engine package names and implementation-specific configuration shapes are deliberately excluded.
+That file contains TL Studio concepts only: Provider ID/name, protocol, Base URL, Model definitions, capability flags, and optional limits. Engine package names and implementation-specific configuration shapes are deliberately excluded.
 
-On the first run after upgrading from older alpha builds, if no TL Agent provider registry exists yet, TL Agent can import compatible custom Provider definitions from the older runtime configuration. After that migration, the TL Agent registry becomes the source of truth for managed definitions.
+On the first run after upgrading from older alpha builds, if no TL Studio provider registry exists yet, TL Studio can import compatible custom Provider definitions from the older runtime configuration. After that migration, the TL Studio registry becomes the source of truth for managed definitions.
 
 ## API keys are separate
 
 API keys are **not** written into `providers.json` and are not stored in browser storage.
 
-In v0.2, credential persistence is still delegated to the bundled engine's local credential store. Moving credentials into a TL Agent-controlled secure store is a separate future milestone.
+In v0.2, credential persistence is still delegated to the bundled engine's local credential store. Moving credentials into a TL Studio-controlled secure store is a separate future milestone.
 
 Removing a managed Provider removes its translated engine configuration and the matching local credential entry.
 

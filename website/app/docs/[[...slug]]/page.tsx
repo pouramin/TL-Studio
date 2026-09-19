@@ -17,7 +17,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
   if (!page) notFound();
   const MDX = page.data.body;
   const markdownUrl = getPageMarkdownUrl(page).url;
-  const editUrl = `https://github.com/pouramin/TL-Agent/blob/docs-site/website/content/locales/${page.path}`;
+  const editUrl = `https://github.com/pouramin/TL-Studio/blob/docs-site/website/content/locales/${page.path}`;
 
   return (
     <DocsPage toc={page.data.toc}>

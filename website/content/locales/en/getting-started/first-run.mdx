@@ -1,34 +1,34 @@
 ---
 title: First run
-description: Start TL Agent, open a local project, and get oriented in the workspace.
+description: Start TL Studio, open a local project, and get oriented in the workspace.
 icon: Play
 ---
 
-## Start TL Agent
+## Start TL Studio
 
-Run the portable executable or use the one-command launcher. TL Agent starts its local services on loopback and opens the browser workspace automatically.
+Run the portable executable or use the one-command launcher. TL Studio starts its local services on loopback and opens the browser workspace automatically.
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
 ## Choose a project
 
-The normal workflow is graphical: use TL Agent's Folder Picker and choose an existing local project directory.
+The normal workflow is graphical: use TL Studio's Folder Picker and choose an existing local project directory.
 
 You can also preselect a project from the CLI:
 
 ```bash
-tl-agent --project /path/to/project
+tl-studio --project /path/to/project
 ```
 
 On Windows:
 
 ```powershell
-tl-agent.exe --project "C:\Users\you\Projects\my-project"
+tl-studio.exe --project "C:\Users\you\Projects\my-project"
 ```
 
-When you launch with `npx --yes tl-agent` from inside a project directory, that directory is selected automatically.
+When you launch with `npx --yes tl-studio` from inside a project directory, that directory is selected automatically.
 
 ## Get oriented
 
@@ -45,6 +45,6 @@ Unsaved editor buffers are protected when switching projects, and file revisions
 
 ## What starts locally
 
-TL Agent starts a local control server and a bundled Agent engine on loopback. The browser talks to TL Agent, not directly to the engine. TL Agent owns the local project APIs and forwards Agent execution through its generic runtime contract.
+TL Studio starts a local control server and a bundled Agent engine on loopback. The browser talks to TL Studio, not directly to the engine. TL Studio owns the local project APIs and forwards Agent execution through its generic runtime contract.
 
-Stopping TL Agent also stops the bundled child process.
+Stopping TL Studio also stops the bundled child process.

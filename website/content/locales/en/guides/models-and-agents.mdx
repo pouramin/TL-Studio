@@ -1,18 +1,18 @@
 ---
 title: Models and agents
-description: Choose Agents and Models through TL Agent's product-facing runtime contract.
+description: Choose Agents and Models through TL Studio's product-facing runtime contract.
 icon: Bot
 ---
 
-TL Agent keeps Agent execution behind a generic local runtime contract while owning more of the Provider/Model product surface itself.
+TL Studio keeps Agent execution behind a generic local runtime contract while owning more of the Provider/Model product surface itself.
 
 ## Agents
 
-The primary coding workflow uses the available coding Agent exposed through TL Agent. Agent selection happens in the TL Agent workspace; the bundled engine executes the task behind the adapter boundary.
+The primary coding workflow uses the available coding Agent exposed through TL Studio. Agent selection happens in the TL Studio workspace; the bundled engine executes the task behind the adapter boundary.
 
 ## Models and Providers
 
-Custom Provider and Model definitions are TL Agent-owned data. They are stored in TL Agent's local provider registry and translated to the active engine internally.
+Custom Provider and Model definitions are TL Studio-owned data. They are stored in TL Studio's local provider registry and translated to the active engine internally.
 
 The Model picker can also include hosted/runtime-discovered models. Runtime-specific Provider IDs and preferred hosted routes are delivered as metadata to the UI rather than hard-coded into product modules.
 
@@ -20,8 +20,8 @@ See [Custom providers](./custom-providers) for the supported API families and st
 
 ## Hosted account flow
 
-When the bundled engine exposes a hosted account flow, TL Agent presents that authorization through generic local routes. The browser does not need implementation-specific endpoint knowledge.
+When the bundled engine exposes a hosted account flow, TL Studio presents that authorization through generic local routes. The browser does not need implementation-specific endpoint knowledge.
 
 ## Provider failures
 
-Transient upstream failures can happen while TL Agent itself remains healthy. After the engine exhausts a retry cycle for a retryable provider error, TL Agent can offer **Resume** and continue from the preserved workspace state instead of starting the task from scratch.
+Transient upstream failures can happen while TL Studio itself remains healthy. After the engine exhausts a retry cycle for a retryable provider error, TL Studio can offer **Resume** and continue from the preserved workspace state instead of starting the task from scratch.

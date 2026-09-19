@@ -13,7 +13,7 @@ export function baseOptions(lang: 'en' | 'fa' = 'en'): BaseLayoutProps {
       title: (
         <span className="tl-docs-brand">
           <img src={site.markUrl} alt="" aria-hidden="true" />
-          <span>TL Agent</span>
+          <span>TL Studio</span>
         </span>
       ),
       url: `${prefix}/`,

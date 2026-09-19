@@ -1,10 +1,10 @@
 ---
 title: Project Search
-description: Search text across the selected project without leaving TL Agent.
+description: Search text across the selected project without leaving TL Studio.
 icon: Search
 ---
 
-Project Search is implemented by TL Agent itself and scans only the currently selected local project.
+Project Search is implemented by TL Studio itself and scans only the currently selected local project.
 
 ## Open Search
 
@@ -29,7 +29,7 @@ Selecting a result opens or activates the matching file and selects the matching
 
 ## Local and bounded
 
-Search does not build a shell command and does not require an external search binary. TL Agent scans the project through its own local filesystem boundary.
+Search does not build a shell command and does not require an external search binary. TL Studio scans the project through its own local filesystem boundary.
 
 For safety and performance it does not follow symlink entries, ignores binary/non-UTF-8 files, bounds searchable file/result sizes, and skips common generated or heavy directories by default, including:
 

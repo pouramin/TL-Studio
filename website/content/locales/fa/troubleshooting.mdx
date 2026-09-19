@@ -1,6 +1,6 @@
 ---
 title: رفع مشکل
-description: بررسی مشکل‌های Startup، Editor، Search، Terminal، Preview، Provider و Agent در TL Agent.
+description: بررسی مشکل‌های Startup، Editor، Search، Terminal، Preview، Provider و Agent در TL Studio.
 icon: Wrench
 ---
 
@@ -10,17 +10,17 @@ icon: Wrench
 
 ## Folder Picker پوشه را قبول نمی‌کند
 
-یک Directory موجود انتخاب کنید. TL Agent قبل از Project Switch مسیر را Normalize و Validate می‌کند.
+یک Directory موجود انتخاب کنید. TL Studio قبل از Project Switch مسیر را Normalize و Validate می‌کند.
 
 ## File به‌دلیل تغییر روی Disk Save نمی‌شود
 
-TL Agent تشخیص داده Revision فایل بعد از بازشدن تغییر کرده است. این کار جلوی Silent Overwrite شدن تغییر جدید Agent، Git یا برنامه دیگر را می‌گیرد.
+TL Studio تشخیص داده Revision فایل بعد از بازشدن تغییر کرده است. این کار جلوی Silent Overwrite شدن تغییر جدید Agent، Git یا برنامه دیگر را می‌گیرد.
 
 اول Disk Change را بررسی کنید. Force Save را فقط وقتی استفاده کنید که عمداً می‌خواهید Editor Buffer نسخه جدید روی Disk را جایگزین کند.
 
 ## Unsaved Tab جلوی Project Switch را می‌گیرد
 
-Dirty Tabها را Save کنید یا آگاهانه Discard را انتخاب کنید. TL Agent قبل از عوض‌کردن Project از Unsaved Editor State محافظت می‌کند.
+Dirty Tabها را Save کنید یا آگاهانه Discard را انتخاب کنید. TL Studio قبل از عوض‌کردن Project از Unsaved Editor State محافظت می‌کند.
 
 ## Project Search یک File را نشان نمی‌دهد
 
@@ -41,7 +41,7 @@ Preview خودکار فعلاً یکی از این دو حالت را لازم �
 
 ## Preview اجرا می‌شود ولی URL پیدا نمی‌شود
 
-در Node Project، TL Agent Loopback URL اعلام‌شده توسط dev server را تشخیص می‌دهد. مطمئن شوید Server واقعاً Start شده و Local URL چاپ می‌کند. External/Non-loopback URL عمداً رد می‌شود.
+در Node Project، TL Studio Loopback URL اعلام‌شده توسط dev server را تشخیص می‌دهد. مطمئن شوید Server واقعاً Start شده و Local URL چاپ می‌کند. External/Non-loopback URL عمداً رد می‌شود.
 
 ## Agent Engine همراه برنامه پیدا نمی‌شود
 
@@ -55,7 +55,7 @@ Limit فعلی **8 فایل**، **10 MB برای هر File** و **20 MB مجمو
 
 برای Custom Provider وارد **Settings → Providers** شوید و Base URL، Protocol، Model ID و وضعیت API Key را بررسی کنید.
 
-در v0.2 تعریف Provider/Model متعلق به Registry خود TL Agent است. اگر از Alpha قدیمی Upgrade کرده‌اید، Import تعریف‌های سازگار فقط در اولین استفاده و زمانی انجام می‌شود که Registry خود TL Agent هنوز وجود نداشته باشد.
+در v0.2 تعریف Provider/Model متعلق به Registry خود TL Studio است. اگر از Alpha قدیمی Upgrade کرده‌اید، Import تعریف‌های سازگار فقط در اولین استفاده و زمانی انجام می‌شود که Registry خود TL Studio هنوز وجود نداشته باشد.
 
 ## Provider بعد از Retryها متوقف شد
 
@@ -73,4 +73,4 @@ Permission Request یا Question باز را بررسی کنید.
 
 ## گزارش Bug
 
-OS، نسخه TL Agent، مراحل Reproduce و Error غیرحساس را بفرستید. جزئیات Agent Engine را فقط وقتی اضافه کنید که مشکل ظاهراً Runtime-specific است. API Key یا Provider Token را منتشر نکنید.
+OS، نسخه TL Studio، مراحل Reproduce و Error غیرحساس را بفرستید. جزئیات Agent Engine را فقط وقتی اضافه کنید که مشکل ظاهراً Runtime-specific است. API Key یا Provider Token را منتشر نکنید.

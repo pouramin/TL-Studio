@@ -1,16 +1,16 @@
 ---
 title: Security model
-description: Understand TL Agent's local network, filesystem, process, preview, and credential boundaries.
+description: Understand TL Studio's local network, filesystem, process, preview, and credential boundaries.
 icon: ShieldCheck
 ---
 
-TL Agent is designed as a local application rather than a remotely exposed coding service.
+TL Studio is designed as a local application rather than a remotely exposed coding service.
 
 ## Loopback-only control surface
 
 The browser-facing server accepts loopback addresses only. The bundled Agent engine also runs on loopback and is not exposed to the browser as a separate public endpoint.
 
-Each launch creates a fresh random backend credential that remains server-side. TL Agent injects engine authentication through its local adapter.
+Each launch creates a fresh random backend credential that remains server-side. TL Studio injects engine authentication through its local adapter.
 
 ## Browser origin checks
 
@@ -20,17 +20,17 @@ Browser requests are validated against the local control origin and the UI is se
 
 Browser file operations are constrained to the selected Project.
 
-TL Agent rejects path traversal, symlink-parent escapes, project-root mutation, and protected Git metadata mutations. Direct symlinks are not treated as normal editable files.
+TL Studio rejects path traversal, symlink-parent escapes, project-root mutation, and protected Git metadata mutations. Direct symlinks are not treated as normal editable files.
 
 Normal saves use a revision token so external changes cannot be silently overwritten.
 
 ## Preview isolation
 
-Project web code does not run on TL Agent's privileged control origin. Live Preview uses a separate loopback origin and only accepts local Preview URLs.
+Project web code does not run on TL Studio's privileged control origin. Live Preview uses a separate loopback origin and only accepts local Preview URLs.
 
 ## Local editor assets
 
-Editor code and syntax-color assets are bundled locally. TL Agent does not load editor runtime code or workers from a CDN.
+Editor code and syntax-color assets are bundled locally. TL Studio does not load editor runtime code or workers from a CDN.
 
 ## Terminal trust
 
@@ -38,7 +38,7 @@ Terminal commands execute locally with your user account's permissions. Loopback
 
 ## Provider credentials
 
-Custom Provider definitions belong to TL Agent, but v0.2 still delegates API-key persistence to the bundled engine's local credential store. Keys are excluded from TL Agent's `providers.json` and browser storage.
+Custom Provider definitions belong to TL Studio, but v0.2 still delegates API-key persistence to the bundled engine's local credential store. Keys are excluded from TL Studio's `providers.json` and browser storage.
 
 ## Agent permissions
 

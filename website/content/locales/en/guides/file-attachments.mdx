@@ -1,10 +1,10 @@
 ---
 title: File attachments
-description: Attach images, PDFs, and text/code files to prompts in TL Agent.
+description: Attach images, PDFs, and text/code files to prompts in TL Studio.
 icon: Paperclip
 ---
 
-TL Agent can send local files with a prompt as structured attachment parts through its local Agent runtime contract. You can attach working material without moving the project into a hosted TL Agent service.
+TL Studio can send local files with a prompt as structured attachment parts through its local Agent runtime contract. You can attach working material without moving the project into a hosted TL Studio service.
 
 ## Ways to attach files
 
@@ -28,7 +28,7 @@ SVG files are treated as text rather than image input.
 
 ## Limits
 
-TL Agent currently enforces:
+TL Studio currently enforces:
 
 - up to **8 files** per prompt;
 - up to **10 MB per file**;
@@ -38,10 +38,10 @@ Unsupported binary formats are rejected before the prompt is sent.
 
 ## Send behavior
 
-The browser prepares structured attachment parts and sends them with the text Prompt through TL Agent's local Agent contract. Sent filenames remain represented in conversation history.
+The browser prepares structured attachment parts and sends them with the text Prompt through TL Studio's local Agent contract. Sent filenames remain represented in conversation history.
 
 Pending attachments are cleared after a successful send, when you start a new Session, or when you switch Projects. If sending fails before the Prompt is accepted, the pending files remain available for retry.
 
 ## Privacy and Provider behavior
 
-TL Agent does not upload attachments to a TL Agent-owned cloud backend. Once you send a Prompt, attachment content can still be forwarded to the Model/Provider you selected. Treat attachments with the same confidentiality rules as any other content sent to that Provider.
+TL Studio does not upload attachments to a TL Studio-owned cloud backend. Once you send a Prompt, attachment content can still be forwarded to the Model/Provider you selected. Treat attachments with the same confidentiality rules as any other content sent to that Provider.

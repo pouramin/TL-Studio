@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install TL Agent with the stable npm launcher or a portable release build.
+description: Install TL Studio with the stable npm launcher or a portable release build.
 icon: Download
 ---
 
@@ -9,21 +9,21 @@ icon: Download
 If Node.js/npm is installed, open a terminal in the project directory you want to work on and run:
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
-The npm package is a lightweight launcher. It detects your operating system and architecture, downloads the matching official TL Agent GitHub Release, verifies its SHA-256 checksum, caches it locally, and starts TL Agent with the current directory selected.
+The npm package is a lightweight launcher. It detects your operating system and architecture, downloads the matching official TL Studio GitHub Release, verifies its SHA-256 checksum, caches it locally, and starts TL Studio with the current directory selected.
 
 Run without automatically opening the browser:
 
 ```bash
-npx --yes tl-agent --no-browser
+npx --yes tl-studio --no-browser
 ```
 
 The default npm path follows the stable channel. Prerelease channels can still be launched explicitly when available, for example:
 
 ```bash
-npx --yes tl-agent@alpha
+npx --yes tl-studio@alpha
 ```
 
 ## Portable release
@@ -31,9 +31,9 @@ npx --yes tl-agent@alpha
 Node.js is not required for portable use. Download the archive for your platform from GitHub Releases, extract it, and run:
 
 ```text
-Windows:  tl-agent.exe
-Linux:    ./tl-agent
-macOS:    ./tl-agent
+Windows:  tl-studio.exe
+Linux:    ./tl-studio
+macOS:    ./tl-studio
 ```
 
 Release archives already include the compatible agent runtime, so no separate runtime installation is required.

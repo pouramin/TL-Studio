@@ -1,43 +1,43 @@
 ---
-title: TL Agent CLI
-description: Reference TL Agent command-line options for normal, scripted, and compatibility launches.
+title: TL Studio CLI
+description: Reference TL Studio command-line options for normal, scripted, and compatibility launches.
 icon: Terminal
 ---
 
-Most users can run TL Agent and choose a project from the graphical Folder Picker.
+Most users can run TL Studio and choose a project from the graphical Folder Picker.
 
 ## `--project`
 
 ```bash
-tl-agent --project /path/to/project
+tl-studio --project /path/to/project
 ```
 
 Windows:
 
 ```powershell
-tl-agent.exe --project "C:\path\to\project"
+tl-studio.exe --project "C:\path\to\project"
 ```
 
 A positional project path is also accepted.
 
 ## `--no-browser`
 
-Start TL Agent without automatically opening the default browser:
+Start TL Studio without automatically opening the default browser:
 
 ```bash
-tl-agent --no-browser
+tl-studio --no-browser
 ```
 
 ## `--listen`
 
-The default is `127.0.0.1`. TL Agent intentionally rejects non-loopback listen addresses.
+The default is `127.0.0.1`. TL Studio intentionally rejects non-loopback listen addresses.
 
 ## `--runtime-bin`
 
 Advanced compatibility/testing override:
 
 ```bash
-tl-agent --runtime-bin /path/to/runtime
+tl-studio --runtime-bin /path/to/runtime
 ```
 
-Normal release users do not need this option because the compatible Agent engine is bundled with TL Agent. The generic flag exists so the product boundary is not tied to a vendor-named CLI option.
+Normal release users do not need this option because the compatible Agent engine is bundled with TL Studio. The generic flag exists so the product boundary is not tied to a vendor-named CLI option.

@@ -1,13 +1,13 @@
 export const publicBasePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 export const site = {
-  name: 'TL Agent',
-  tagline: 'Code. Reason. Act.',
+  name: 'TL Studio',
+  tagline: 'Build locally. Work with AI.',
   description:
-    'A local, standalone coding workspace where the agent, editor, project tools, models, and providers work together — no external IDE required.',
-  repoUrl: 'https://github.com/pouramin/TL-Agent',
-  releasesUrl: 'https://github.com/pouramin/TL-Agent/releases',
-  issuesUrl: 'https://github.com/pouramin/TL-Agent/issues',
-  logoUrl: `${publicBasePath}/tl-agent-logo.svg`,
-  markUrl: `${publicBasePath}/tl-agent-mark.svg`,
+    'A fast local development workspace with an editor, project tools, terminal, preview, providers, and an AI agent built in.',
+  repoUrl: 'https://github.com/pouramin/TL-Studio',
+  releasesUrl: 'https://github.com/pouramin/TL-Studio/releases',
+  issuesUrl: 'https://github.com/pouramin/TL-Studio/issues',
+  logoUrl: `${publicBasePath}/tl-studio-logo.svg`,
+  markUrl: `${publicBasePath}/tl-studio-mark.svg`,
 } as const;

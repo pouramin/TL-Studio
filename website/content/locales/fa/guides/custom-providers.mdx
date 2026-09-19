@@ -1,10 +1,10 @@
 ---
 title: Custom Provider
-description: مدیریت Provider و Modelهای سازگار در Local Registry خود TL Agent.
+description: مدیریت Provider و Modelهای سازگار در Local Registry خود TL Studio.
 icon: Cable
 ---
 
-TL Agent تعریف Custom Providerها را از **Settings → Providers** مدیریت می‌کند و برای این کار به Gateway ابری متعلق به TL Agent نیاز ندارد.
+TL Studio تعریف Custom Providerها را از **Settings → Providers** مدیریت می‌کند و برای این کار به Gateway ابری متعلق به TL Studio نیاز ندارد.
 
 ## Provider APIهای پشتیبانی‌شده
 
@@ -30,21 +30,21 @@ Form فعلی از این Protocol Familyها پشتیبانی می‌کند:
 - پشتیبانی Tool Calling؛
 - پشتیبانی Reasoning.
 
-بعد از Save، تعریف Provider و Model وارد Local Configuration خود TL Agent می‌شود و Launcher آن را پشت Runtime Adapter برای Agent Engine فعال ترجمه می‌کند.
+بعد از Save، تعریف Provider و Model وارد Local Configuration خود TL Studio می‌شود و Launcher آن را پشت Runtime Adapter برای Agent Engine فعال ترجمه می‌کند.
 
-## Provider Registry متعلق به TL Agent است
+## Provider Registry متعلق به TL Studio است
 
-تعریف Custom Providerها توسط خود TL Agent داخل فایل Versioned به نام `providers.json` در Local App State ذخیره می‌شود.
+تعریف Custom Providerها توسط خود TL Studio داخل فایل Versioned به نام `providers.json` در Local App State ذخیره می‌شود.
 
-این فایل فقط Conceptهای خود TL Agent را نگه می‌دارد: Provider ID/Name، Protocol، Base URL، Model Definition، Capability Flag و Limitهای اختیاری. Engine Package Name یا Config Shape مخصوص Implementation داخل این Registry ذخیره نمی‌شود.
+این فایل فقط Conceptهای خود TL Studio را نگه می‌دارد: Provider ID/Name، Protocol، Base URL، Model Definition، Capability Flag و Limitهای اختیاری. Engine Package Name یا Config Shape مخصوص Implementation داخل این Registry ذخیره نمی‌شود.
 
-در اولین اجرا بعد از Upgrade از Alphaهای قدیمی، اگر Registry خود TL Agent هنوز وجود نداشته باشد، برنامه می‌تواند Custom Providerهای سازگار را از Config قدیمی Import کند. بعد از این Migration، Registry خود TL Agent Source of Truth تعریف‌های مدیریت‌شده است.
+در اولین اجرا بعد از Upgrade از Alphaهای قدیمی، اگر Registry خود TL Studio هنوز وجود نداشته باشد، برنامه می‌تواند Custom Providerهای سازگار را از Config قدیمی Import کند. بعد از این Migration، Registry خود TL Studio Source of Truth تعریف‌های مدیریت‌شده است.
 
 ## API Key جداست
 
 API Key داخل `providers.json` یا Browser Storage ذخیره نمی‌شود.
 
-در v0.2 نگه‌داری Credential هنوز به Local Credential Store مربوط به Engine همراه برنامه سپرده شده است. انتقال Credential Ownership به Secure Store خود TL Agent یک Milestone جدا برای آینده است.
+در v0.2 نگه‌داری Credential هنوز به Local Credential Store مربوط به Engine همراه برنامه سپرده شده است. انتقال Credential Ownership به Secure Store خود TL Studio یک Milestone جدا برای آینده است.
 
 با حذف Provider مدیریت‌شده، Config ترجمه‌شده در Engine و Credential محلی متناظر هم پاک می‌شوند.
 

@@ -1,19 +1,19 @@
 ---
-title: TL Agent
-description: Learn what TL Agent is and how its local coding workspace is structured.
+title: TL Studio
+description: Learn what TL Studio is and how its local development workspace is structured.
 icon: House
 ---
 
-TL Agent is a **local, standalone coding-agent workspace with its own browser IDE**. It brings Agent chat, project files, a multi-tab editor, Project Search, command execution, Live Preview, sessions, providers, permissions, attachments, and changes into one local product without requiring an external IDE.
+TL Studio is a **local development workspace with its own browser IDE and AI built in**. It brings project files, a multi-tab editor, Project Search, command execution, Live Preview, sessions, providers, permissions, attachments, changes, and Agent workflows into one fast local product.
 
 ## Product identity
 
-The product you install and operate is **TL Agent**. The workspace, editor, project tools, provider/model definitions, recovery behavior, security boundary, packaging, and browser experience all belong to TL Agent.
+The product you install and operate is **TL Studio**. The workspace, editor, project tools, provider/model definitions, recovery behavior, security boundary, packaging, and browser experience all belong to TL Studio.
 
 ```text
 You
   ↓
-TL Agent
+TL Studio
   ├─ Browser IDE + Agent workspace
   ├─ Files / Editor / Search
   ├─ Terminal / Live Preview
@@ -28,7 +28,7 @@ Bundled agent engine
 Models / providers / agent tools
 ```
 
-The bundled engine is an execution dependency behind a TL Agent-owned contract, not the public identity of the product.
+The bundled engine is an execution dependency behind a TL Studio-owned contract, not the public identity of the product.
 
 ## What you can do
 
@@ -50,10 +50,10 @@ The bundled engine is an execution dependency behind a TL Agent-owned contract, 
 
 ## Current stable release
 
-**v0.2.0 is the current stable TL Agent release.**
+**v0.2.1 is the current stable TL Studio release.**
 
 ```bash
-npx --yes tl-agent
+npx --yes tl-studio
 ```
 
 Stable production lives on `main`. Experimental development continues separately on `dev` and prerelease npm channels.

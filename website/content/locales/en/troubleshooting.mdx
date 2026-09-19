@@ -1,26 +1,26 @@
 ---
 title: Troubleshooting
-description: Diagnose common TL Agent startup, editor, Search, Terminal, Preview, Provider, and Agent problems.
+description: Diagnose common TL Studio startup, editor, Search, Terminal, Preview, Provider, and Agent problems.
 icon: Wrench
 ---
 
-## TL Agent does not open a browser
+## TL Studio does not open a browser
 
 The local server may still be running. Copy the `Local:` URL printed in the terminal and open it manually. If you used `--no-browser`, this is expected.
 
 ## Project picker does not accept a folder
 
-Choose an existing directory. TL Agent normalizes and validates the path before switching Project context.
+Choose an existing directory. TL Studio normalizes and validates the path before switching Project context.
 
 ## A file will not save because it changed on disk
 
-TL Agent detected that the File revision changed after you opened it. This protects newer Agent/Git/external edits from being silently overwritten.
+TL Studio detected that the File revision changed after you opened it. This protects newer Agent/Git/external edits from being silently overwritten.
 
 Review the disk change first. Use force-save only when you intentionally want your editor buffer to replace the newer disk version.
 
 ## Unsaved tabs block Project switching
 
-Save the dirty tabs or explicitly choose to discard them. TL Agent protects unsaved editor state before changing Project context.
+Save the dirty tabs or explicitly choose to discard them. TL Studio protects unsaved editor state before changing Project context.
 
 ## Project Search does not show a file
 
@@ -41,11 +41,11 @@ For another stack, run its development command manually in Terminal.
 
 ## Preview starts but no URL appears
 
-For Node projects, TL Agent detects loopback URLs reported by the development server. Make sure the dev server actually starts and reports a local URL. External/non-loopback Preview URLs are intentionally rejected.
+For Node projects, TL Studio detects loopback URLs reported by the development server. Make sure the dev server actually starts and reports a local URL. External/non-loopback Preview URLs are intentionally rejected.
 
 ## Bundled engine not found
 
-Official TL Agent portable releases include the compatible Agent engine. This error is more likely when running from source or using `--runtime-bin`.
+Official TL Studio portable releases include the compatible Agent engine. This error is more likely when running from source or using `--runtime-bin`.
 
 ## An attachment is rejected
 
@@ -55,7 +55,7 @@ Current limits are **8 files**, **10 MB per file**, and **20 MB total**. Unsuppo
 
 For a Custom Provider, check **Settings → Providers**, Base URL, protocol, Model ID, and API-key state.
 
-TL Agent v0.2 owns the Provider/Model definition registry. If you upgraded from an older alpha build, compatible definitions are imported on first use only when no TL Agent registry exists yet.
+TL Studio v0.2 owns the Provider/Model definition registry. If you upgraded from an older alpha build, compatible definitions are imported on first use only when no TL Studio registry exists yet.
 
 ## A Provider request ended after retries
 
@@ -73,4 +73,4 @@ Check for a pending Permission request or interactive Question.
 
 ## Reporting a bug
 
-Include your operating system, TL Agent version, reproduction steps, and non-secret error output. Include Agent-engine compatibility details only when the issue appears runtime-specific. Never publish API keys or Provider tokens.
+Include your operating system, TL Studio version, reproduction steps, and non-secret error output. Include Agent-engine compatibility details only when the issue appears runtime-specific. Never publish API keys or Provider tokens.

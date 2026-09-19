@@ -1,0 +1,19 @@
+name: Docs Rebrand Audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inventory legacy docs branding
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -RInE 'TL Agent|TL-Agent|tl-agent|TL_AGENT|TLAgent|tlAgent' website             --exclude='docs-rebrand-audit.yml'             || true
+          find website \( -iname '*tl-agent*' -o -iname '*TL-Agent*' \) -print

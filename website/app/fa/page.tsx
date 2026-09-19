@@ -7,7 +7,7 @@ import { site } from '@/lib/site';
 const features = [
   {
     title: 'کاملاً Local',
-    description: 'TL Agent روی کامپیوتر خودتان اجرا می‌شود و مستقیم با Project Local کار می‌کند؛ بدون Cloud Backend یا Database متعلق به TL Agent.',
+    description: 'TL Studio روی کامپیوتر خودتان اجرا می‌شود و مستقیم با Project Local کار می‌کند؛ بدون Cloud Backend یا Database متعلق به TL Studio.',
     icon: ServerOff,
   },
   {
@@ -22,7 +22,7 @@ const features = [
   },
   {
     title: 'Provider و Model Control',
-    description: 'تعریف Custom Provider و Model داخل TL Agent مدیریت می‌شود و Credentialها داخل Browser Storage ذخیره نمی‌شوند.',
+    description: 'تعریف Custom Provider و Model داخل TL Studio مدیریت می‌شود و Credentialها داخل Browser Storage ذخیره نمی‌شوند.',
     icon: LockKeyhole,
   },
 ];
@@ -44,16 +44,16 @@ export default function PersianHomePage() {
         <div className="hero-grid pointer-events-none absolute inset-0 -z-10 opacity-60" />
         <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-20 text-center md:pt-28">
           <div className="tl-brand-lockup mb-7" dir="ltr">
-            <img src={site.logoUrl} alt="TL Agent — Code. Reason. Act." />
+            <img src={site.logoUrl} alt="TL Studio — Code. Reason. Act." />
           </div>
           <div className="mb-6 rounded-full border bg-fd-card/70 px-4 py-1.5 text-sm text-fd-muted-foreground">
-            Stable v0.2.0 · Local-first · Open Source
+            Stable v0.2.1 · Local-first · Open Source
           </div>
           <h1 className="max-w-4xl text-balance text-5xl font-bold tracking-tight md:text-7xl">
-            Workspace مستقل و Local برای Coding Agent و Project شما.
+            محیط توسعه‌ی سریع و Local با AI داخلی.
           </h1>
           <p className="mt-7 max-w-2xl text-balance text-lg leading-8 text-fd-muted-foreground md:text-xl">
-            TL Agent، Agent Workspace و ابزارهای اصلی Project مثل Editor، Search، Terminal و Live Preview را داخل یک محیط مستقل در مرورگر کنار هم می‌آورد.
+            TL Studio یک Browser IDE مستقل و Local است که Editor، Search، Terminal، Live Preview، Providerها و Agent را داخل یک محیط سریع کنار هم می‌آورد.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link href="/fa/docs" className="inline-flex items-center gap-2 rounded-lg bg-fd-primary px-5 py-3 font-medium text-fd-primary-foreground">
@@ -72,9 +72,9 @@ export default function PersianHomePage() {
           </div>
 
           <div className="mt-16 w-full max-w-4xl rounded-2xl border bg-fd-card/80 p-5 shadow-sm md:p-8">
-            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">TL Agent چطور کار می‌کند؟</div>
+            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">TL Studio چطور کار می‌کند؟</div>
             <div className="grid gap-3 md:grid-cols-4" dir="ltr">
-              {['Browser IDE', 'TL Agent Local Core', 'Agent Engine Adapter', 'Models + Tools'].map((label, index) => (
+              {['Browser IDE', 'TL Studio Local Core', 'Agent Engine Adapter', 'Models + Tools'].map((label, index) => (
                 <div key={label} className="relative">
                   <div className="arch-line rounded-xl px-4 py-5 text-center font-medium">{label}</div>
                   {index < 3 ? <div className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-fd-muted-foreground md:block">→</div> : null}
@@ -97,9 +97,9 @@ export default function PersianHomePage() {
         <section className="border-t bg-fd-card/35">
           <div className="mx-auto max-w-6xl px-6 py-16">
             <p className="text-sm font-medium text-fd-muted-foreground">Independent Product · Replaceable Engine</p>
-            <h2 className="mt-2 text-3xl font-semibold">TL Agent همون محصولیه که کاربر می‌بینه و استفاده می‌کنه.</h2>
+            <h2 className="mt-2 text-3xl font-semibold">TL Studio همون محصولیه که کاربر می‌بینه و استفاده می‌کنه.</h2>
             <p className="mt-4 max-w-3xl leading-8 text-fd-muted-foreground">
-              Editor، Project Files، Search، Terminal، Live Preview، Provider/Model Registry، Recovery، Local Security، Packaging و Releaseها متعلق به TL Agent هستند. Agent Execution پشت یک Runtime Contract عمومی و Local قرار دارد.
+              Editor، Project Files، Search، Terminal، Live Preview، Provider/Model Registry، Recovery، Local Security، Packaging و Releaseها متعلق به TL Studio هستند. Agent Execution پشت یک Runtime Contract عمومی و Local قرار دارد.
             </p>
           </div>
         </section>
