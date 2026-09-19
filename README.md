@@ -21,31 +21,9 @@ No VS Code, JetBrains, Cursor, Docker, hosted TL Studio backend, database, or pr
 
 ## Quick Start
 
-### One-command launch
-
-If Node.js/npm is installed, run this inside the project directory you want to work on:
-
-```bash
-npx --yes tl-studio
-```
-
-The npm package is only a lightweight launcher. It detects the operating system and architecture, downloads the matching official TL Studio GitHub Release, verifies its SHA-256 checksum, caches it locally, and opens TL Studio with the current directory selected.
-
-Run without automatically opening the browser:
-
-```bash
-npx --yes tl-studio --no-browser
-```
-
-Prerelease channels can still be launched explicitly when available, for example:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
 ### Portable release
 
-Node.js is not required for the portable build. Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
+Download your platform archive from **[GitHub Releases](https://github.com/pouramin/TL-Studio/releases)**, extract it, and run:
 
 ```text
 Windows:  tl-studio.exe
