@@ -8,12 +8,12 @@ const https = require("https");
 const crypto = require("crypto");
 const { spawnSync } = require("child_process");
 
-const REPO = "pouramin/TL-Agent";
-const USER_AGENT = "TL-Agent-npx-launcher";
+const REPO = "pouramin/TL-Studio";
+const USER_AGENT = "TL-Studio-npx-launcher";
 const args = process.argv.slice(2);
 
 function fail(message) {
-  console.error(`TL Agent quick launch failed: ${message}`);
+  console.error(`TL Studio quick launch failed: ${message}`);
   process.exit(1);
 }
 
@@ -77,28 +77,28 @@ async function sha256(file) {
 function platformTarget() {
   const arch = process.arch;
   if (process.platform === "win32" && arch === "x64") {
-    return { suffix: "windows-x64.zip", binary: "tl-agent.exe", archive: "zip" };
+    return { suffix: "windows-x64.zip", binary: "tl-studio.exe", archive: "zip" };
   }
   if (process.platform === "linux" && arch === "x64") {
-    return { suffix: "linux-x64.tar.gz", binary: "tl-agent", archive: "tar" };
+    return { suffix: "linux-x64.tar.gz", binary: "tl-studio", archive: "tar" };
   }
   if (process.platform === "linux" && arch === "arm64") {
-    return { suffix: "linux-arm64.tar.gz", binary: "tl-agent", archive: "tar" };
+    return { suffix: "linux-arm64.tar.gz", binary: "tl-studio", archive: "tar" };
   }
   if (process.platform === "darwin" && arch === "x64") {
-    return { suffix: "macos-x64.tar.gz", binary: "tl-agent", archive: "tar" };
+    return { suffix: "macos-x64.tar.gz", binary: "tl-studio", archive: "tar" };
   }
   if (process.platform === "darwin" && arch === "arm64") {
-    return { suffix: "macos-arm64.tar.gz", binary: "tl-agent", archive: "tar" };
+    return { suffix: "macos-arm64.tar.gz", binary: "tl-studio", archive: "tar" };
   }
   fail(`unsupported platform: ${process.platform}/${arch}`);
 }
 
 function cacheRoot() {
   if (process.platform === "win32") {
-    return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "TL-Agent", "cache");
+    return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "TL-Studio", "cache");
   }
-  return path.join(process.env.XDG_CACHE_HOME || path.join(os.homedir(), ".cache"), "tl-agent");
+  return path.join(process.env.XDG_CACHE_HOME || path.join(os.homedir(), ".cache"), "tl-studio");
 }
 
 function psQuote(value) {
@@ -119,7 +119,7 @@ function extract(archive, destination, kind) {
 
 async function main() {
   const target = platformTarget();
-  const requestedTag = process.env.TL_AGENT_VERSION || "";
+  const requestedTag = process.env.TL_STUDIO_VERSION || "";
   const releases = await fetchJSON(`https://api.github.com/repos/${REPO}/releases?per_page=30`);
   const release = releases.find((item) => {
     if (item.draft) return false;
@@ -140,7 +140,7 @@ async function main() {
     const sumsPath = path.join(tempDir, "SHA256SUMS.txt");
     try {
       fs.mkdirSync(tempDir, { recursive: true });
-      console.log(`Downloading TL Agent ${release.tag_name} for ${process.platform}/${process.arch}…`);
+      console.log(`Downloading TL Studio ${release.tag_name} for ${process.platform}/${process.arch}…`);
       await Promise.all([
         download(asset.browser_download_url, archivePath),
         download(sums.browser_download_url, sumsPath),
@@ -162,7 +162,7 @@ async function main() {
     }
   }
 
-  console.log(`Launching TL Agent ${release.tag_name} in ${process.cwd()}`);
+  console.log(`Launching TL Studio ${release.tag_name} in ${process.cwd()}`);
   const result = spawnSync(binary, args, {
     cwd: process.cwd(),
     stdio: "inherit",

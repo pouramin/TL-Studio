@@ -32,7 +32,7 @@ func TestComposerAttachmentsAreEmbeddedAndWired(t *testing.T) {
 		}
 	}
 	if strings.Contains(text, "K.request(") || strings.Contains(text, "/kilo/session/") || strings.Contains(text, "/runtime/session/") {
-		t.Fatal("attachments UI bypasses the TL Agent runtime adapter")
+		t.Fatal("attachments UI bypasses the TL Studio runtime adapter")
 	}
 
 	adapter, err := webFS.ReadFile("web/runtime-api.js")

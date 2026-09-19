@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify that TL-Agent routes current and legacy read APIs to the selected project."""
+"""Verify that TL-Studio routes current and legacy read APIs to the selected project."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def main() -> int:
         print(f"project routing mismatch: selected={selected!r} routed={directory!r}", file=sys.stderr)
         return 1
 
-    # TL Agent briefly used Protocol v2 during alpha development. The current
+    # TL Studio briefly used Protocol v2 during alpha development. The current
     # product path never writes through that API, but recovery of those alpha
     # sessions requires its read endpoints to remain available in the pinned
     # local runtime and scoped to the selected project by the proxy boundary.

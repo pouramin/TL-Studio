@@ -1,6 +1,6 @@
 # Security
 
-TL Agent is intentionally local-first. Its browser UI and bundled agent runtime bind to loopback by default, and the launcher refuses a non-loopback UI address.
+TL Studio is intentionally local-first. Its browser UI and bundled agent runtime bind to loopback by default, and the launcher refuses a non-loopback UI address.
 
 ## Threat model
 
@@ -17,9 +17,9 @@ The launcher protects its local browser/runtime bridge by:
 - keeping project file operations inside the selected project boundary, and
 - not exposing a project-owned remote control plane.
 
-Project file APIs reject traversal and symlink escapes and protect Git metadata from workspace mutations. Live Preview content runs on a separate loopback origin from TL Agent's local control APIs.
+Project file APIs reject traversal and symlink escapes and protect Git metadata from workspace mutations. Live Preview content runs on a separate loopback origin from TL Studio's local control APIs.
 
-The current bundled engine is a third-party implementation detail behind TL Agent's runtime boundary. Engine-specific security and compatibility details must not leak credentials or weaken the launcher-owned local boundary.
+The current bundled engine is a third-party implementation detail behind TL Studio's runtime boundary. Engine-specific security and compatibility details must not leak credentials or weaken the launcher-owned local boundary.
 
 ## Reporting
 
