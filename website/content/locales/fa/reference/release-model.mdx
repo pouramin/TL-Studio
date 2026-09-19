@@ -10,7 +10,13 @@ icon: PackageCheck
 
 - `main` خط Stable Production است؛
 - `dev` خط Development نسخه بعدی است؛
-کاربر Stable نسخه Portable منتشرشده در GitHub Releases را اجرا می‌کند و Development آزمایشی روی خط جدا باقی می‌ماند.
+کاربر Stable می‌تواند از npm Launcher استفاده کند:
+
+```bash
+npx --yes tl-studio
+```
+
+npm فقط خط Stable را دنبال می‌کند. Alphaهای Development روی `dev` عمومی Publish نمی‌شوند و فقط به‌صورت Preview Build داخل GitHub Actions برای تست پروژه باقی می‌مانند.
 
 ## Portable Release
 
