@@ -4,28 +4,13 @@ description: Understand TL Studio stable/prerelease channels and portable releas
 icon: PackageCheck
 ---
 
-**v0.2.0 is the current stable TL Studio release.**
+**v0.2.1 is the current stable TL Studio release.**
 
 ## Stable and development lines
 
 - `main` is the stable production line.
 - `dev` is the active next-version development line.
-- stable npm uses the `latest` dist-tag;
-- experimental npm builds use explicit prerelease tags such as `alpha`.
-
-Stable launch:
-
-```bash
-npx --yes tl-studio
-```
-
-Prerelease launch when available:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
-The npm package is a lightweight launcher pinned to the matching TL Studio GitHub Release. It detects OS/architecture, downloads the official archive, verifies SHA-256, caches it locally, and starts TL Studio.
+Stable users install from the published GitHub Release assets. Experimental builds remain on the separate development line.
 
 ## Portable releases
 
@@ -38,4 +23,4 @@ Portable archives include:
 
 Users do not need to install or manage the Agent engine separately.
 
-Stable promotion happens only after automated checks and hands-on validation of the release candidate. Experimental development can continue without changing the stable `latest` path.
+Stable promotion happens only after automated checks and hands-on validation of the release candidate. Experimental development can continue without changing the stable release line.
