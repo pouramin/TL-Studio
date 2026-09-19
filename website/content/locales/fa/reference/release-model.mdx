@@ -4,28 +4,13 @@ description: مدل Stable/Prerelease و Packaging نسخه Portable در TL Stu
 icon: PackageCheck
 ---
 
-**v0.2.0 نسخه Stable فعلی TL Studio است.**
+**v0.2.1 نسخه Stable فعلی TL Studio است.**
 
 ## Stable و Development Line
 
 - `main` خط Stable Production است؛
 - `dev` خط Development نسخه بعدی است؛
-- npm Stable از dist-tag برابر `latest` استفاده می‌کند؛
-- Build آزمایشی از Tag جدا مثل `alpha` استفاده می‌کند.
-
-اجرای Stable:
-
-```bash
-npx --yes tl-studio
-```
-
-اجرای Prerelease وقتی موجود باشد:
-
-```bash
-npx --yes tl-studio@alpha
-```
-
-پکیج npm فقط Launcher سبک Pin‌شده به GitHub Release متناظر است. OS/Architecture را تشخیص می‌دهد، Archive رسمی را می‌گیرد، SHA-256 را Verify می‌کند، Local Cache می‌سازد و TL Studio را اجرا می‌کند.
+کاربر Stable نسخه Portable منتشرشده در GitHub Releases را اجرا می‌کند و Development آزمایشی روی خط جدا باقی می‌ماند.
 
 ## Portable Release
 
@@ -38,4 +23,4 @@ Archiveهای Portable شامل این‌ها هستند:
 
 User لازم نیست Agent Engine را جدا نصب یا مدیریت کند.
 
-Stable Promotion فقط بعد از Checkهای خودکار و Validation دستی Release Candidate انجام می‌شود و Development آزمایشی بدون تغییر مسیر `latest` ادامه پیدا می‌کند.
+Stable Promotion فقط بعد از Checkهای خودکار و Validation دستی Release Candidate انجام می‌شود و Development آزمایشی بدون تغییر خط Stable ادامه پیدا می‌کند.
