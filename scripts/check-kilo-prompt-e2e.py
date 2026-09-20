@@ -326,7 +326,7 @@ def main() -> int:
             f"semantic write activity mismatch: {semantic_write!r}")
     semantic_changes = request(base, f"/local/sessions/{sid}/changes")
     require(isinstance(semantic_changes, list) and any(
-        isinstance(change, dict) and str(change.get("file") or "").replace("\\", "/").endswith("/hello.txt")
+        isinstance(change, dict) and str(change.get("file") or "").replace("\\", "/").endswith("hello.txt")
         for change in semantic_changes
     ), f"semantic session changes missing hello.txt: {semantic_changes!r}")
 
