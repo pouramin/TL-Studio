@@ -69,6 +69,12 @@
     surface.insertBefore(layer, editor);
 
     const render = () => {
+      const monacoReady = surface.classList.contains("monaco-ready");
+      layer.hidden = monacoReady;
+      if (monacoReady) {
+        layer.textContent = "";
+        return;
+      }
       layer.innerHTML = `${highlight(editor.value, lang(K.state?.activeEditorPath))}\n`;
       layer.scrollTop = editor.scrollTop;
       layer.scrollLeft = editor.scrollLeft;
@@ -78,6 +84,7 @@
     document.getElementById("fileTabs")?.addEventListener("click", () => setTimeout(render, 0));
     const target = document.getElementById("fileEditorTitle") || surface;
     new MutationObserver(render).observe(target, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(render).observe(surface, { attributes: true, attributeFilter: ["class"] });
     render();
     K.refreshEditorHighlight = render;
     return true;
