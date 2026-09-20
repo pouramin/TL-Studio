@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -69,7 +71,7 @@ func TestPermissionEngineOwnsAlwaysPolicyAndKeepsSensitiveRequestsInteractive(t 
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/permission":
 			writeJSON(w, http.StatusOK, pending)
-		case r.Method == http.MethodPost && len(r.URL.Path) > len("/permission/") && r.URL.Path[len(r.URL.Path)-len("/reply"):] == "/reply":
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/permission/") && strings.HasSuffix(r.URL.Path, "/reply"):
 			var body map[string]any
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatalf("decode runtime reply: %v", err)
@@ -90,7 +92,7 @@ func TestPermissionEngineOwnsAlwaysPolicyAndKeepsSensitiveRequestsInteractive(t 
 	}
 	engine.store = newPermissionPolicyStore(filepath.Join(t.TempDir(), "permissions.json"))
 
-	result, err := engine.reply(t.Context(), "req-1", "session-1", "always", "")
+	result, err := engine.reply(context.Background(), "req-1", "session-1", "always", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +116,7 @@ func TestPermissionEngineOwnsAlwaysPolicyAndKeepsSensitiveRequestsInteractive(t 
 	}
 	mu.Unlock()
 
-	visible, err := engine.listPending(t.Context(), "session-1")
+	visible, err := engine.listPending(context.Background(), "session-1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +139,7 @@ func TestPermissionEngineOwnsAlwaysPolicyAndKeepsSensitiveRequestsInteractive(t 
 	}
 	mu.Unlock()
 
-	visible, err = engine.listPending(t.Context(), "session-1")
+	visible, err = engine.listPending(context.Background(), "session-1")
 	if err != nil {
 		t.Fatal(err)
 	}
