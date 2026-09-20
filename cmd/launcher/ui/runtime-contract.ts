@@ -44,6 +44,30 @@ interface RuntimeProviderConfigContract {
   remove(providerID: RuntimeProviderID): Promise<unknown>;
 }
 
+interface TLStudioToolCapabilities {
+  read: boolean;
+  write: boolean;
+  execute: boolean;
+  network: boolean;
+}
+
+interface TLStudioToolDescriptor {
+  id: string;
+  runtimeIDs: string[];
+  name: string;
+  description: string;
+  category: string;
+  permissionClass: string;
+  capabilities: TLStudioToolCapabilities;
+  presentation: string;
+}
+
+interface TLStudioToolRegistry {
+  version: number;
+  tools: TLStudioToolDescriptor[];
+  unknown: TLStudioToolDescriptor;
+}
+
 interface TLStudioPermissionRule {
   id: string;
   project: string;
@@ -69,6 +93,9 @@ interface TLStudioRuntimeContract {
   agents(): Promise<unknown[]>;
   providerState(): Promise<unknown>;
   readonly providers: RuntimeProviderConfigContract;
+  tools: {
+    registry(): Promise<TLStudioToolRegistry>;
+  };
   permissions: {
     list(sessionID?: RuntimeSessionID): Promise<unknown[]>;
     reply(sessionID: RuntimeSessionID, requestID: string, reply: "once" | "always" | "reject", message?: string): Promise<unknown>;
