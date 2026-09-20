@@ -80,6 +80,12 @@ type sessionActivityView struct {
 	Elapsed         int64               `json:"elapsed,omitempty"`
 }
 
+type sessionAttachmentView struct {
+	Name string `json:"name"`
+	MIME string `json:"mime,omitempty"`
+	URL  string `json:"url,omitempty"`
+}
+
 type sessionMessageView struct {
 	ID          string                `json:"id,omitempty"`
 	SessionID   string                `json:"sessionID,omitempty"`
@@ -91,6 +97,7 @@ type sessionMessageView struct {
 	Text        string                `json:"text,omitempty"`
 	Error       *sessionErrorView     `json:"error,omitempty"`
 	Activities  []sessionActivityView `json:"activities"`
+	Attachments []sessionAttachmentView `json:"attachments"`
 	Usage       sessionUsage          `json:"usage"`
 	Changes     []sessionChangeView   `json:"changes"`
 }
@@ -541,6 +548,7 @@ func normalizeMessage(raw map[string]any) sessionMessageView {
 		CompletedAt: maxSessionTimestamp(sessionInt64(timeValue["completed"]), sessionInt64(timeValue["updated"])),
 		Error:       normalizeSessionError(info["error"]),
 		Activities:  []sessionActivityView{},
+		Attachments: []sessionAttachmentView{},
 		Changes:     []sessionChangeView{},
 		Usage:       normalizeUsage(info["tokens"]),
 	}
@@ -553,9 +561,20 @@ func normalizeMessage(raw map[string]any) sessionMessageView {
 		if part == nil {
 			continue
 		}
-		if sessionString(part["type"]) == "text" && !sessionBool(part["ignored"]) {
+		partType := sessionString(part["type"])
+		if partType == "text" && !sessionBool(part["ignored"]) {
 			if text := sessionString(part["text"]); text != "" {
 				textParts = append(textParts, text)
+			}
+		}
+		if partType == "file" {
+			name := firstSessionString(part["filename"], part["name"])
+			if name != "" {
+				message.Attachments = append(message.Attachments, sessionAttachmentView{
+					Name: name,
+					MIME: sessionString(part["mime"]),
+					URL:  sessionString(part["url"]),
+				})
 			}
 		}
 		if activity, ok := normalizeActivity(part); ok {
