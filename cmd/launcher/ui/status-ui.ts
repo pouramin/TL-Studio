@@ -8,12 +8,15 @@
   let projectUsageLoading = false;
   let projectUsageTimer = null;
 
-  const partsOf = (message) => Array.isArray(message?.parts)
-    ? message.parts
+  const partsOf = (message) => Array.isArray(message?.activities)
+    ? message.activities
+    : Array.isArray(message?.parts) ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const messageRole = (message) => message?.info?.role || message?.type || "";
-  const messageTime = (message) => message?.info?.time || message?.time || {};
+  const messageRole = (message) => message?.role || message?.info?.role || message?.type || "";
+  const messageTime = (message) => message?.role
+    ? { created: message.createdAt, completed: message.completedAt, updated: message.completedAt }
+    : message?.info?.time || message?.time || {};
 
   const exactUserText = (message) => {
     if (typeof message?.text === "string") return message.text;
@@ -145,8 +148,8 @@
       input: Number(tokens.input || 0),
       output: Number(tokens.output || 0),
       reasoning: Number(tokens.reasoning || 0),
-      cacheRead: Number(cache.read || 0),
-      cacheWrite: Number(cache.write || 0),
+      cacheRead: Number(tokens.cacheRead ?? cache.read ?? 0),
+      cacheWrite: Number(tokens.cacheWrite ?? cache.write ?? 0),
     };
   };
 
@@ -162,18 +165,19 @@
   const tokenTotal = (tokens) => tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead + tokens.cacheWrite;
 
   const assistantTokens = (message) => {
-    const direct = tokenShape(message?.info?.tokens || message?.tokens);
+    const direct = tokenShape(message?.usage || message?.info?.tokens || message?.tokens);
     if (tokenTotal(direct) > 0) return direct;
 
     const total = emptyTokens();
     for (const part of partsOf(message)) {
-      if (part?.type !== "step-finish") continue;
-      addTokens(total, tokenShape(part.tokens));
+      if (part?.kind === "model") addTokens(total, tokenShape(part.usage));
+      else if (part?.type === "step-finish") addTokens(total, tokenShape(part.tokens));
     }
     return total;
   };
 
   const partTimestamp = (part) => {
+    if (part?.kind) return Number(part.endAt || part.startAt || 0);
     const time = part?.time || {};
     return Number(time.end || time.completed || time.start || 0);
   };
@@ -292,11 +296,11 @@
   };
 
   const routedModelSteps = (message) => partsOf(message)
-    .filter((part) => part?.type === "step-finish" && part?.model?.modelID)
+    .filter((part) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
     .map((part) => ({
-      providerID: String(part.model.providerID || ""),
-      modelID: String(part.model.modelID || ""),
-      elapsed: Number(part?.time?.elapsed || 0),
+      providerID: String(part.model?.providerID || ""),
+      modelID: String(part.model?.id || part.model?.modelID || ""),
+      elapsed: Number(part?.elapsed || part?.time?.elapsed || 0),
     }));
 
   const modelLabel = (model) => {
@@ -372,7 +376,7 @@
     });
   };
 
-  const sessionStamp = (session) => String(session?.time?.updated || session?.time?.created || "");
+  const sessionStamp = (session) => String(session?.updatedAt || session?.createdAt || session?.time?.updated || session?.time?.created || "");
 
   const normalizePath = (value) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
@@ -471,8 +475,8 @@
         const session = pending[cursor++];
         try {
           const directory = sessionDirectory(session) || K.state.local?.project || undefined;
-          const payload = await K.api.sessions.messages(session.id, { limit: PROJECT_MESSAGE_LIMIT, directory });
-          const messages = Array.isArray(payload?.data) ? payload.data : [];
+          const payload = await K.api.sessionView.messages(session.id, { limit: PROJECT_MESSAGE_LIMIT, directory });
+          const messages = Array.isArray(payload) ? payload : [];
           projectUsageCache.set(usageCacheKey(session), {
             stamp: sessionStamp(session),
             usage: usageForMessages(messages),

@@ -191,8 +191,8 @@
   K.loadMessages = async () => {
     if (!K.state.session) return [];
     const revision = ++K.state.revision;
-    const payload = await K.api.sessions.messages(K.state.session.id, { limit: 200 });
-    if (revision === K.state.revision) K.state.messages = Array.isArray(payload?.data) ? payload.data : [];
+    const messages = await K.api.sessionView.messages(K.state.session.id, { limit: 200 });
+    if (revision === K.state.revision) K.state.messages = Array.isArray(messages) ? messages : [];
     return K.state.messages;
   };
 
@@ -216,9 +216,10 @@
     const model = K.selectedModel();
     if (agent) input.agent = agent;
     if (model) input.model = model;
-    const session = (await K.api.sessions.create(input))?.data;
-    if (!session?.id) throw new Error("Runtime did not return a session ID");
-    K.state.session = session;
+    const created = (await K.api.sessions.create(input))?.data;
+    if (!created?.id) throw new Error("Runtime did not return a session ID");
+    const session = await K.api.sessionView.get(created.id).catch(() => null);
+    K.state.session = session || { id: created.id, title: created.title || "", directory: K.state.local?.project || "" };
     if (agent) K.state.session.agent = agent;
     if (model) K.state.session.model = model;
     K.showConversation();
@@ -243,7 +244,7 @@
       if (!K.state.session) return;
       try {
         await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
-        const fresh = (await K.api.sessions.get(K.state.session.id).catch(() => null))?.data;
+        const fresh = await K.api.sessionView.get(K.state.session.id).catch(() => null);
         if (fresh) K.state.session = fresh;
         K.renderMessages();
         K.renderSessionHeader();
@@ -287,9 +288,9 @@
   };
 
   const assistantAfter = (timestamp) => K.state.messages.some((message) => {
-    if (message?.info?.role !== "assistant") return false;
-    const created = Number(message.info.time?.created || 0);
-    return created >= timestamp - 1000 && (textOf(message) || message.info.error || partsOf(message).some((part) => part?.type === "tool"));
+    if (message?.role !== "assistant") return false;
+    const created = Number(message.createdAt || 0);
+    return created >= timestamp - 1000 && (message.text || message.error || (message.activities || []).some((activity) => activity?.kind === "tool"));
   });
 
   K.startSessionPolling = (startedAt = Date.now()) => {
@@ -340,13 +341,15 @@
       K.els.prompt.value = "";
       K.resizePrompt();
       K.state.messages.push({
-        info: {
-          role: "user",
-          time: { created: startedAt },
-          agent: agent || "",
-          model: model ? { providerID: model.providerID, modelID: model.id } : undefined,
-        },
-        parts: [{ type: "text", text }],
+        role: "user",
+        createdAt: startedAt,
+        agent: agent || "",
+        model: model ? { providerID: model.providerID, id: model.id } : undefined,
+        text,
+        activities: [],
+        attachments: [],
+        usage: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+        changes: [],
       });
       K.renderMessages();
 

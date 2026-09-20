@@ -7,12 +7,15 @@
   const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
-  const partsOf = (message) => Array.isArray(message?.parts)
-    ? message.parts
+  const partsOf = (message) => Array.isArray(message?.activities)
+    ? message.activities
+    : Array.isArray(message?.parts) ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const messageRole = (message) => message?.info?.role || message?.type || "";
-  const messageTime = (message) => message?.info?.time || message?.time || {};
+  const messageRole = (message) => message?.role || message?.info?.role || message?.type || "";
+  const messageTime = (message) => message?.role
+    ? { created: message.createdAt, completed: message.completedAt, updated: message.completedAt }
+    : message?.info?.time || message?.time || {};
 
   const exactUserText = (message) => {
     if (typeof message?.text === "string") return message.text;
@@ -27,11 +30,11 @@
     && exactUserText(message).trim() === RESUME_PROMPT;
 
   const routedModelSteps = (message) => partsOf(message)
-    .filter((part) => part?.type === "step-finish" && part?.model?.modelID)
+    .filter((part) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
     .map((part) => ({
-      providerID: String(part.model.providerID || ""),
-      modelID: String(part.model.modelID || ""),
-      elapsed: Number(part?.time?.elapsed || 0),
+      providerID: String(part.model?.providerID || ""),
+      modelID: String(part.model?.id || part.model?.modelID || ""),
+      elapsed: Number(part?.elapsed || part?.time?.elapsed || 0),
     }));
 
   const modelLabel = (model) => {
@@ -92,6 +95,10 @@
         timestampOf(time.updated),
         timestampOf(time.completed));
       for (const part of partsOf(message)) {
+        if (part?.kind) {
+          latest = Math.max(latest, timestampOf(part.startAt), timestampOf(part.endAt));
+          continue;
+        }
         const partTime = part?.time || {};
         const stateTime = part?.state?.time || {};
         latest = Math.max(latest,
@@ -136,8 +143,8 @@
     const lastActivity = lastActivityAt(messages);
     const idleFor = lastActivity ? Math.max(0, now - lastActivity) : 0;
 
-    if (status?.type === "retry") {
-      const next = timestampOf(status.next);
+    if (status?.state === "retrying") {
+      const next = timestampOf(status.nextAt);
       const untilNext = next ? next - now : 0;
       const retry = Number(status.attempt || 0);
       return {
@@ -155,7 +162,7 @@
       };
     }
 
-    if (status?.type === "busy") {
+    if (status?.state === "running") {
       const stale = idleFor >= 120_000;
       return {
         type: "busy",
@@ -172,7 +179,7 @@
     }
 
     return {
-      type: K.state.sending ? "starting" : String(status?.type || "unknown"),
+      type: K.state.sending ? "starting" : String(status?.state || "unknown"),
       title: K.state.sending ? "Starting" : "Working",
       meta: `TL attempt ${tlAttempt}`,
       detail: "",

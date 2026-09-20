@@ -85,19 +85,21 @@ Live Preview iframe
 
 ## Session and agent surface
 
-The browser uses TL Studio's `/runtime/*` contract. The launcher/runtime adapter currently translates that contract to the bundled engine's product APIs for:
+TL Studio now owns the semantic **read model** for current sessions. The launcher exposes:
 
-- sessions
-- messages/prompts
-- active-session state
-- agent switching
-- model switching
-- TL Studio-owned provider/model discovery
-- hosted-provider authorization
-- session questions
-- event/SSE-driven progress and file-change reconciliation
+- `GET /local/sessions`
+- `GET /local/sessions/status`
+- `GET /local/sessions/{sessionID}`
+- `GET /local/sessions/{sessionID}/messages`
+- `GET /local/sessions/{sessionID}/changes`
 
-A narrow read-only compatibility bridge exists for sessions created during an older TL Studio alpha protocol window. Current sessions continue to use only the current product API path.
+The launcher translates the bundled runtime's session records, `info + parts` message envelopes, activity/tool state, usage metadata, status values, and diff metadata into TL Studio concepts. Cross-project session aggregation also lives in the launcher now; the browser no longer needs to know that the current runtime scopes root-session listing by directory.
+
+The current semantic message contract exposes stable product fields such as `role`, `text`, `activities`, `usage`, `changes`, `createdAt`, and `completedAt`. Tool activities carry both the TL Studio semantic Tool Registry ID and the runtime ID for diagnostics. Unknown runtime tools still degrade through the Tool Registry's conservative fallback.
+
+This milestone deliberately owns **reading and presentation semantics**, not session persistence or agent execution. Session creation, rename/delete mutations, prompts, aborts, the agent loop, persisted runtime session storage, and live SSE events still go through the runtime adapter. The runtime remains authoritative for execution and persisted transcript data.
+
+A narrow read-only compatibility bridge remains for sessions created during an older TL Studio alpha protocol window. Legacy parsing is isolated to that compatibility path rather than defining the current session contract.
 
 ## Provider and model ownership
 
@@ -122,7 +124,7 @@ The launcher translates managed definitions to the current engine's provider con
 
 API keys are deliberately excluded from TL Studio's provider registry and browser storage. In this phase, credentials are still delegated to the bundled runtime's local credential store. Moving credential ownership to a TL Studio-controlled secure store is a separate future security milestone.
 
-Session and tool ownership still remain in the runtime for now. Permission request generation and enforcement also still happen in the runtime, but permission policy and remembered approval semantics are now owned by TL Studio as described below.
+Session persistence and execution remain in the runtime for now, while TL Studio owns the current session read/presentation contract and tool semantics. Permission request generation and enforcement also still happen in the runtime, but permission policy and remembered approval semantics are owned by TL Studio as described below.
 
 ## Tool Registry ownership
 
@@ -183,4 +185,4 @@ The browser must not call implementation-specific runtime routes directly. `/run
 
 The current engine remains replaceable. New browser features must depend on TL Studio concepts such as sessions, messages, providers, permissions, questions, tools, and events rather than on the bundled engine's product name.
 
-Phase 1 established the runtime independence boundary. Provider/model definitions and permission policy are now TL Studio-owned. Session and tool ownership remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.
+Phase 1 established the runtime independence boundary. Provider/model definitions, tool semantics, permission policy, and the current session read/presentation model are now TL Studio-owned. Session persistence, live-event projection, questions, and the Agent execution loop remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.

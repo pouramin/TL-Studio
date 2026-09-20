@@ -164,6 +164,15 @@ def main() -> int:
         merged_ids = session_ids(original_sessions) | session_ids(alt_sessions)
         require(sid in merged_ids and alt_sid in merged_ids, "merged project histories did not contain both sessions")
 
+        semantic_sessions = request(base, "/local/sessions?limit=150")
+        require(isinstance(semantic_sessions, list), "TL Studio semantic session list must be an array")
+        semantic_ids = session_ids(semantic_sessions)
+        require(sid in semantic_ids and alt_sid in semantic_ids,
+                f"TL Studio semantic session aggregation missing project sessions: {semantic_ids!r}")
+        for semantic in semantic_sessions:
+            require("time" not in semantic and "createdAt" in semantic and "updatedAt" in semantic,
+                    f"semantic session leaked runtime time envelope: {semantic!r}")
+
         alt_record = next((s for s in alt_sessions if isinstance(s, dict) and s.get("id") == alt_sid), None)
         require(isinstance(alt_record, dict) and alt_record.get("directory") == alt_project,
                 f"session must expose its own directory: {alt_record!r}")
@@ -178,6 +187,14 @@ def main() -> int:
     for item in messages:
         require(isinstance(item, dict) and isinstance(item.get("info"), dict) and isinstance(item.get("parts"), list),
                 f"production message must be {{info, parts}}: {item!r}")
+
+    semantic_messages = request(base, f"/local/sessions/{sidq}/messages?limit=10")
+    require(isinstance(semantic_messages, list), "TL Studio semantic messages must be an array")
+    for item in semantic_messages:
+        require(isinstance(item, dict) and isinstance(item.get("role"), str), f"semantic message role missing: {item!r}")
+        require(isinstance(item.get("activities"), list) and isinstance(item.get("changes"), list),
+                f"semantic activity/change arrays missing: {item!r}")
+        require("info" not in item and "parts" not in item, f"runtime message envelope leaked into semantic contract: {item!r}")
 
     diffs = unwrap(request(base, f"/runtime/session/{sidq}/diff?{query}"))
     require(isinstance(diffs, list), "session.diff must be an array")
@@ -217,6 +234,7 @@ def main() -> int:
         "global_dispose": True,
         "kilo_auth_after": kilo_auth_after.get("authenticated"),
         "session_lifecycle": "create/update/diff/delete",
+        "semantic_session_read_contract": True,
         "recent_project_session_aggregation": True,
         "event": event_payload.get("type"),
     }, indent=2))

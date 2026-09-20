@@ -26,24 +26,35 @@ const source = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "di
 const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
 const originalUser = (created = 1000) => ({
-  info: { role: "user", time: { created } },
-  parts: [{ type: "text", text: "Build the site" }],
+  role: "user",
+  createdAt: created,
+  text: "Build the site",
+  activities: [],
 });
 const resumeUser = (created = 3000) => ({
-  info: { role: "user", time: { created } },
-  parts: [{ type: "text", text: RESUME_PROMPT }],
+  role: "user",
+  createdAt: created,
+  text: RESUME_PROMPT,
+  activities: [],
 });
 const assistantStep = (modelID, created = 1500, completed = 2000) => ({
-  info: { role: "assistant", time: { created, completed } },
-  parts: [{
-    type: "step-finish",
-    time: { start: created, end: completed },
-    model: { providerID: "kilo", modelID },
+  role: "assistant",
+  createdAt: created,
+  completedAt: completed,
+  activities: [{
+    kind: "model",
+    status: "completed",
+    startAt: created,
+    endAt: completed,
+    model: { providerID: "kilo", id: modelID },
   }],
 });
 const assistantError = (created = 2500) => ({
-  info: { role: "assistant", time: { created, completed: created + 10 }, error: { message: "Upstream idle timeout exceeded" } },
-  parts: [],
+  role: "assistant",
+  createdAt: created,
+  completedAt: created + 10,
+  error: { message: "Upstream idle timeout exceeded" },
+  activities: [],
 });
 
 const K = {
@@ -105,10 +116,11 @@ assert.equal(hooks.attemptNumberAt(5, currentAttemptModelMessages), 2);
 const now = 1_000_000;
 K.state.messages = currentAttemptModelMessages;
 K.state.activeSessions["session-1"] = {
-  type: "retry",
+  state: "retrying",
+  active: true,
   attempt: 3,
   message: "Upstream idle timeout exceeded",
-  next: now + 5_000,
+  nextAt: now + 5_000,
 };
 let snapshot = hooks.workingStatusSnapshot(now, currentAttemptModelMessages);
 assert.equal(snapshot.type, "retry");
@@ -121,7 +133,7 @@ const staleMessages = [
   originalUser(now - 600_000),
   assistantStep("qwen/qwen3-coder:free", now - 400_000, now - 300_000),
 ];
-K.state.activeSessions["session-1"] = { type: "busy" };
+K.state.activeSessions["session-1"] = { state: "running", active: true };
 snapshot = hooks.workingStatusSnapshot(now, staleMessages);
 assert.equal(snapshot.type, "busy");
 assert.equal(snapshot.stale, true);
@@ -134,7 +146,7 @@ async function testRecovery() {
   let errorMessage = "";
 
   K.state.messages = staleMessages;
-  K.state.activeSessions["session-1"] = { type: "busy" };
+  K.state.activeSessions["session-1"] = { state: "running", active: true };
   K.api = {
     hosted: { providerID: "kilo" },
     sessions: {
@@ -142,12 +154,12 @@ async function testRecovery() {
         abortCalls += 1;
         assert.equal(sessionID, "session-1");
         assert.equal(options.scope, "session");
-        K.state.activeSessions[sessionID] = { type: "idle" };
+        K.state.activeSessions[sessionID] = { state: "idle", active: false };
       },
     },
   };
   K.loadActiveSessions = async () => {};
-  K.isSessionRunning = (sessionID) => K.state.activeSessions[sessionID]?.type !== "idle";
+  K.isSessionRunning = (sessionID) => K.state.activeSessions[sessionID]?.active === true;
   K.stopSessionPolling = () => {};
   K.loadMessages = async () => [];
   K.loadAttention = async () => {};

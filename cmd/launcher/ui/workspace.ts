@@ -62,47 +62,6 @@
     return [...merged.values()];
   };
 
-  const changesFromMessages = () => {
-    const messages = Array.isArray(K.state.messages) ? K.state.messages : [];
-
-    // Prefer Kilo's projected per-turn summaries when present. They already
-    // represent a file-diff shape and avoid reinterpreting tool metadata.
-    const projected = [];
-    for (const message of messages) {
-      const diffs = message?.info?.summary?.diffs;
-      if (Array.isArray(diffs)) projected.push(...diffs);
-    }
-    if (projected.length) return mergeChanges(projected);
-
-    // Fresh/non-git projects can legitimately have an empty aggregate
-    // /session/:id/diff even though write/edit tools expose authoritative diff
-    // metadata. Fall back to those completed tool parts so Changes still works.
-    const toolChanges = [];
-    for (const message of messages) {
-      const parts = Array.isArray(message?.parts) ? message.parts : [];
-      for (const part of parts) {
-        if (part?.type !== "tool") continue;
-        const state = part.state || {};
-        const metadata = state.metadata || {};
-        const input = state.input || {};
-        const output = state.output ?? state.result ?? part.output ?? part.result;
-        const fallbackPath = input.filePath || input.path || input.file || metadata.filepath || metadata.path || "";
-
-        const candidates = [
-          metadata.filediff,
-          metadata.fileDiff,
-          output?.filediff,
-          output?.fileDiff,
-          output && typeof output === "object" && ("patch" in output || "additions" in output || "deletions" in output) ? output : null,
-        ];
-        const candidate = candidates.find((value) => value && typeof value === "object");
-        const change = normalizeChange(candidate, fallbackPath);
-        if (change) toolChanges.push(change);
-      }
-    }
-    return mergeChanges(toolChanges);
-  };
-
   K.refreshWorkspaceControls = () => {
     const session = K.state.session;
     const running = !!session && (K.state.sending || K.isSessionRunning(session.id));
@@ -168,12 +127,12 @@
     K.renderChanges();
     let aggregate = [];
     try {
-      const payload = await K.api.sessions.diff(K.state.session.id);
-      aggregate = Array.isArray(payload?.data) ? payload.data : [];
+      const changes = await K.api.sessionView.changes(K.state.session.id);
+      aggregate = Array.isArray(changes) ? changes : [];
     } catch (error) {
-      console.warn("[TL Studio] Could not load aggregate session diff", error);
+      console.warn("[TL Studio] Could not load semantic session changes", error);
     }
-    K.state.changes = aggregate.length ? mergeChanges(aggregate) : changesFromMessages();
+    K.state.changes = mergeChanges(aggregate);
     K.state.changesLoading = false;
     K.renderChanges();
     K.refreshWorkspaceControls();
@@ -235,7 +194,8 @@
     const title = ui.sessionTitleInput.value.trim();
     if (!title) return K.showError("Session title cannot be empty.");
     try {
-      const fresh = (await K.api.sessions.update(session.id, { title }))?.data;
+      await K.api.sessions.update(session.id, { title });
+      const fresh = await K.api.sessionView.get(session.id).catch(() => null);
       if (fresh) K.state.session = fresh;
       if (ui.sessionDialog.open) ui.sessionDialog.close();
       await K.loadSessions();
