@@ -16,7 +16,9 @@ icon: PackageCheck
 npx --yes tl-studio
 ```
 
-npm فقط خط Stable را دنبال می‌کند. Alphaهای Development روی `dev` عمومی Publish نمی‌شوند و فقط به‌صورت Preview Build داخل GitHub Actions برای تست پروژه باقی می‌مانند.
+npm فقط خط Stable را دنبال می‌کند.
+
+نسخه Development فعلی **v0.3.0-alpha.6** روی `dev` است. Alphaها عمداً روی npm Publish نمی‌شوند و GitHub Prerelease عمومی هم ندارند. فقط به‌صورت **Preview Build** داخل GitHub Actions برای تست پروژه ساخته می‌شوند. Workflow فعلی Preview نسخه Windows x64 می‌سازد و Artifact را 14 روز نگه می‌دارد.
 
 ## Portable Release
 

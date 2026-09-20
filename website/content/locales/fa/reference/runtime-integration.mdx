@@ -38,3 +38,12 @@ tl-studio --runtime-bin /path/to/runtime
 ## Upgrade Rule
 
 قبل از تغییر Engine همراه برنامه، Compatibility Check باید Project Routing، Agent/Provider/Session Shape، Message، Permission/Question، Event، Provider Configuration و یک File-write Tool Flow واقعی را پوشش دهد.
+
+
+## Development Preview Ownership
+
+در Stable v0.2.1، Provider/Model Definition متعلق به TL Studio است اما Permission Persistence هنوز Runtime-backed است.
+
+در Preview خصوصی **v0.3.0-alpha.6**، Browser دیگر Permissionها را از Raw Runtime Route لیست یا Reply نمی‌کند. TL Studio Routeهای `/local/permissions*` را ارائه می‌دهد، Remembered Ruleهای Project-scoped را خودش ذخیره می‌کند و Decision صریح یا Remembered را برای Engine همراه برنامه Translate می‌کند.
+
+Session Execution، Tool Execution، Question Handling، Provider Credential و Model Inference هنوز در Engine باقی می‌مانند. این یک قدم دیگر به سمت Replaceability است، نه ادعای حذف کامل Execution Dependency.

@@ -38,3 +38,12 @@ tl-studio --runtime-bin /path/to/runtime
 ## Upgrade rule
 
 Before changing the bundled engine, compatibility checks must cover Project routing, Agent/Provider/Session shapes, Messages, Permissions/Questions, Events, Provider configuration, and a real file-write Tool flow.
+
+
+## Development preview ownership
+
+In stable v0.2.1, Provider/Model definitions are TL Studio-owned while Permission persistence is still runtime-backed.
+
+In private **v0.3.0-alpha.6**, the browser no longer lists or replies to permissions through raw runtime routes. TL Studio exposes `/local/permissions*`, stores Project-scoped remembered rules itself, and translates explicit or remembered decisions to the bundled engine.
+
+The engine still owns Session execution, Tool execution, Question handling, Provider credentials, and Model inference. This is another step toward replaceability without pretending the execution dependency has disappeared.

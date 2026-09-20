@@ -58,3 +58,15 @@ npm run build
 ```
 
 متن User-facing باید روی **TL Studio** متمرکز بماند. اسم Agent Engine همراه برنامه فقط در Maintainer Compatibility Reference یا جایی که Attribution قانونی واقعاً لازم است بیاید.
+
+
+## خط Development فعلی
+
+خط خصوصی Development فعلی **v0.3.0-alpha.6** است.
+
+هنگام کار روی `dev` دو Boundary مهم‌اند:
+
+- Monaco فقط یک Editor Engine کاملاً Local و Lazy-loaded است. File Ownership، Save/Conflict Logic و Project Path Authority نباید به Monaco منتقل شوند.
+- Remembered Permission Policy متعلق به TL Studio و در `cmd/launcher/permission_engine.go` است. Request حساس باید Interactive بماند و Browser باید از `/local/permissions*` استفاده کند، نه Raw Permission Route مربوط به Engine.
+
+Preview Buildهای `dev` فقط Artifactهای GitHub Actions هستند. Alpha روی npm یا GitHub Prerelease عمومی منتشر نشود مگر اینکه Release Model عمداً تغییر کند.
