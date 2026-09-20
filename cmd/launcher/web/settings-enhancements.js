@@ -83,6 +83,18 @@
 
   panel.append(title, ...holder.children);
 
+  const permissionTitle = document.createElement("div");
+  permissionTitle.className = "settings-section-title";
+  permissionTitle.textContent = "Agent Permissions";
+
+  const permissionHolder = document.createElement("div");
+  permissionHolder.innerHTML = `
+    <div class="settings-row settings-row-stack permission-policy-row">
+      <div class="settings-copy"><strong>Remembered project rules</strong><span>TL Studio can automatically approve matching non-sensitive requests you explicitly chose to remember. Sensitive shell and sandbox escalation requests are never remembered.</span></div>
+      <div id="permissionRules" class="permission-rules" aria-live="polite">Loading…</div>
+    </div>`;
+  panel.append(permissionTitle, ...permissionHolder.children);
+
   const controls = {
     theme: document.getElementById("editorThemeSelect"),
     uiFont: document.getElementById("uiFontSelect"),
@@ -101,6 +113,58 @@
   controls.codeFont.addEventListener("change", () => { write(KEYS.codeFont, controls.codeFont.value); apply(); });
   controls.terminalFont.addEventListener("change", () => { write(KEYS.terminalFont, controls.terminalFont.value); apply(); });
   controls.resetPreview.addEventListener("click", () => K.previewWindow?.reset?.());
+
+  const permissionRules = document.getElementById("permissionRules");
+  const projectName = (value) => String(value || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Project";
+  const renderPermissionRules = async () => {
+    if (!permissionRules || !K.api?.permissions?.rules) return;
+    permissionRules.textContent = "Loading…";
+    try {
+      const rules = await K.api.permissions.rules();
+      permissionRules.textContent = "";
+      if (!rules.length) {
+        const empty = document.createElement("span");
+        empty.className = "permission-rules-empty";
+        empty.textContent = "No remembered permission rules.";
+        permissionRules.appendChild(empty);
+        return;
+      }
+      for (const rule of rules) {
+        const row = document.createElement("div");
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        const meta = document.createElement("span");
+        const remove = document.createElement("button");
+        row.className = "permission-rule";
+        title.textContent = rule.permission || "action";
+        meta.textContent = `${projectName(rule.project)} · ${rule.matcher || "matching request"}`;
+        remove.type = "button";
+        remove.className = "ghost small";
+        remove.textContent = "Forget";
+        remove.dataset.ruleId = rule.id || "";
+        copy.append(title, meta);
+        row.append(copy, remove);
+        permissionRules.appendChild(row);
+      }
+    } catch (error) {
+      permissionRules.textContent = `Could not load permission rules: ${error.message || String(error)}`;
+    }
+  };
+  permissionRules?.addEventListener("click", async (event) => {
+    const button = event.target.closest?.("button[data-rule-id]");
+    const id = button?.dataset?.ruleId;
+    if (!id) return;
+    button.disabled = true;
+    try {
+      await K.api.permissions.removeRule(id);
+      await renderPermissionRules();
+    } catch (error) {
+      K.showError(error.message || String(error));
+      button.disabled = false;
+    }
+  });
+  K.refreshPermissionRules = renderPermissionRules;
+  renderPermissionRules();
 
   apply();
 })();

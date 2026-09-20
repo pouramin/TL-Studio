@@ -44,6 +44,15 @@ interface RuntimeProviderConfigContract {
   remove(providerID: RuntimeProviderID): Promise<unknown>;
 }
 
+interface TLStudioPermissionRule {
+  id: string;
+  project: string;
+  permission: string;
+  matcher: string;
+  decision: "allow";
+  createdAt: string;
+}
+
 interface RuntimeHostedProviderContract {
   readonly providerID: RuntimeProviderID;
   readonly preferredModels: readonly string[];
@@ -60,6 +69,12 @@ interface TLStudioRuntimeContract {
   agents(): Promise<unknown[]>;
   providerState(): Promise<unknown>;
   readonly providers: RuntimeProviderConfigContract;
+  permissions: {
+    list(sessionID?: RuntimeSessionID): Promise<unknown[]>;
+    reply(sessionID: RuntimeSessionID, requestID: string, reply: "once" | "always" | "reject", message?: string): Promise<unknown>;
+    rules(): Promise<TLStudioPermissionRule[]>;
+    removeRule(ruleID: string): Promise<unknown>;
+  };
   sessions: {
     list(options?: { limit?: number; directory?: string }): Promise<unknown>;
     create(input?: RuntimeSessionCreateInput): Promise<unknown>;

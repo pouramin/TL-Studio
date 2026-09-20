@@ -8,7 +8,7 @@
   A fast local development workspace with AI built in.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.5</strong> · Stable release remains v0.2.1.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.6</strong> · Stable release remains v0.2.1.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -43,7 +43,7 @@ The release already includes the pinned local agent runtime.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
 - **Live agent activity** — compact Reasoning and Tool cards with live status updates.
-- **Permissions & questions** — approve one-time actions, save matching rules when supported, reject actions, and answer interactive questions.
+- **TL Studio permission policies & questions** — approve one-time actions, remember project-scoped non-sensitive rules in TL Studio, forget saved rules from Settings, reject actions, and answer interactive questions.
 - **Stop & recovery** — interrupt active work and recover from stalled or retryable upstream failures.
 - **Session management** — create, resume, rename, delete, and switch sessions across recent projects.
 - **Project-scoped usage** — per-turn and project totals for tokens, requests, time, reasoning, and cache usage.
@@ -65,23 +65,24 @@ Browser workspace
 TL Studio launcher (Go)
     │
     ├─ TL Studio provider/model registry
+    ├─ TL Studio permission policy engine
     ├─ project files / search / terminal / preview
     │
     └─ authenticated runtime adapter
             ▼
         Local agent runtime
             ├─ agents / sessions / tools
-            ├─ permissions / questions / live events
+            ├─ permission enforcement / questions / live events
             └─ provider execution / model inference
 ```
 
-TL Studio owns the workspace, product UI, local launcher, provider/model definitions, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
 
 The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
 ## Runtime boundary
 
-TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio.
+TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, permission policy, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio. Permission prompts use launcher-owned `/local/permissions*` routes so remembered approvals are not delegated to the bundled engine.
 
 The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. That engine is an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
@@ -168,7 +169,7 @@ TL Studio UI
 → final assistant response
 ```
 
-Experimental builds continue on explicit prerelease channels without changing the stable `latest` npm path.
+Alpha builds remain private Preview Build artifacts on `dev` and do not publish to npm or GitHub Releases.
 
 ## License & attribution
 

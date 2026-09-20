@@ -24,7 +24,7 @@ The browser IDE keeps one in-memory buffer per open editor tab. User-initiated r
 
 Runtime file/session events trigger workspace reconciliation. Clean open buffers follow disk changes automatically, while dirty buffers are preserved and marked when the disk version changes or disappears.
 
-The current editor surface remains dependency-free at runtime. Syntax coloring is layered locally over the editor and user font/theme preferences are stored in browser-local settings. A future editor-engine replacement may be considered only if it can remain fully bundled/local and preserve the same file-buffer/save/conflict contracts.
+The enhanced editor uses a fully local Monaco bundle with same-origin workers and no CDN dependency. TL Studio still owns the file-buffer/save/conflict contract, and the original textarea editor remains a lightweight fallback if Monaco cannot load. User font/theme preferences are stored in browser-local settings.
 
 ## Project Search
 
@@ -66,7 +66,7 @@ Only loopback preview URLs are accepted. Static preview file serving remains pro
 ```text
 Browser TL Studio UI
   │
-  ├── /local/*  ───────────────► launcher project/files/search/process/preview boundary
+  ├── /local/*  ───────────────► launcher project/files/search/process/preview/permission boundary
   │
   └── /runtime/*
           │
@@ -94,7 +94,6 @@ The browser uses TL Studio's `/runtime/*` contract. The launcher/runtime adapter
 - model switching
 - TL Studio-owned provider/model discovery
 - hosted-provider authorization
-- session permissions
 - session questions
 - event/SSE-driven progress and file-change reconciliation
 
@@ -123,7 +122,33 @@ The launcher translates managed definitions to the current engine's provider con
 
 API keys are deliberately excluded from TL Studio's provider registry and browser storage. In this phase, credentials are still delegated to the bundled runtime's local credential store. Moving credential ownership to a TL Studio-controlled secure store is a separate future security milestone.
 
-Session, tool, and permission ownership still remain in the runtime for now; this provider/model slice does not change the Agent Engine boundary.
+Session and tool ownership still remain in the runtime for now. Permission request generation and enforcement also still happen in the runtime, but permission policy and remembered approval semantics are now owned by TL Studio as described below.
+
+## Permission policy ownership
+
+Permission policy is the second Phase 2 capability moved behind a TL Studio-owned domain contract.
+
+The bundled runtime still generates permission requests at the exact point where a tool requires approval and remains responsible for enforcing the final allow/reject result. TL Studio now owns the policy layer that decides how a human choice is remembered and when a matching non-sensitive request can be approved automatically.
+
+The browser no longer lists or replies to permissions through raw runtime routes. It uses launcher-owned routes:
+
+- `GET /local/permissions?sessionID=...`
+- `POST /local/permissions/{requestID}/reply`
+- `GET /local/permissions/rules`
+- `DELETE /local/permissions/rules/{ruleID}`
+
+When the user chooses **Always allow in this project**, TL Studio stores normalized project-scoped allow rules in its own `permissions.json` file under the local state directory. The launcher translates that explicit choice into a one-time approval for the current runtime request; future matching requests are evaluated by TL Studio before they reach the browser.
+
+Remembered rules are conservative by design:
+
+- they are scoped to the selected project;
+- they match the runtime-provided canonical `always` matcher tokens exactly rather than inventing broader wildcard semantics;
+- every matcher on a future request must already be covered before automatic approval occurs;
+- sensitive `skillShell` and `sandboxEscalation` requests are never remembered or auto-approved;
+- requests marked `disableAlways` remain interactive;
+- Settings exposes remembered rules and lets the user forget them.
+
+Automatic policy approvals are sent to the runtime as non-interactive one-time approvals. Explicit clicks remain interactive approvals. This preserves the runtime's sensitive-permission enforcement while moving persistence and decision policy into TL Studio.
 
 ## Editor asset strategy
 
@@ -150,4 +175,4 @@ The browser must not call implementation-specific runtime routes directly. `/run
 
 The current engine remains replaceable. New browser features must depend on TL Studio concepts such as sessions, messages, providers, permissions, questions, tools, and events rather than on the bundled engine's product name.
 
-Phase 1 established the runtime independence boundary. The provider/model ownership slice is now complete: provider/model definitions and their browser-facing configuration contract are TL Studio-owned. Session, tool, and permission ownership remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.
+Phase 1 established the runtime independence boundary. Provider/model definitions and permission policy are now TL Studio-owned. Session and tool ownership remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.

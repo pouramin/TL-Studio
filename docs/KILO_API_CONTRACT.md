@@ -19,7 +19,7 @@ TL Studio owns the browser-facing runtime namespace, provider/model registry, wo
 
 The browser talks to TL Studio through:
 
-- `/local/*` for TL Studio-owned workspace/files/search/process/preview capabilities;
+- `/local/*` for TL Studio-owned workspace/files/search/process/preview/permission-policy capabilities;
 - `/runtime/*` for agent-runtime capabilities.
 
 The browser must not construct Kilo-specific route prefixes or depend on Kilo-specific authentication details.
@@ -72,8 +72,12 @@ TL Studio uses events for responsive updates and projected runtime state, while 
 
 ### Permissions
 
+The current engine still exposes and enforces:
+
 - `GET /runtime/permission?directory=...`
 - `POST /runtime/permission/:requestID/reply?directory=...`
+
+Those routes are now an implementation compatibility surface. Normal browser permission UI uses TL Studio's launcher-owned `/local/permissions*` contract. The launcher reads current engine requests, applies TL Studio's project-scoped policy, and translates explicit or remembered decisions back to the engine as one-time replies.
 
 ### Questions
 
@@ -140,7 +144,9 @@ The adapter owns browser-side runtime concerns such as:
 - response normalization
 - session/message access
 - model selection representation
-- permission/question access
+- question access
+
+Permission policy is intentionally not a browser-to-engine adapter concern anymore; it is owned by the launcher-side TL Studio permission engine.
 - live-event handling
 
 Engine-specific provider/config/auth translation belongs in the launcher, not in browser modules.
@@ -174,6 +180,7 @@ TL Studio launcher
 → product agent/session flow
 → local test provider
 → real write tool
+→ TL Studio /local/permissions policy boundary
 → edit permission
 → hello.txt inside the selected project
 → final assistant response

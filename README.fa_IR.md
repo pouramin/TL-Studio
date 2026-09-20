@@ -8,7 +8,7 @@
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.5</strong> · نسخه Stable همچنان v0.2.1 است.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.6</strong> · نسخه Stable همچنان v0.2.1 است.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -43,7 +43,7 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **Custom Provider** — اتصال Endpointهای سازگار با OpenAI، OpenAI Responses و Anthropic با Credential خود کاربر.
 - **File attachment** — ارسال تصویر، PDF و فایل‌های متنی/کد؛ همراه با Multi-select، Drag & Drop و Paste از Clipboard.
 - **نمایش زنده‌ی فعالیت Agent** — نمایش Reasoning و Toolها همراه با وضعیت Run.
-- **Permission و Question** — Allow یک‌باره، ذخیره‌ی Ruleهای قابل‌تکرار در صورت پشتیبانی، Reject و پاسخ به سؤال‌های تعاملی.
+- **Permission Policy خود TL Studio و Question** — Allow یک‌باره، ذخیره‌ی Ruleهای غیرحساس به‌صورت Project-scoped داخل TL Studio، Forget از Settings، Reject و پاسخ به سؤال‌های تعاملی.
 - **Stop و Recovery** — توقف Run فعال و بازیابی Sessionهای گیرکرده یا خطاهای Retryable.
 - **مدیریت Session** — ساخت، ادامه، تغییر نام، حذف و جابه‌جایی Sessionها بین Projectهای اخیر.
 - **Project Usage** — نمایش مصرف هر Turn و مجموع Project شامل Token، Request، Time، Reasoning و Cache.
@@ -65,17 +65,18 @@ Browser workspace
 TL Studio launcher (Go)
     │
     ├─ TL Studio provider/model registry
+    ├─ TL Studio permission policy engine
     ├─ project files / search / terminal / preview
     │
     └─ runtime adapter محلی و احراز‌شده
             ▼
         Local agent runtime
             ├─ agents / sessions / tools
-            ├─ permissions / questions / live events
+            ├─ permission enforcement / questions / live events
             └─ provider execution / model inference
 ```
 
-TL Studio مالک لایه‌ی محصول است: Workspace، رابط کاربری، Launcher محلی، تعریف Provider و Model، تجربه‌ی Project و Session، Recovery و Release packaging.
+TL Studio مالک لایه‌ی محصول است: Workspace، رابط کاربری، Launcher محلی، تعریف Provider و Model، Permission Policy در Scope هر Project، تجربه‌ی Project و Session، Recovery و Release packaging.
 
 تعریف Custom Providerها داخل State محلی خود TL Studio ذخیره می‌شود و Launcher آن‌ها را برای Runtime فعال ترجمه می‌کند. Credentialها فعلاً به Credential Store محلی Runtime سپرده می‌شوند و داخل Provider Registry خود TL Studio ذخیره نمی‌شوند.
 
@@ -85,7 +86,7 @@ Project انتخاب‌شده روی سیستم کاربر باقی می‌ما�
 
 ## مرز Runtime
 
-مرورگر و رابط محصول TL Studio به قراردادهای خود TL Studio وابسته‌اند، نه به API اختصاصی یک Engine. ترافیک Runtime مرورگر فقط از مرز محلی `/runtime/*` عبور می‌کند و تعریف Provider/Model، فایل‌های Project، Search، Terminal، Preview و بخش‌های اصلی Workspace در مالکیت TL Studio هستند.
+مرورگر و رابط محصول TL Studio به قراردادهای خود TL Studio وابسته‌اند، نه به API اختصاصی یک Engine. ترافیک Runtime مرورگر فقط از مرز محلی `/runtime/*` عبور می‌کند و تعریف Provider/Model، Permission Policy، فایل‌های Project، Search، Terminal، Preview و بخش‌های اصلی Workspace در مالکیت TL Studio هستند. Permission promptها از Routeهای `/local/permissions*` خود Launcher عبور می‌کنند تا Ruleهای Remembered در اختیار TL Studio باشند.
 
 نسخه‌ی Stable فعلی، **Kilo Code 7.6.2** را به‌عنوان Agent Engine شخص ثالث و تست‌شده Bundle می‌کند. این Engine یک جزئیات پیاده‌سازی پشت Runtime Adapter است و هویت عمومی محصول به آن وابسته نیست. جزئیات سازگاری Engine در [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md) و Attribution لازم در [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) نگهداری می‌شود.
 
@@ -172,7 +173,7 @@ TL Studio UI
 → final assistant response
 ```
 
-نسخه‌های آزمایشی روی Channelهای prerelease جدا ادامه پیدا می‌کنند، بدون اینکه مسیر Stable با dist-tag `latest` تغییر کند.
+Alphaها فقط به‌صورت Preview Build خصوصی روی `dev` می‌مانند و روی npm یا GitHub Releases منتشر نمی‌شوند.
 
 ## لایسنس و Attribution
 

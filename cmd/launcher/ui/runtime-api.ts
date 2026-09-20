@@ -153,16 +153,20 @@
 
     permissions: {
       list: async (sessionID) => {
-        const payload = unwrapData(await request(route("/permission")));
-        return (Array.isArray(payload) ? payload : []).filter((item) => !sessionID || item?.sessionID === sessionID);
+        const query = new URLSearchParams();
+        if (sessionID) query.set("sessionID", sessionID);
+        const payload = await K.request(`/local/permissions${query.size ? `?${query}` : ""}`);
+        return Array.isArray(payload) ? payload : [];
       },
-      // Every reply through this browser adapter is the result of an explicit human click.
-      // The bundled runtime requires `interactive: true` for sensitive permission classes such as
-      // skill-shell and sandbox-escalation requests; otherwise an approval is intentionally ignored.
-      reply: (sessionID, requestID, reply, message) => request(route(`/permission/${enc(requestID)}/reply`), {
+      reply: (sessionID, requestID, reply, message) => K.request(`/local/permissions/${enc(requestID)}/reply`, {
         method: "POST",
-        ...body({ reply, interactive: true, ...(message ? { message } : {}) }),
+        ...body({ sessionID, reply, ...(message ? { message } : {}) }),
       }),
+      rules: async () => {
+        const payload = await K.request("/local/permissions/rules");
+        return Array.isArray(payload) ? payload : [];
+      },
+      removeRule: (ruleID) => K.request(`/local/permissions/rules/${enc(ruleID)}`, { method: "DELETE" }),
     },
 
     questions: {
