@@ -16,7 +16,6 @@ html, body, button, input, select, textarea, dialog { font-family: var(--tl-ui-f
 .file-editor-input, .file-editor-highlight, .file-line-numbers, code, pre { font-family: var(--tl-code-font); }
 .terminal-output, .terminal-input { font-family: var(--tl-terminal-font); }
 
-.file-editor-surface { position: relative; }
 .file-editor-surface.monaco-ready .file-editor-highlight {
   display: none !important;
 }

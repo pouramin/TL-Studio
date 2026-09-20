@@ -21,6 +21,7 @@ func TestMonacoEditorIsLocalLazyAndFallbackSafe(t *testing.T) {
 		"/monaco-editor-worker.js",
 		"tl-studio:editor-render",
 		"lightweight editor fallback",
+		"state.editor?.layout?.()",
 	} {
 		if !strings.Contains(source, required) {
 			t.Fatalf("Monaco bridge missing %q", required)
@@ -36,6 +37,14 @@ func TestMonacoEditorIsLocalLazyAndFallbackSafe(t *testing.T) {
 	}
 	if !strings.Contains(string(index), "<script src=\"/monaco.js\" defer></script>") {
 		t.Fatal("Monaco bridge is not loaded by the workspace UI")
+	}
+
+	filesCSS, err := os.ReadFile(filepath.Join(root, "cmd", "launcher", "web", "files.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(filesCSS), ".file-editor-surface { position: absolute; inset: 0;") {
+		t.Fatal("workspace editor surface must fill the editor body")
 	}
 
 	files, err := os.ReadFile(filepath.Join(root, "cmd", "launcher", "ui", "files.ts"))

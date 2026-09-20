@@ -181,6 +181,10 @@
         state.textarea.setAttribute("aria-hidden", "true");
         state.surface.classList.add("monaco-ready");
         state.surface.classList.remove("monaco-loading");
+        requestAnimationFrame(() => {
+          state.editor?.layout?.();
+          requestAnimationFrame(() => state.editor?.layout?.());
+        });
         return state.editor;
       } catch (error) {
         host.remove();
