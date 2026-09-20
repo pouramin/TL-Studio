@@ -202,6 +202,10 @@ func newServer(state *appState, backendURL, username, password string) (http.Han
 	if err != nil {
 		return nil, fmt.Errorf("create permission engine: %w", err)
 	}
+	sessionRead, err := newSessionReadContract(state, backendURL, username, password)
+	if err != nil {
+		return nil, fmt.Errorf("create session read contract: %w", err)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", func(w http.ResponseWriter, _ *http.Request) {
@@ -246,6 +250,7 @@ func newServer(state *appState, backendURL, username, password string) (http.Han
 	registerLocalProcessRoutes(mux, state)
 	registerRuntimeProviderRoutes(mux, providerManager)
 	registerToolRegistryRoutes(mux)
+	registerSessionReadRoutes(mux, sessionRead)
 	registerPermissionRoutes(mux, permissionEngine)
 	mux.Handle("/runtime/", proxy)
 	mux.Handle("/runtime", proxy)
