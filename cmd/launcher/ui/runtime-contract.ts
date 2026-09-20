@@ -68,6 +68,73 @@ interface TLStudioToolRegistry {
   unknown: TLStudioToolDescriptor;
 }
 
+interface TLStudioSessionModelRef {
+  providerID?: string;
+  id?: string;
+}
+
+interface TLStudioSessionView {
+  id: RuntimeSessionID;
+  title: string;
+  directory: string;
+  parentID?: RuntimeSessionID;
+  agent?: string;
+  model?: TLStudioSessionModelRef;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+interface TLStudioSessionUsage {
+  input: number;
+  output: number;
+  reasoning: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+interface TLStudioSessionActivity {
+  kind: "reasoning" | "tool" | "subtask" | "model";
+  status?: string;
+  text?: string;
+  agent?: string;
+  title?: string;
+  toolID?: string;
+  runtimeToolID?: string;
+  toolName?: string;
+  category?: string;
+  permissionClass?: string;
+  model?: TLStudioSessionModelRef;
+  usage?: TLStudioSessionUsage;
+  startAt?: number;
+  endAt?: number;
+  elapsed?: number;
+  [key: string]: unknown;
+}
+
+interface TLStudioSessionMessage {
+  id?: string;
+  sessionID?: RuntimeSessionID;
+  role: string;
+  agent?: string;
+  model?: TLStudioSessionModelRef;
+  createdAt?: number;
+  completedAt?: number;
+  text?: string;
+  error?: unknown;
+  activities: TLStudioSessionActivity[];
+  attachments: Array<{ name: string; mime?: string; url?: string }>;
+  usage: TLStudioSessionUsage;
+  changes: Array<{ file: string; additions: number; deletions: number; patch?: string }>;
+}
+
+interface TLStudioSessionStatus {
+  state: "idle" | "running" | "retrying" | "unknown";
+  active: boolean;
+  attempt?: number;
+  nextAt?: number;
+  message?: string;
+}
+
 interface TLStudioPermissionRule {
   id: string;
   project: string;
@@ -95,6 +162,13 @@ interface TLStudioRuntimeContract {
   readonly providers: RuntimeProviderConfigContract;
   tools: {
     registry(): Promise<TLStudioToolRegistry>;
+  };
+  sessionView: {
+    list(options?: { limit?: number }): Promise<TLStudioSessionView[]>;
+    status(options?: { directory?: string }): Promise<Record<RuntimeSessionID, TLStudioSessionStatus>>;
+    get(sessionID: RuntimeSessionID, options?: { directory?: string }): Promise<TLStudioSessionView>;
+    messages(sessionID: RuntimeSessionID, options?: { limit?: number; directory?: string }): Promise<TLStudioSessionMessage[]>;
+    changes(sessionID: RuntimeSessionID, options?: { directory?: string }): Promise<Array<{ file: string; additions: number; deletions: number; patch?: string }>>;
   };
   permissions: {
     list(sessionID?: RuntimeSessionID): Promise<unknown[]>;
