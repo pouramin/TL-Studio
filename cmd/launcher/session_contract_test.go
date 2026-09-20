@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -44,7 +43,8 @@ func TestSessionReadContractNormalizesMessagesAndToolActivity(t *testing.T) {
 		if r.URL.Path != "/session/s1/message" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		if r.URL.Query().Get("directory") != stateProjectFromHeader(t, r) {
+		headerDirectory := stateProjectFromHeader(t, r)
+		if r.URL.Query().Get("directory") == "" || r.URL.Query().Get("directory") != headerDirectory {
 			t.Fatalf("directory query/header mismatch: %s %s", r.URL.Query().Get("directory"), r.Header.Get("x-kilo-directory"))
 		}
 		writeJSON(w, http.StatusOK, []any{
