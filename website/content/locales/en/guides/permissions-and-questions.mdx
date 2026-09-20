@@ -20,6 +20,23 @@ Every approval made through the TL Studio permission dialog is sent to the pinne
 
 Always read the requested action, patterns, and metadata before approving command execution, file changes, or elevated tool behavior.
 
+## Development preview: TL Studio permission policy
+
+In stable v0.2.1, remembered approval behavior still follows the bundled runtime's reusable permission rules.
+
+In private **v0.3.0-alpha.6**, persistence moves into TL Studio. The launcher owns `/local/permissions*` routes and stores remembered **allow** rules in a local `permissions.json` policy file scoped to the selected Project.
+
+The preview policy is deliberately conservative:
+
+- TL Studio remembers only runtime-provided canonical matcher tokens; it does not invent broader wildcard rules;
+- every matcher on a future request must already be covered before automatic approval;
+- sensitive `skillShell` and `sandboxEscalation` requests are never remembered or auto-approved;
+- requests marked `disableAlways` remain interactive;
+- remembered rules are visible in Settings and can be forgotten there;
+- an explicit human click is forwarded as an interactive approval, while a matched remembered rule is applied as a non-interactive one-time approval.
+
+The runtime still generates the permission request at the tool boundary and enforces the final result; TL Studio owns the persistence and decision policy.
+
 ## Questions
 
 Interactive questions can be answered directly inside TL Studio. Depending on the request, the interface can present option lists, single or multiple selection, default choices, and custom answers.

@@ -43,3 +43,12 @@ Custom Provider definitions belong to TL Studio, but v0.2 still delegates API-ke
 ## Agent permissions
 
 An Agent can read/write project files and execute commands when the relevant Permission is granted. Review sensitive Permission requests before approving them.
+
+
+## Development preview security changes
+
+Private v0.3 adds a TL Studio-owned permission policy store. Remembered rules are Project-scoped, persisted locally in `permissions.json`, and limited to allow decisions using exact reusable matcher tokens supplied by the runtime.
+
+Sensitive `skillShell` and `sandboxEscalation` requests are never persisted or auto-approved, and requests that disable persistent approval remain interactive. Settings can list and delete remembered rules.
+
+The same dev line also bundles Monaco and its workers locally; editor runtime assets are not fetched from a CDN.

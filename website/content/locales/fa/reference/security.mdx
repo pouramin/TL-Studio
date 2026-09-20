@@ -43,3 +43,12 @@ Custom Provider Definition متعلق به TL Studio است، اما در v0.2 �
 ## Agent Permission
 
 Agent در صورت گرفتن Permission لازم می‌تواند Project Fileها را Read/Write کند و Command اجرا کند. Permission Request حساس را قبل از Approval بررسی کنید.
+
+
+## تغییرات Security در Development Preview
+
+در v0.3 خصوصی، Permission Policy Store متعلق به TL Studio اضافه شده است. Ruleهای Remembered در Scope همان Project داخل `permissions.json` به‌صورت Local ذخیره می‌شوند و فقط Allow Decisionهایی را پوشش می‌دهند که Matcher Token دقیق و قابل‌استفاده از Runtime داشته باشند.
+
+Requestهای حساس `skillShell` و `sandboxEscalation` هیچ‌وقت Persist یا Auto-approve نمی‌شوند و Requestهایی که Persistent Approval را Disable می‌کنند Interactive باقی می‌مانند. Ruleهای Remembered از Settings قابل مشاهده و حذف هستند.
+
+در همین خط Development، Monaco و Workerهایش هم کاملاً Local Bundle می‌شوند و Editor Asset از CDN دریافت نمی‌شود.

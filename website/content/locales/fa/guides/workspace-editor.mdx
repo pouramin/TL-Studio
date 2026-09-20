@@ -46,3 +46,12 @@ File ممکن است توسط Agent، Git، Build Tool یا برنامه‌ای 
 ## Project Switch
 
 اگر Tab باز با تغییر Save‌نشده داشته باشید، TL Studio قبل از رفتن به Project دیگر از آن محافظت می‌کند. اول Save کنید یا آگاهانه تغییر را Discard کنید.
+
+
+## Development Preview: Monaco
+
+در Stable v0.2.1 همان Editor سبک داخلی و تمام Contractهای File/Save/Conflict توضیح‌داده‌شده در بالا استفاده می‌شوند.
+
+در خط Development خصوصی **v0.3.0-alpha.6**، **Monaco Editor 0.56.0** به‌عنوان Editor Engine پیشرفته اضافه شده است. Monaco همراه خود TL Studio Bundle می‌شود، با اولین استفاده از File به‌صورت Lazy Load بالا می‌آید و Workerهای آن هم Local و Same-origin هستند؛ CDN برای Editor لازم نیست.
+
+Editor قبلی مبتنی بر textarea همچنان Fallback قابل‌استفاده است. File Buffer، Save Flow، SHA-256 Conflict Check، Project Boundary و External-change Reconciliation همچنان متعلق به TL Studio هستند و Monaco فقط Editor/Presentation Engine است. قابلیت‌های استاندارد Monaco مثل Find/Replace و Multi-cursor هم در Preview در دسترس‌اند.

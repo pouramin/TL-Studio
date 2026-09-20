@@ -20,6 +20,23 @@ TL Studio براساس خود Request گزینه‌های قابل استفاد�
 
 قبل از Allow کردن Command، File Change یا Tool Behavior حساس، Action، Patternها و Metadata درخواست را بخوانید.
 
+## Development Preview: Permission Policy خود TL Studio
+
+در Stable v0.2.1، رفتار Remembered Approval هنوز به Ruleهای قابل‌استفاده‌ای وابسته است که Runtime ارائه می‌کند.
+
+در Preview خصوصی **v0.3.0-alpha.6**، Persistence به خود TL Studio منتقل شده است. Launcher Routeهای `/local/permissions*` را مالک است و Ruleهای Remembered از نوع **allow** را داخل فایل Local به نام `permissions.json` و در Scope همان Project ذخیره می‌کند.
+
+Policy در Preview عمداً محافظه‌کار است:
+
+- فقط Matcher Tokenهای canonical که Runtime می‌دهد ذخیره می‌شوند و TL Studio Wildcard گسترده‌تر اختراع نمی‌کند؛
+- برای Auto Approval باید همه Matcherهای Request آینده از قبل پوشش داده شده باشند؛
+- Requestهای حساس `skillShell` و `sandboxEscalation` هیچ‌وقت Remember یا Auto-approve نمی‌شوند؛
+- Request دارای `disableAlways` همیشه Interactive می‌ماند؛
+- Ruleهای ذخیره‌شده در Settings دیده می‌شوند و می‌توان آن‌ها را Forget کرد؛
+- کلیک صریح User به‌صورت Interactive Approval فرستاده می‌شود، اما Rule ذخیره‌شده به یک One-time Approval غیرInteractive تبدیل می‌شود.
+
+خود Runtime همچنان Permission Request را در مرز Tool تولید و نتیجه نهایی را Enforce می‌کند؛ Persistence و Decision Policy متعلق به TL Studio می‌شود.
+
 ## Questionها
 
 Questionهای تعاملی را می‌توانید مستقیم داخل TL Studio پاسخ دهید. بسته به Request، UI می‌تواند Single Select، Multi Select، Default Option و Custom Answer نشان دهد.
