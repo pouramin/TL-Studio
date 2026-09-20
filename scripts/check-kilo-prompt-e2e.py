@@ -186,6 +186,21 @@ def main() -> int:
     project = local.get("project") if isinstance(local, dict) else None
     require(isinstance(project, str) and project, f"local project missing: {local!r}")
 
+    registry = request(base, "/local/tools")
+    require(isinstance(registry, dict) and registry.get("version") == 1, f"tool registry missing: {registry!r}")
+    tools_meta = registry.get("tools")
+    require(isinstance(tools_meta, list), f"tool registry tools missing: {registry!r}")
+    write_meta = next(
+        (item for item in tools_meta if isinstance(item, dict) and "write" in item.get("runtimeIDs", [])),
+        None,
+    )
+    require(write_meta is not None, f"write tool semantic mapping missing: {tools_meta!r}")
+    require(write_meta.get("id") == "files.write" and write_meta.get("permissionClass") == "write",
+            f"write tool semantic mapping mismatch: {write_meta!r}")
+    unknown_meta = registry.get("unknown")
+    require(isinstance(unknown_meta, dict) and unknown_meta.get("permissionClass") == "runtime",
+            f"unknown tool fallback must stay runtime-controlled: {unknown_meta!r}")
+
     agents = unwrap(request(base, routed("/runtime/agent", project)))
     require(isinstance(agents, list), f"agent response mismatch: {agents!r}")
     visible = [a for a in agents if isinstance(a, dict) and not a.get("hidden") and a.get("mode") != "subagent"]
@@ -337,6 +352,7 @@ def main() -> int:
         "messages": len(messages),
         "events": interesting,
         "saw_running": saw_running,
+        "tool_registry": "files.write",
         "permission": "edit/once",
         "file": target,
         "changes_source": change_source,

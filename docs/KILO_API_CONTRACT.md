@@ -19,7 +19,7 @@ TL Studio owns the browser-facing runtime namespace, provider/model registry, wo
 
 The browser talks to TL Studio through:
 
-- `/local/*` for TL Studio-owned workspace/files/search/process/preview/permission-policy capabilities;
+- `/local/*` for TL Studio-owned workspace/files/search/process/preview/tool-registry/permission-policy capabilities;
 - `/runtime/*` for agent-runtime capabilities.
 
 The browser must not construct Kilo-specific route prefixes or depend on Kilo-specific authentication details.
@@ -78,6 +78,12 @@ The current engine still exposes and enforces:
 - `POST /runtime/permission/:requestID/reply?directory=...`
 
 Those routes are now an implementation compatibility surface. Normal browser permission UI uses TL Studio's launcher-owned `/local/permissions*` contract. The launcher reads current engine requests, applies TL Studio's project-scoped policy, and translates explicit or remembered decisions back to the engine as one-time replies.
+
+### Tool Registry
+
+Tool identity and product-facing metadata are no longer inferred directly in the browser. The launcher exposes `GET /local/tools`, which maps known Kilo 7.6.2 runtime IDs such as `read`, `write`, `edit`, `apply_patch`, `bash`, `webfetch`, and `websearch` to TL Studio semantic descriptors.
+
+This registry does not replace Kilo's execution engine. Tool parts still arrive through runtime session messages and Kilo still executes the underlying tool. Unknown IDs use TL Studio's conservative runtime-controlled fallback. Permission decisions continue through the separate TL Studio permission-policy boundary and final runtime enforcement.
 
 ### Questions
 
@@ -147,6 +153,7 @@ The adapter owns browser-side runtime concerns such as:
 - question access
 
 Permission policy is intentionally not a browser-to-engine adapter concern anymore; it is owned by the launcher-side TL Studio permission engine.
+- tool presentation resolves through the launcher-owned `/local/tools` semantic registry rather than raw runtime labels
 - live-event handling
 
 Engine-specific provider/config/auth translation belongs in the launcher, not in browser modules.

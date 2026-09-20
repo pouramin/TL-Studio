@@ -245,6 +245,7 @@ func newServer(state *appState, backendURL, username, password string) (http.Han
 	registerProjectSearchRoutes(mux, state)
 	registerLocalProcessRoutes(mux, state)
 	registerRuntimeProviderRoutes(mux, providerManager)
+	registerToolRegistryRoutes(mux)
 	registerPermissionRoutes(mux, permissionEngine)
 	mux.Handle("/runtime/", proxy)
 	mux.Handle("/runtime", proxy)

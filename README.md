@@ -42,7 +42,8 @@ The release already includes the pinned local agent runtime.
 - **Agent & model selection** — switch agents and available provider models from the composer.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
-- **Live agent activity** — compact Reasoning and Tool cards with live status updates.
+- **TL Studio Tool Registry** — known runtime tools are mapped to TL Studio-owned names, categories, capability metadata, permission classes, and presentation hints.
+- **Live agent activity** — compact Reasoning and Tool cards with live status updates using TL Studio tool semantics.
 - **TL Studio permission policies & questions** — approve one-time actions, remember project-scoped non-sensitive rules in TL Studio, forget saved rules from Settings, reject actions, and answer interactive questions.
 - **Stop & recovery** — interrupt active work and recover from stalled or retryable upstream failures.
 - **Session management** — create, resume, rename, delete, and switch sessions across recent projects.
@@ -65,24 +66,25 @@ Browser workspace
 TL Studio launcher (Go)
     │
     ├─ TL Studio provider/model registry
+    ├─ TL Studio tool registry
     ├─ TL Studio permission policy engine
     ├─ project files / search / terminal / preview
     │
     └─ authenticated runtime adapter
             ▼
         Local agent runtime
-            ├─ agents / sessions / tools
+            ├─ agents / sessions / tool execution
             ├─ permission enforcement / questions / live events
             └─ provider execution / model inference
 ```
 
-TL Studio owns the workspace, product UI, local launcher, provider/model definitions, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, tool semantics/metadata, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
 
 The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
 ## Runtime boundary
 
-TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, permission policy, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio. Permission prompts use launcher-owned `/local/permissions*` routes so remembered approvals are not delegated to the bundled engine.
+TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, tool semantics, permission policy, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio. Permission prompts use launcher-owned `/local/permissions*` routes so remembered approvals are not delegated to the bundled engine.
 
 The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. That engine is an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 

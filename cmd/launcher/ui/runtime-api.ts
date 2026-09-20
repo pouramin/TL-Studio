@@ -96,6 +96,13 @@
       remove: async (providerID) => unwrapData(await request(`/providers/config/${enc(providerID)}`, { method: "DELETE" })),
     },
 
+    tools: {
+      registry: async () => {
+        const payload = await K.request("/local/tools");
+        return payload && typeof payload === "object" ? payload : { version: 0, tools: [] };
+      },
+    },
+
     sessions: {
       list: async ({ limit = 50, directory = projectDirectory() } = {}) => {
         const payload = unwrapData(await request(route("/session", { limit, roots: true }, directory)));
