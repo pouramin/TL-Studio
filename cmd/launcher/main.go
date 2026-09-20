@@ -198,6 +198,10 @@ func newServer(state *appState, backendURL, username, password string) (http.Han
 	if err != nil {
 		return nil, fmt.Errorf("create runtime provider manager: %w", err)
 	}
+	permissionEngine, err := newPermissionEngine(state, backendURL, username, password)
+	if err != nil {
+		return nil, fmt.Errorf("create permission engine: %w", err)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", func(w http.ResponseWriter, _ *http.Request) {
@@ -241,6 +245,7 @@ func newServer(state *appState, backendURL, username, password string) (http.Han
 	registerProjectSearchRoutes(mux, state)
 	registerLocalProcessRoutes(mux, state)
 	registerRuntimeProviderRoutes(mux, providerManager)
+	registerPermissionRoutes(mux, permissionEngine)
 	mux.Handle("/runtime/", proxy)
 	mux.Handle("/runtime", proxy)
 
