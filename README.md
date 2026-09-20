@@ -14,7 +14,7 @@
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
 **TL Studio** is a local browser-based development workspace where you can edit code yourself and work alongside an AI agent. Open a project, browse and edit files, search across the codebase, run commands, preview the app, choose models/providers, and hand work to the agent — all on your own computer.

@@ -14,7 +14,7 @@
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/pouramin/TL-Studio" alt="License"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
 **TL Studio** یک محیط توسعه‌ی لوکال در مرورگر است که هم خودتان می‌توانید داخلش کد را بخوانید و ویرایش کنید و هم در کنار آن از Agent کمک بگیرید. Project را باز کنید، فایل‌ها را مدیریت و ویرایش کنید، در کل کد جست‌وجو کنید، Command اجرا کنید، Preview بگیرید، Model و Provider انتخاب کنید و هرجا خواستید کار را به Agent بسپارید.
