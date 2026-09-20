@@ -247,7 +247,7 @@ def main() -> int:
         if isinstance(status, dict) and status.get("type") != "idle":
             saw_running = True
 
-        pending = unwrap(request(base, routed("/runtime/permission", project)))
+        pending = request(base, f"/local/permissions?{urllib.parse.urlencode({'sessionID': session_id})}")
         pending = pending if isinstance(pending, list) else []
         for permission in pending:
             if not isinstance(permission, dict) or permission.get("sessionID") != session_id:
@@ -261,9 +261,9 @@ def main() -> int:
                     f"edit permission did not target hello.txt: {permission!r}")
             request(
                 base,
-                routed(f"/runtime/permission/{urllib.parse.quote(permission_id, safe='')}/reply", project),
+                f"/local/permissions/{urllib.parse.quote(permission_id, safe='')}/reply",
                 method="POST",
-                payload={"reply": "once"},
+                payload={"sessionID": session_id, "reply": "once"},
             )
             approved_permissions.add(permission_id)
             saw_edit_permission = True
