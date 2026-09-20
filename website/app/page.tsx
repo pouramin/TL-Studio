@@ -96,10 +96,10 @@ export default function HomePage() {
 
         <section className="border-t bg-fd-card/20">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className="text-sm font-medium text-fd-muted-foreground">Development preview · v0.3.0-alpha.6</p>
+            <p className="text-sm font-medium text-fd-muted-foreground">Development preview · v0.3.0-alpha.7</p>
             <h2 className="mt-2 text-3xl font-semibold">The next development line moves more of the workspace into TL Studio.</h2>
             <p className="mt-4 max-w-3xl leading-7 text-fd-muted-foreground">
-              The private dev preview adds a locally bundled, lazy-loaded Monaco editor and a TL Studio-owned project-scoped permission policy engine. Stable users remain on v0.2.1.
+              The private dev preview adds a locally bundled Monaco editor, a TL Studio-owned Tool Registry, and a project-scoped permission policy engine. Stable users remain on v0.2.1.
             </p>
             <Link href="/docs/reference/development-preview" className="mt-5 inline-flex items-center gap-2 font-medium text-fd-primary">
               Development preview details <ArrowRight className="size-4" />

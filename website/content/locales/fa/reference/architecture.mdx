@@ -82,18 +82,20 @@ Browser با `/runtime/*` حرف می‌زند و Launcher/Runtime Adapter آن 
 
 ## Development Preview Boundary
 
-خط خصوصی **v0.3.0-alpha.6** دو بخش دیگر را به داخل TL Studio منتقل می‌کند، بدون اینکه Contract نسخه Stable v0.2.1 را عوض کند:
+خط خصوصی **v0.3.0-alpha.7** سه بخش دیگر از Product Semantics را به داخل TL Studio منتقل می‌کند، بدون اینکه Contract نسخه Stable v0.2.1 را عوض کند:
 
 1. **Editor Engine** — Monaco Editor به‌صورت Local Bundle و Lazy Load می‌شود و همچنان پشت File Buffer/Save/Conflict APIهای خود TL Studio قرار دارد؛ Editor سبک قبلی هم Fallback باقی می‌ماند.
-2. **Permission Policy** — Browser از Routeهای `/local/permissions*` متعلق به TL Studio استفاده می‌کند. Remembered Allow Ruleهای Project-scoped داخل `permissions.json` خود TL Studio نگه‌داری می‌شوند؛ Engine همراه برنامه هنوز Permission Request را تولید و Enforce می‌کند.
+2. **Tool Semantics** — Route `GET /local/tools` Descriptorهای Semantic متعلق به TL Studio را می‌دهد. Runtime Tool IDهای شناخته‌شده به ID، Name، Category، Permission Class، Capability Flag و Presentation Hint پایدار در TL Studio Map می‌شوند؛ Tool Execution همچنان در Engine همراه برنامه است.
+3. **Permission Policy** — Browser از Routeهای `/local/permissions*` متعلق به TL Studio استفاده می‌کند. Remembered Allow Ruleهای Project-scoped داخل `permissions.json` خود TL Studio نگه‌داری می‌شوند؛ Engine همراه برنامه هنوز Permission Request را تولید و Enforce می‌کند.
 
 معماری Development به این شکل نزدیک‌تر می‌شود:
 
 ```text
 Browser Workspace
   ├─ Files / Monaco-or-fallback Editor / Search / Terminal / Preview
+  ├─ /local/tools ─────────► TL Studio Tool Registry
   ├─ /local/permissions* ──► TL Studio Permission Policy
   └─ /runtime/* ──────────► Runtime Adapter ──► Bundled Agent Engine
 ```
 
-در dev، Provider/Model Definition و Permission Persistence متعلق به TL Studio هستند. Session Execution، Tool Execution، Questionها، Credential Persistence و Model Inference هنوز پشت Agent Engine Boundary باقی می‌مانند.
+در dev، Provider/Model Definition، Tool Semantics و Permission Persistence متعلق به TL Studio هستند. Session Execution، Tool Execution، Questionها، Credential Persistence و Model Inference هنوز پشت Agent Engine Boundary باقی می‌مانند.

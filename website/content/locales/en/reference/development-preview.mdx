@@ -4,7 +4,7 @@ description: What is currently on dev, how it differs from stable, and how priva
 icon: FlaskConical
 ---
 
-Stable users should use **v0.2.1**. The active development line is **v0.3.0-alpha.6** on `dev`.
+Stable users should use **v0.2.1**. The active development line is **v0.3.0-alpha.7** on `dev`.
 
 The development line is intentionally private: it is **not published to npm** and **not published as a public GitHub prerelease**. GitHub Actions produces short-lived **Preview Build** artifacts for project testing.
 
@@ -22,6 +22,18 @@ The development workspace uses **Monaco Editor 0.56.0** as the enhanced editor e
 - the original lightweight textarea editor remains the fallback.
 
 Monaco does **not** own filesystem semantics. TL Studio still owns Project paths, file buffers, saves, SHA-256 conflict checks, external-change reconciliation, and Agent handoff.
+
+### TL Studio Tool Registry
+
+The preview adds a versioned Tool Registry exposed by TL Studio at:
+
+```text
+GET /local/tools
+```
+
+Known runtime tool IDs are mapped to TL Studio-owned semantic descriptors: stable ID, product-facing name/description, category, permission class, read/write/execute/network capability flags, and a presentation hint. Activity cards resolve these descriptors instead of treating the runtime's raw tool ID as product metadata.
+
+The registry is descriptive only. It does not execute tools or grant permissions. Unknown tools fall back to a conservative `runtime.unknown` descriptor with no invented capabilities, while the original runtime ID remains available for diagnostics. Runtime enforcement stays authoritative.
 
 ### TL Studio permission policy engine
 

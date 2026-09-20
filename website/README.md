@@ -20,7 +20,7 @@ For stable v0.2.1, the public site reflects TL Studio-owned capabilities includi
 
 Implementation-specific engine naming should remain isolated to the maintainer Runtime Integration reference unless legal attribution or compatibility debugging genuinely requires it.
 
-The public site is stable-first, but repository-wide reviews must also inspect `dev`. Development-only features must be labeled clearly and must not be presented as stable. The current private dev line is `v0.3.0-alpha.6`, with locally bundled Monaco and TL Studio-owned remembered permission policy as its major product-boundary changes.
+The public site is stable-first, but repository-wide reviews must also inspect `dev`. Development-only features must be labeled clearly and must not be presented as stable. The current private dev line is `v0.3.0-alpha.7`, with locally bundled Monaco, a TL Studio-owned Tool Registry, and TL Studio-owned remembered permission policy as its major product-boundary changes.
 
 ## Languages
 

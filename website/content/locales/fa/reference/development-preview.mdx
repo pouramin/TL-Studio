@@ -4,7 +4,7 @@ description: وضعیت فعلی dev، تفاوتش با Stable و نحوه تو
 icon: FlaskConical
 ---
 
-برای استفاده معمول، نسخه **v0.2.1** Stable است. خط Development فعال **v0.3.0-alpha.6** روی `dev` است.
+برای استفاده معمول، نسخه **v0.2.1** Stable است. خط Development فعال **v0.3.0-alpha.7** روی `dev` است.
 
 این خط Development عمداً خصوصی نگه داشته می‌شود: روی **npm Publish نمی‌شود** و **GitHub Prerelease عمومی** هم ندارد. GitHub Actions برای تست پروژه **Preview Build**های موقت تولید می‌کند.
 
@@ -22,6 +22,18 @@ icon: FlaskConical
 - Editor سبک قبلی همچنان Fallback است.
 
 Monaco مالک Filesystem نیست. Project Path، File Buffer، Save، SHA-256 Conflict Check، External-change Reconciliation و Agent Handoff همچنان متعلق به TL Studio هستند.
+
+### Tool Registry خود TL Studio
+
+در Preview یک Tool Registry Versioned از این Route ارائه می‌شود:
+
+```text
+GET /local/tools
+```
+
+Runtime Tool IDهای شناخته‌شده به Descriptorهای Semantic متعلق به TL Studio Map می‌شوند: ID پایدار، Name/Description محصولی، Category، Permission Class، Capability Flagهای Read/Write/Execute/Network و Presentation Hint. Activity Cardها به‌جای اینکه Raw Tool ID مربوط به Runtime را Product Metadata در نظر بگیرند، از همین Registry استفاده می‌کنند.
+
+Registry فقط توصیفی است؛ Tool اجرا نمی‌کند و Permission نمی‌دهد. Tool ناشناخته به Descriptor محافظه‌کار `runtime.unknown` با Capability خالی برمی‌گردد و Runtime ID اصلی برای Diagnostics باقی می‌ماند. Runtime Enforcement همچنان مرجع نهایی است.
 
 ### Permission Policy Engine خود TL Studio
 

@@ -82,18 +82,20 @@ The goal is replaceability: new product features should depend on Sessions, Mess
 
 ## Development preview boundary
 
-The private **v0.3.0-alpha.6** line moves two more capabilities inward without changing the stable v0.2.1 contract:
+The private **v0.3.0-alpha.7** line moves three more product semantics inward without changing the stable v0.2.1 contract:
 
 1. **Editor engine** — Monaco Editor is bundled locally and lazy-loaded. It remains behind TL Studio's existing file-buffer/save/conflict APIs, with the lightweight editor preserved as fallback.
-2. **Permission policy** — the browser uses TL Studio-owned `/local/permissions*` routes. Project-scoped remembered allow rules live in TL Studio's `permissions.json`; the bundled engine still generates and enforces individual permission requests.
+2. **Tool semantics** — `GET /local/tools` exposes TL Studio-owned semantic tool descriptors. Known runtime tool IDs map to stable TL Studio IDs, names, categories, permission classes, capability flags, and presentation hints. Actual tool execution remains in the bundled engine.
+3. **Permission policy** — the browser uses TL Studio-owned `/local/permissions*` routes. Project-scoped remembered allow rules live in TL Studio's `permissions.json`; the bundled engine still generates and enforces individual permission requests.
 
 The development architecture therefore becomes:
 
 ```text
 Browser workspace
   ├─ Files / Monaco-or-fallback editor / Search / Terminal / Preview
+  ├─ /local/tools ─────────► TL Studio Tool Registry
   ├─ /local/permissions* ──► TL Studio permission policy
   └─ /runtime/* ──────────► runtime adapter ──► bundled Agent engine
 ```
 
-Provider/model definitions and permission persistence are TL Studio-owned in the dev line. Session execution, Tool execution, Questions, credential persistence, and Model inference remain behind the Agent engine boundary.
+Provider/model definitions, Tool semantics, and permission persistence are TL Studio-owned in the dev line. Session execution, Tool execution, Questions, credential persistence, and Model inference remain behind the Agent engine boundary.
