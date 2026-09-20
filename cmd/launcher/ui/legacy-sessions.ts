@@ -75,8 +75,8 @@
     }
 
     K.state.sessions = [...merged.values()].sort((a, b) => {
-      const at = Number(a?.time?.updated || a?.time?.created || 0);
-      const bt = Number(b?.time?.updated || b?.time?.created || 0);
+      const at = Number(a?.updatedAt || a?.createdAt || a?.time?.updated || a?.time?.created || 0);
+      const bt = Number(b?.updatedAt || b?.createdAt || b?.time?.updated || b?.time?.created || 0);
       return bt - at;
     });
     K.renderSessions();
