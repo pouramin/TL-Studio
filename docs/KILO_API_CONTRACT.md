@@ -62,7 +62,21 @@ The current engine's product layer exposes the visible `code` agent rather than 
 - `POST /runtime/session/:sessionID/abort?directory=...`
 - `GET /runtime/session/:sessionID/diff?directory=...`
 
-The pinned engine returns product messages in its current `info + parts` envelope. The browser adapter normalizes and presents that data through TL Studio UI concepts.
+The pinned engine returns product messages in its current `info + parts` envelope. That envelope is now implementation-only for current sessions: the launcher projects it into TL Studio's `/local/sessions*` semantic read contract before the browser consumes it.
+
+### TL Studio session read projection
+
+Normal Browser reads no longer consume the engine's session/message shapes directly. The launcher maps the implementation routes above into:
+
+- `GET /local/sessions`
+- `GET /local/sessions/status`
+- `GET /local/sessions/{sessionID}`
+- `GET /local/sessions/{sessionID}/messages`
+- `GET /local/sessions/{sessionID}/changes`
+
+The projection owns cross-project aggregation, flat session timestamps, semantic message roles/text, activity classification, usage, normalized status, and Changes fallback. Runtime-specific `info`, `parts`, `busy`, and `retry` shapes therefore stay on this compatibility side of the boundary.
+
+This does not move mutation or execution ownership. Session create/update/delete, prompt/abort, live events, persisted transcript storage, and the agent loop still use the engine through the runtime adapter.
 
 ### Events
 
