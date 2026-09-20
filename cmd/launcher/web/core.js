@@ -232,20 +232,20 @@
   };
 
   K.loadSessions = async () => {
-    const payload = await K.api.sessions.list({ limit: 50 });
-    K.state.sessions = Array.isArray(payload?.data) ? payload.data : [];
+    const payload = await K.api.sessionView.list({ limit: 150 });
+    K.state.sessions = Array.isArray(payload) ? payload : [];
     K.renderSessions();
     return K.state.sessions;
   };
 
   K.loadActiveSessions = async () => {
-    try { K.state.activeSessions = (await K.api.sessions.status())?.data || {}; }
+    try { K.state.activeSessions = await K.api.sessionView.status(); }
     catch { K.state.activeSessions = {}; }
   };
 
   K.isSessionRunning = (sessionID) => {
     const status = sessionID ? K.state.activeSessions?.[sessionID] : undefined;
-    return !!status && status.type !== "idle";
+    return status?.active === true;
   };
 
   K.renderSessions = () => {
@@ -264,7 +264,7 @@
       const title = document.createElement("strong");
       const meta = document.createElement("span");
       title.textContent = session.title || "Untitled session";
-      meta.textContent = `${session.agent || "default"} · ${K.relativeTime(session.time?.updated || session.time?.created)}`;
+      meta.textContent = `${session.agent || "default"} · ${K.relativeTime(session.updatedAt || session.createdAt)}`;
       button.append(title, meta);
       button.addEventListener("click", () => K.selectSession(session));
       list.appendChild(button);
