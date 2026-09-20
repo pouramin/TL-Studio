@@ -30,6 +30,9 @@ func TestWorkspaceUXEnhancementsContract(t *testing.T) {
 	if !strings.Contains(editorCSS, ".file-editor-surface.monaco-ready .file-editor-highlight") {
 		t.Fatal("legacy syntax layer is not hidden when Monaco is active")
 	}
+	if strings.Contains(editorCSS, ".file-editor-surface { position: relative; }") {
+		t.Fatal("editor enhancements must not override the workspace surface positioning")
+	}
 
 	settings := read("settings-enhancements.js")
 	for _, required := range []string{"Editor color theme", "UI Font", "Code Font", "Terminal Font", "resetPreviewWindow", "tl-studio.editor-theme"} {
