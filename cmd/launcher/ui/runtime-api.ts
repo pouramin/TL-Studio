@@ -112,15 +112,6 @@
     },
 
     sessions: {
-      list: async ({ limit = 50, directory = projectDirectory() } = {}) => {
-        const payload = unwrapData(await request(route("/session", { limit, roots: true }, directory)));
-        return wrapData(Array.isArray(payload) ? payload : []);
-      },
-      status: async () => {
-        const payload = unwrapData(await request(route("/session/status")));
-        return wrapData(payload && typeof payload === "object" ? payload : {});
-      },
-      get: async (sessionID, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory)))),
       create: async (input = {}) => {
         const payload = {};
         if (input.parentID) payload.parentID = input.parentID;
@@ -131,14 +122,6 @@
         method: "PATCH", ...body(input),
       }))),
       remove: async (sessionID, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), { method: "DELETE" }))),
-      diff: async (sessionID, { messageID, full, file, directory } = {}) => {
-        const payload = unwrapData(await request(route(`/session/${enc(sessionID)}/diff`, { messageID, full, file }, directory)));
-        return wrapData(Array.isArray(payload) ? payload : []);
-      },
-      messages: async (sessionID, { limit = 200, directory } = {}) => {
-        const payload = unwrapData(await request(route(`/session/${enc(sessionID)}/message`, { limit }, directory)));
-        return wrapData(Array.isArray(payload) ? payload : []);
-      },
       promptAsync: (sessionID, { text, parts, agent, model, variant, messageID, directory } = {}) => {
         const payload = {
           parts: Array.isArray(parts) && parts.length ? parts : [{ type: "text", text: text || "" }],
