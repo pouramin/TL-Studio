@@ -236,11 +236,18 @@
     K.addAttachments(files);
   });
 
-  const messageParts = (message) => Array.isArray(message?.parts)
-    ? message.parts
-    : Array.isArray(message?.content) ? message.content : [];
+  const messageAttachments = (message) => {
+    if (Array.isArray(message?.attachments)) return message.attachments;
+    const parts = Array.isArray(message?.parts) ? message.parts : Array.isArray(message?.content) ? message.content : [];
+    return parts.filter((part) => part?.type === "file").map((part) => ({
+      name: part.filename || part.name || "Attachment",
+      mime: part.mime || "text/plain",
+      url: part.url || "",
+    }));
+  };
 
   const renderedMessage = (message) => {
+    if (message?.role) return message.role === "user" || message.role === "assistant";
     if (message?.info && Array.isArray(message.parts)) return message.info.role === "user" || message.info.role === "assistant";
     return ["user", "assistant", "shell", "system", "synthetic"].includes(message?.type);
   };
@@ -252,7 +259,7 @@
       if (!renderedMessage(message)) continue;
       const row = rows[rowIndex++];
       if (!row) break;
-      const files = messageParts(message).filter((part) => part?.type === "file");
+      const files = messageAttachments(message);
       if (!files.length) continue;
       const content = row.querySelector(".message-content");
       if (!content || content.querySelector(".message-attachments")) continue;
@@ -264,8 +271,8 @@
         const type = document.createElement("span");
         type.textContent = kindLabel(file.mime || "text/plain");
         const name = document.createElement("strong");
-        name.textContent = file.filename || "Attachment";
-        name.title = file.filename || "Attachment";
+        name.textContent = file.name || "Attachment";
+        name.title = file.name || "Attachment";
         item.append(type, name);
         list.appendChild(item);
       }
@@ -300,13 +307,15 @@
       K.els.prompt.value = "";
       K.resizePrompt();
       K.state.messages.push({
-        info: {
-          role: "user",
-          time: { created: startedAt },
-          agent: agent || "",
-          model: model ? { providerID: model.providerID, modelID: model.id } : undefined,
-        },
-        parts,
+        role: "user",
+        createdAt: startedAt,
+        agent: agent || "",
+        model: model ? { providerID: model.providerID, id: model.id } : undefined,
+        text,
+        activities: [],
+        attachments: attachments.map((item) => ({ name: item.name, mime: item.mime, url: item.url })),
+        usage: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+        changes: [],
       });
       K.renderMessages();
 
