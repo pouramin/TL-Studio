@@ -103,6 +103,14 @@
       },
     },
 
+    sessionView: {
+      list: ({ limit = 150 } = {}) => K.request(withQuery("/local/sessions", { limit })),
+      status: ({ directory = projectDirectory() } = {}) => K.request(withQuery("/local/sessions/status", { directory })),
+      get: (sessionID, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}`, { directory })),
+      messages: (sessionID, { limit = 200, directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/messages`, { limit, directory })),
+      changes: (sessionID, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/changes`, { directory })),
+    },
+
     sessions: {
       list: async ({ limit = 50, directory = projectDirectory() } = {}) => {
         const payload = unwrapData(await request(route("/session", { limit, roots: true }, directory)));
