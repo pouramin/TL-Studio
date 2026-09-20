@@ -8,11 +8,8 @@
   const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
-  const partsOf = (message) => Array.isArray(message?.parts)
-    ? message.parts
-    : Array.isArray(message?.content) ? message.content : [];
-  const messageRole = (message) => message?.info?.role || message?.type || "";
-  const errorOf = (message) => message?.info?.error || message?.error || null;
+  const messageRole = (message) => message?.role || message?.info?.role || message?.type || "";
+  const errorOf = (message) => message?.error || message?.info?.error || null;
   const errorData = (error) => error?.data && typeof error.data === "object" ? error.data : (error || {});
 
   const text = (value) => String(value ?? "").trim();
@@ -30,10 +27,10 @@
     if (!error || typeof error !== "object") return null;
 
     const data = errorData(error);
-    const name = text(error.name || error.type);
-    const messageText = text(data.message || error.message);
-    const responseBody = text(data.responseBody || error.responseBody);
-    const statusCode = finiteStatus(data.statusCode || error.statusCode);
+    const name = text(error.type || error.name);
+    const messageText = text(error.message || data.message);
+    const responseBody = text(error.responseBody || data.responseBody);
+    const statusCode = finiteStatus(error.statusCode || data.statusCode);
     const combined = `${messageText}\n${responseBody}`;
 
     if (name === "MessageAbortedError" || name === "ProviderAuthError" || name === "ContextOverflowError" || clearlyNonRetryable(combined)) {
@@ -41,7 +38,8 @@
     }
 
     const apiError = name === "APIError";
-    const retryable = (apiError && data.isRetryable === true)
+    const retryable = error.retryable === true
+      || (apiError && data.isRetryable === true)
       || (statusCode >= 500 && statusCode < 600)
       || transientMessage(combined);
 
