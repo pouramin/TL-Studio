@@ -56,6 +56,12 @@
     return `+${Number.isFinite(additions) ? additions : 0} −${Number.isFinite(deletions) ? deletions : 0}`;
   };
 
+  const toolDescriptor = (item) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
+    name: "Runtime tool",
+    category: "runtime",
+    permissionClass: "runtime",
+  };
+
   const toolDetails = (item) => {
     const state = item?.state || {};
     const blocks = [];
@@ -315,9 +321,10 @@
 
     if (item?.type === "tool") {
       const state = item.state || {};
-      const meta = [fileHint(item), diffHint(item)].filter(Boolean).join(" · ");
+      const descriptor = toolDescriptor(item);
+      const meta = [descriptor.category, descriptor.permissionClass, fileHint(item), diffHint(item)].filter(Boolean).join(" · ");
       return activityCard({
-        title: item.tool || item.name || "Tool",
+        title: descriptor.name,
         status: state.status || item.status || "pending",
         meta,
         blocks: toolDetails(item),
