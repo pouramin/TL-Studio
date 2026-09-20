@@ -1,14 +1,14 @@
 {
-  "name": "tl-agent",
+  "name": "tl-studio",
   "version": "0.0.0",
-  "description": "Quick launcher for the TL Agent local coding-agent workspace",
+  "description": "Quick launcher for the TL Studio local development workspace",
   "license": "MIT",
   "type": "commonjs",
   "bin": {
-    "tl-agent": "tl-agent.cjs"
+    "tl-studio": "tl-studio.cjs"
   },
   "files": [
-    "tl-agent.cjs",
+    "tl-studio.cjs",
     "launcher.cjs",
     "README.md"
   ],
@@ -17,14 +17,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pouramin/TL-Agent.git"
+    "url": "git+https://github.com/pouramin/TL-Studio.git"
   },
-  "homepage": "https://github.com/pouramin/TL-Agent#readme",
+  "homepage": "https://github.com/pouramin/TL-Studio#readme",
   "bugs": {
-    "url": "https://github.com/pouramin/TL-Agent/issues"
+    "url": "https://github.com/pouramin/TL-Studio/issues"
   },
   "keywords": [
-    "tl-agent",
+    "tl-studio",
     "coding-agent",
     "ai",
     "developer-tools",

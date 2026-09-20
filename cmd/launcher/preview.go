@@ -217,7 +217,7 @@ func (m *previewManager) snapshotLocked(capability previewCapability) previewSna
 	}
 	snapshot.Running = processState.Running
 	if !processState.Running && m.previewURL == "" {
-		snapshot.Error = "The dev server exited before TL Agent could detect a local preview URL."
+		snapshot.Error = "The dev server exited before TL Studio could detect a local preview URL."
 	}
 	return snapshot
 }
@@ -275,11 +275,11 @@ func registerLivePreviewRoutes(mux *http.ServeMux, state *appState) {
 	manager := newPreviewManager(state)
 
 	// The application shell keeps a strict CSP, but explicitly allows frames from
-	// loopback-only preview servers. The preview itself never shares TL Agent's origin.
+	// loopback-only preview servers. The preview itself never shares TL Studio's origin.
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		indexHTML, err := fs.ReadFile(webFS, "web/index.html")
 		if err != nil {
-			http.Error(w, "TL Agent UI unavailable", http.StatusInternalServerError)
+			http.Error(w, "TL Studio UI unavailable", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

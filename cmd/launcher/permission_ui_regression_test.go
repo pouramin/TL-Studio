@@ -35,6 +35,6 @@ func TestPermissionUIExplainsScopedAlwaysRules(t *testing.T) {
 		}
 	}
 	if strings.Contains(text, `Kilo wants permission to`) {
-		t.Fatal("permission UI should use TL Agent product language instead of upstream branding")
+		t.Fatal("permission UI should use TL Studio product language instead of upstream branding")
 	}
 }

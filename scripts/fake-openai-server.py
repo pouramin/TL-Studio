@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tiny OpenAI-compatible streaming fixture used by TL Agent CI.
+"""Tiny OpenAI-compatible streaming fixture used by TL Studio CI.
 
 When FAKE_WRITE_PATH is set, the first provider turn calls Kilo's `write` tool
 for that exact path. After Kilo sends the tool result back, the fixture emits
@@ -15,13 +15,13 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 REPLY = "E2E_PRODUCT_OK"
-WRITE_CONTENT = "TL_AGENT_E2E_OK"
+WRITE_CONTENT = "TL_STUDIO_E2E_OK"
 WRITE_PATH = os.environ.get("FAKE_WRITE_PATH", "")
 
 
 def chat_chunk(delta=None, finish=None, usage=None):
     item = {
-        "id": "chatcmpl-tl-agent",
+        "id": "chatcmpl-tl-studio",
         "object": "chat.completion.chunk",
         "choices": [{"index": 0, "delta": delta or {}}],
     }
@@ -47,7 +47,7 @@ def chat_events(body: dict):
             chat_chunk({
                 "tool_calls": [{
                     "index": 0,
-                    "id": "call_tl_agent_write",
+                    "id": "call_tl_studio_write",
                     "type": "function",
                     "function": {"name": "write", "arguments": arguments},
                 }]
@@ -76,18 +76,18 @@ def response_events(model: str):
         {
             "type": "response.created",
             "sequence_number": 1,
-            "response": {"id": "resp_tl_agent", "created_at": 0, "model": model, "service_tier": None},
+            "response": {"id": "resp_tl_studio", "created_at": 0, "model": model, "service_tier": None},
         },
         {
             "type": "response.output_item.added",
             "sequence_number": 2,
             "output_index": 0,
-            "item": {"type": "message", "id": "msg_tl_agent"},
+            "item": {"type": "message", "id": "msg_tl_studio"},
         },
         {
             "type": "response.output_text.delta",
             "sequence_number": 3,
-            "item_id": "msg_tl_agent",
+            "item_id": "msg_tl_studio",
             "delta": REPLY,
             "logprobs": None,
         },
@@ -95,7 +95,7 @@ def response_events(model: str):
             "type": "response.output_item.done",
             "sequence_number": 4,
             "output_index": 0,
-            "item": {"type": "message", "id": "msg_tl_agent"},
+            "item": {"type": "message", "id": "msg_tl_studio"},
         },
         {
             "type": "response.completed",

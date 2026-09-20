@@ -150,7 +150,7 @@ func main() {
 		_ = httpServer.Shutdown(shutdownCtx)
 	}()
 
-	fmt.Printf("TL Agent %s\n", version)
+	fmt.Printf("TL Studio %s\n", version)
 	fmt.Printf("  Project: %s\n", project)
 	fmt.Printf("  Local:   %s\n", frontendURL)
 	fmt.Printf("  Runtime: bundled\n")
@@ -344,7 +344,7 @@ func findKiloBinary(override string) (string, error) {
 	if strings.TrimSpace(override) != "" {
 		candidates = append(candidates, override)
 	}
-	if env := strings.TrimSpace(os.Getenv("TL_AGENT_RUNTIME_BIN")); env != "" {
+	if env := strings.TrimSpace(os.Getenv("TL_STUDIO_RUNTIME_BIN")); env != "" {
 		candidates = append(candidates, env)
 	} else if legacyEnv := strings.TrimSpace(os.Getenv("KILO_BIN")); legacyEnv != "" {
 		candidates = append(candidates, legacyEnv)
@@ -372,7 +372,7 @@ func findKiloBinary(override string) (string, error) {
 			return abs, nil
 		}
 	}
-	return "", errors.New("bundled agent runtime not found; reinstall TL Agent or use --runtime-bin for an advanced local override")
+	return "", errors.New("bundled agent runtime not found; reinstall TL Studio or use --runtime-bin for an advanced local override")
 }
 
 func startKilo(ctx context.Context, kiloPath string, port int, username, password string) (*exec.Cmd, error) {

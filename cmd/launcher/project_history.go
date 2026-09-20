@@ -26,14 +26,14 @@ type projectHistoryStore struct {
 var recentProjects = &projectHistoryStore{}
 
 func projectHistoryPath() string {
-	if dir := strings.TrimSpace(os.Getenv("TL_AGENT_STATE_DIR")); dir != "" {
+	if dir := strings.TrimSpace(os.Getenv("TL_STUDIO_STATE_DIR")); dir != "" {
 		return filepath.Join(dir, "projects.json")
 	}
 	base, err := os.UserConfigDir()
 	if err != nil || strings.TrimSpace(base) == "" {
 		base = os.TempDir()
 	}
-	return filepath.Join(base, "TL Agent", "projects.json")
+	return filepath.Join(base, "TL Studio", "projects.json")
 }
 
 func (s *projectHistoryStore) path() string {

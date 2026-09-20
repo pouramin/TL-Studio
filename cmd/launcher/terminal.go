@@ -122,7 +122,7 @@ func (p *managedProcess) wait() {
 			code = exitErr.ExitCode()
 		} else {
 			code = -1
-			p.appendOutput([]byte("[TL Agent] process error: " + err.Error() + "\n"))
+			p.appendOutput([]byte("[TL Studio] process error: " + err.Error() + "\n"))
 		}
 	}
 	now := time.Now().UTC()

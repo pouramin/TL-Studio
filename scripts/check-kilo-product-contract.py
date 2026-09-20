@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runtime contract check for the Kilo v7.6.2 product HttpApi used by TL Agent."""
+"""Runtime contract check for the Kilo v7.6.2 product HttpApi used by TL Studio."""
 
 from __future__ import annotations
 
@@ -131,10 +131,10 @@ def main() -> int:
     require(isinstance(sessions, list), "session.list must be an array")
     require(sid in session_ids(sessions), "created session missing from project list")
 
-    # Kilo serve scopes its useful root-session listing to a directory. TL Agent
+    # Kilo serve scopes its useful root-session listing to a directory. TL Studio
     # persists only recent project paths, queries each directory explicitly, and
     # merges the authoritative Kilo session records in the UI.
-    alt_project = tempfile.mkdtemp(prefix="tl-agent-contract-project-")
+    alt_project = tempfile.mkdtemp(prefix="tl-studio-contract-project-")
     alt_sid = None
     try:
         switched = request(base, "/local/project", method="POST", payload={"path": alt_project})
@@ -147,14 +147,14 @@ def main() -> int:
                 f"recent project history did not keep both projects: {history!r}")
 
         alt_query = directory_query(alt_project)
-        created_alt = unwrap(request(base, f"/runtime/session?{alt_query}", method="POST", payload={"title": "TL Agent cross-project"}))
+        created_alt = unwrap(request(base, f"/runtime/session?{alt_query}", method="POST", payload={"title": "TL Studio cross-project"}))
         require(isinstance(created_alt, dict) and isinstance(created_alt.get("id"), str),
                 f"second project session.create mismatch: {created_alt!r}")
         alt_sid = created_alt["id"]
 
         # Return to the original project, then prove explicit-directory queries
         # can still retrieve both histories while the launcher's active project is
-        # the original one. This mirrors TL Agent's sidebar aggregation.
+        # the original one. This mirrors TL Studio's sidebar aggregation.
         request(base, "/local/project", method="POST", payload={"path": project})
         original_sessions = unwrap(request(base, f"/runtime/session?{directory_query(project, {'limit': 50, 'roots': 'true'})}"))
         alt_sessions = unwrap(request(base, f"/runtime/session?{directory_query(alt_project, {'limit': 50, 'roots': 'true'})}"))
@@ -170,8 +170,8 @@ def main() -> int:
     finally:
         request(base, "/local/project", method="POST", payload={"path": project})
 
-    renamed = unwrap(request(base, f"/runtime/session/{sidq}?{query}", method="PATCH", payload={"title": "TL Agent contract"}))
-    require(isinstance(renamed, dict) and renamed.get("title") == "TL Agent contract", f"session.update mismatch: {renamed!r}")
+    renamed = unwrap(request(base, f"/runtime/session/{sidq}?{query}", method="PATCH", payload={"title": "TL Studio contract"}))
+    require(isinstance(renamed, dict) and renamed.get("title") == "TL Studio contract", f"session.update mismatch: {renamed!r}")
 
     messages = unwrap(request(base, f"/runtime/session/{sidq}/message?{directory_query(project, {'limit': 10})}"))
     require(isinstance(messages, list), "session messages must be an array")

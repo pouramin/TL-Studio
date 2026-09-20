@@ -478,7 +478,7 @@
             usage: usageForMessages(messages),
           });
         } catch (error) {
-          console.warn("[TL Agent] Could not load project usage for session", session.id, error);
+          console.warn("[TL Studio] Could not load project usage for session", session.id, error);
         }
       }
     };
@@ -493,7 +493,7 @@
     if (projectUsageTimer) window.clearTimeout(projectUsageTimer);
     projectUsageTimer = window.setTimeout(() => {
       projectUsageTimer = null;
-      refreshProjectUsage().catch((error) => console.warn("[TL Agent] Project usage refresh failed", error));
+      refreshProjectUsage().catch((error) => console.warn("[TL Studio] Project usage refresh failed", error));
     }, 120);
   };
 

@@ -2,6 +2,11 @@ name: Publish npm launcher
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
 
 permissions:
   contents: read
@@ -32,7 +37,7 @@ jobs:
         working-directory: packaging/npm/dist
         run: |
           set -euo pipefail
-          node --check tl-agent.cjs
+          node --check tl-studio.cjs
           npm pack --dry-run --ignore-scripts
 
       - name: Publish to npmjs with trusted publishing
@@ -43,11 +48,10 @@ jobs:
           NAME="$(node -p "require('./package.json').name")"
 
           if [[ "$VERSION" == *-* ]]; then
-            PRERELEASE="${VERSION#*-}"
-            DIST_TAG="${PRERELEASE%%.*}"
-          else
-            DIST_TAG="latest"
+            echo "Refusing to publish prerelease version $VERSION from stable main."
+            exit 1
           fi
+          DIST_TAG="latest"
 
           if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
             echo "${NAME}@${VERSION} is already published; nothing to do."

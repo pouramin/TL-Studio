@@ -1,19 +1,19 @@
 {
-  "name": "tl-agent",
+  "name": "tl-studio",
   "version": "0.0.0-github",
   "private": true,
-  "description": "Development tooling for the TL Agent browser UI",
+  "description": "Development tooling for the TL Studio browser UI",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pouramin/TL-Agent.git"
+    "url": "git+https://github.com/pouramin/TL-Studio.git"
   },
-  "homepage": "https://github.com/pouramin/TL-Agent",
+  "homepage": "https://github.com/pouramin/TL-Studio",
   "engines": {
     "node": ">=18"
   },
   "bin": {
-    "tl-agent": "scripts/npx-launch.cjs"
+    "tl-studio": "scripts/npx-launch.cjs"
   },
   "files": [
     "scripts/npx-launch.cjs"

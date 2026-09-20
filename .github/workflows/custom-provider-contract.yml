@@ -24,7 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/tl-provider-contract/bin /tmp/tl-provider-upstream
-          go build -trimpath -o /tmp/tl-provider-contract/tl-agent ./cmd/launcher
+          go build -trimpath -o /tmp/tl-provider-contract/tl-studio ./cmd/launcher
           KILO_VERSION="$(tr -d '[:space:]' < KILO_VERSION)"
           test "$KILO_VERSION" = "7.6.2"
           ASSET="kilo-linux-x64.tar.gz"
@@ -35,7 +35,7 @@ jobs:
           KILO_BIN="$(find /tmp/tl-provider-upstream -type f -name kilo | head -n 1)"
           test -n "$KILO_BIN"
           cp "$KILO_BIN" /tmp/tl-provider-contract/bin/kilo
-          chmod +x /tmp/tl-provider-contract/tl-agent /tmp/tl-provider-contract/bin/kilo
+          chmod +x /tmp/tl-provider-contract/tl-studio /tmp/tl-provider-contract/bin/kilo
       - name: Run real bundled-runtime custom-provider contract
         shell: bash
         run: |
@@ -43,7 +43,7 @@ jobs:
           LOG="$(mktemp)"
           START_DIR="$PWD"
           cd /tmp
-          /tmp/tl-provider-contract/tl-agent --no-browser --project "$GITHUB_WORKSPACE" >"$LOG" 2>&1 &
+          /tmp/tl-provider-contract/tl-studio --no-browser --project "$GITHUB_WORKSPACE" >"$LOG" 2>&1 &
           PID=$!
           cd "$START_DIR"
           cleanup() {

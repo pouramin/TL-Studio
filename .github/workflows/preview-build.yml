@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p staging/package/bin staging/upstream
-          go build -trimpath -ldflags "-s -w -X main.version=${PREVIEW_TAG}" -o staging/package/tl-agent.exe ./cmd/launcher
+          go build -trimpath -ldflags "-s -w -X main.version=${PREVIEW_TAG}" -o staging/package/tl-studio.exe ./cmd/launcher
 
       - name: Bundle pinned runtime
         shell: bash
@@ -71,13 +71,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          FILE="TL-Agent-${PREVIEW_TAG}-Windows-x64-Preview.zip"
+          FILE="TL-Studio-${PREVIEW_TAG}-Windows-x64-Preview.zip"
           (cd staging/package && zip -qr "../../dist/${FILE}" .)
           sha256sum "dist/${FILE}" > dist/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TL-Agent-${{ env.PREVIEW_VERSION }}-Windows-x64-Preview
+          name: TL-Studio-${{ env.PREVIEW_VERSION }}-Windows-x64-Preview
           path: dist/*
           if-no-files-found: error
           retention-days: 14

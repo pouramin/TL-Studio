@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-func TestTLAgentBrandAssets(t *testing.T) {
-	mark, err := webFS.ReadFile("web/tl-agent-mark.svg")
+func TestTLStudioBrandAssets(t *testing.T) {
+	mark, err := webFS.ReadFile("web/tl-studio-mark.svg")
 	if err != nil {
-		t.Fatalf("read embedded TL Agent mark: %v", err)
+		t.Fatalf("read embedded TL Studio mark: %v", err)
 	}
 	if !bytes.Contains(mark, []byte("<svg")) || !bytes.Contains(mark, []byte("#212E4E")) || !bytes.Contains(mark, []byte("#008036")) {
-		t.Fatal("embedded TL Agent mark is missing expected SVG structure or brand colors")
+		t.Fatal("embedded TL Studio mark is missing expected SVG structure or brand colors")
 	}
 
 	index, err := webFS.ReadFile("web/index.html")
@@ -24,8 +24,8 @@ func TestTLAgentBrandAssets(t *testing.T) {
 	if strings.Contains(indexText, "tunnellab-mark.png") {
 		t.Fatal("index still references the legacy TunnelLab mark")
 	}
-	if got := strings.Count(indexText, "/tl-agent-mark.svg"); got < 4 {
-		t.Fatalf("expected TL Agent mark to be used for favicon and product surfaces, got %d references", got)
+	if got := strings.Count(indexText, "/tl-studio-mark.svg"); got < 4 {
+		t.Fatalf("expected TL Studio mark to be used for favicon and product surfaces, got %d references", got)
 	}
 
 	for _, path := range []string{"../../README.md", "../../README.fa_IR.md"} {
@@ -34,8 +34,8 @@ func TestTLAgentBrandAssets(t *testing.T) {
 			t.Fatalf("read %s: %v", path, err)
 		}
 		text := string(readme)
-		if !strings.Contains(text, "./media/tl-agent-logo.svg") {
-			t.Fatalf("%s does not reference the canonical TL Agent SVG logo", path)
+		if !strings.Contains(text, "./media/tl-studio-logo.svg") {
+			t.Fatalf("%s does not reference the canonical TL Studio SVG logo", path)
 		}
 		if strings.Contains(text, "./media/tunnellab-logo.jpg") {
 			t.Fatalf("%s still references the legacy TunnelLab logo", path)

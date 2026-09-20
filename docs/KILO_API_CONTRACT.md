@@ -1,6 +1,6 @@
 # Bundled Runtime Contract — Kilo Code 7.6.2
 
-This document records the **implementation-specific compatibility contract** for the engine currently bundled with TL Agent.
+This document records the **implementation-specific compatibility contract** for the engine currently bundled with TL Studio.
 
 It is intentionally not the public browser/product contract.
 
@@ -13,24 +13,24 @@ Current engine:
 - generated browser adapter: `cmd/launcher/web/runtime-api.js`
 - launcher provider/hosted translation: `cmd/launcher/runtime_providers.go`
 
-TL Agent owns the browser-facing runtime namespace, provider/model registry, workspace APIs, release packaging, and product identity. Kilo-specific routes, environment variables, authentication, and provider implementation details stay behind that boundary.
+TL Studio owns the browser-facing runtime namespace, provider/model registry, workspace APIs, release packaging, and product identity. Kilo-specific routes, environment variables, authentication, and provider implementation details stay behind that boundary.
 
 ## Product boundary
 
-The browser talks to TL Agent through:
+The browser talks to TL Studio through:
 
-- `/local/*` for TL Agent-owned workspace/files/search/process/preview capabilities;
+- `/local/*` for TL Studio-owned workspace/files/search/process/preview capabilities;
 - `/runtime/*` for agent-runtime capabilities.
 
 The browser must not construct Kilo-specific route prefixes or depend on Kilo-specific authentication details.
 
 For generic runtime product routes, the launcher reverse proxy strips the `/runtime` prefix, injects runtime authentication, and injects the selected project directory before forwarding to the bundled engine.
 
-For TL Agent-owned semantic provider routes, the launcher handles translation itself.
+For TL Studio-owned semantic provider routes, the launcher handles translation itself.
 
 ## Current engine routing
 
-Kilo v7.6.2 expects project-scoped requests to carry the selected directory. TL Agent forwards the selected project as the runtime query directory and injects the current engine's `x-kilo-directory` header at the private proxy boundary.
+Kilo v7.6.2 expects project-scoped requests to carry the selected directory. TL Studio forwards the selected project as the runtime query directory and injects the current engine's `x-kilo-directory` header at the private proxy boundary.
 
 That header is an engine implementation detail. Browser modules must never set or depend on it.
 
@@ -38,7 +38,7 @@ The launcher also starts the current engine with its required local server envir
 
 ## Runtime product routes currently exercised
 
-The browser reaches these through the TL Agent `/runtime/*` namespace:
+The browser reaches these through the TL Studio `/runtime/*` namespace:
 
 ### Health and project routing
 
@@ -62,13 +62,13 @@ The current engine's product layer exposes the visible `code` agent rather than 
 - `POST /runtime/session/:sessionID/abort?directory=...`
 - `GET /runtime/session/:sessionID/diff?directory=...`
 
-The pinned engine returns product messages in its current `info + parts` envelope. The browser adapter normalizes and presents that data through TL Agent UI concepts.
+The pinned engine returns product messages in its current `info + parts` envelope. The browser adapter normalizes and presents that data through TL Studio UI concepts.
 
 ### Events
 
 - `GET /runtime/global/event?directory=...` (SSE)
 
-TL Agent uses events for responsive updates and projected runtime state, while persisted/current session messages remain the reconnect-safe rendering source of truth.
+TL Studio uses events for responsive updates and projected runtime state, while persisted/current session messages remain the reconnect-safe rendering source of truth.
 
 ### Permissions
 
@@ -83,9 +83,9 @@ TL Agent uses events for responsive updates and projected runtime state, while p
 
 ## Provider and model ownership
 
-Provider/model definitions are no longer owned by browser code or stored as engine-specific configuration in the TL Agent UI.
+Provider/model definitions are no longer owned by browser code or stored as engine-specific configuration in the TL Studio UI.
 
-TL Agent owns a local `providers.json` registry with product concepts such as:
+TL Studio owns a local `providers.json` registry with product concepts such as:
 
 - provider ID and display name
 - protocol
@@ -95,7 +95,7 @@ TL Agent owns a local `providers.json` registry with product concepts such as:
 - reasoning capability
 - context/output limits
 
-The browser uses TL Agent semantic routes:
+The browser uses TL Studio semantic routes:
 
 - `GET /runtime/providers/catalog`
 - `GET /runtime/providers/config`
@@ -108,7 +108,7 @@ Credentials are intentionally excluded from `providers.json` and browser storage
 
 ## Hosted provider mapping
 
-The browser uses TL Agent semantic hosted-provider routes:
+The browser uses TL Studio semantic hosted-provider routes:
 
 - `GET /runtime/hosted/status`
 - `POST /runtime/hosted/authorize`
@@ -131,11 +131,11 @@ Generated browser JavaScript lives in:
 
 `cmd/launcher/web/runtime-api.js`
 
-UI modules must use this TL Agent adapter and must not construct engine-specific routes directly.
+UI modules must use this TL Studio adapter and must not construct engine-specific routes directly.
 
 The adapter owns browser-side runtime concerns such as:
 
-- TL Agent `/runtime/*` route construction
+- TL Studio `/runtime/*` route construction
 - selected-project routing
 - response normalization
 - session/message access
@@ -153,13 +153,13 @@ The test filenames still use `check-kilo-*` because they validate the exact curr
 
 `scripts/check-kilo-product-contract.py`
 
-CI starts the pinned real engine through the TL Agent launcher and verifies health, selected-project routing, agent behavior, provider/session/message shapes, permissions/questions, and the event stream through TL Agent's public `/runtime/*` boundary.
+CI starts the pinned real engine through the TL Studio launcher and verifies health, selected-project routing, agent behavior, provider/session/message shapes, permissions/questions, and the event stream through TL Studio's public `/runtime/*` boundary.
 
 ### Project routing
 
 `scripts/check-kilo-project-routing.py`
 
-This verifies that changing the selected TL Agent project changes the directory used by the current engine rather than silently falling back to the launcher process CWD.
+This verifies that changing the selected TL Studio project changes the directory used by the current engine rather than silently falling back to the launcher process CWD.
 
 ### Prompt + real write-tool E2E
 
@@ -168,9 +168,9 @@ This verifies that changing the selected TL Agent project changes the directory 
 CI starts a local fake OpenAI-compatible provider and exercises:
 
 ```text
-TL Agent launcher
+TL Studio launcher
 → bundled Kilo 7.6.2 engine
-→ TL Agent /runtime boundary
+→ TL Studio /runtime boundary
 → product agent/session flow
 → local test provider
 → real write tool
@@ -182,7 +182,7 @@ TL Agent launcher
 The fixture asserts:
 
 ```text
-hello.txt == TL_AGENT_E2E_OK
+hello.txt == TL_STUDIO_E2E_OK
 ```
 
 and:
@@ -197,7 +197,7 @@ A release must not be cut if this real-engine product-path E2E fails.
 
 Kilo v7.6.2 exposes an experimental `/api/*` Protocol v2 surface in addition to the product/current HTTP API used by its official client.
 
-TL Agent's current stable coding path does not use that experimental surface as its primary session model. Any future engine/API migration must be version-pinned and validated against the real bundled engine and TL Agent's product E2E before release.
+TL Studio's current stable coding path does not use that experimental surface as its primary session model. Any future engine/API migration must be version-pinned and validated against the real bundled engine and TL Studio's product E2E before release.
 
 ## Engine upgrade checklist
 
@@ -207,7 +207,7 @@ Before changing `KILO_VERSION`:
 2. inspect the upstream product client to determine which routes it actually uses;
 3. compare agent, provider, session, message/part, permission, question, event, and tool behavior;
 4. update only the launcher/runtime adapter and this implementation-specific contract where possible;
-5. keep browser modules on TL Agent-owned `/runtime/*` and semantic provider/hosted routes;
+5. keep browser modules on TL Studio-owned `/runtime/*` and semantic provider/hosted routes;
 6. run the real runtime contract, project-routing, provider contract, and Prompt/write-tool E2E tests;
 7. perform hands-on Windows validation before promotion.
 

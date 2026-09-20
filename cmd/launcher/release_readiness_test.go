@@ -26,7 +26,7 @@ func TestProductUIKeepsRuntimeBrandingBehindBoundary(t *testing.T) {
 	source := string(data)
 	for _, forbidden := range []string{
 		"powered by Kilo Code",
-		"TL Agent runs Kilo",
+		"TL Studio runs Kilo",
 		"configured in Kilo",
 		">Kilo account<",
 		">Sign in to Kilo<",
@@ -49,7 +49,7 @@ func TestWorkflowsUsePublicRuntimeBoundary(t *testing.T) {
 			t.Fatalf("%s still uses the legacy runtime route", workflow)
 		}
 		if !strings.Contains(source, "/runtime/global/health") {
-			t.Fatalf("%s is missing the TL Agent runtime health boundary", workflow)
+			t.Fatalf("%s is missing the TL Studio runtime health boundary", workflow)
 		}
 	}
 }

@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 
 EXPECTED = "E2E_PRODUCT_OK"
-FILE_CONTENT = "TL_AGENT_E2E_OK"
+FILE_CONTENT = "TL_STUDIO_E2E_OK"
 
 
 class E2EError(RuntimeError):
@@ -121,7 +121,7 @@ def has_completed_write(envelope: dict) -> bool:
 
 
 def projected_changes(messages: list[dict]) -> list[dict]:
-    """Mirror TL Agent's fallback when the bundled runtime's aggregate session diff is empty."""
+    """Mirror TL Studio's fallback when the bundled runtime's aggregate session diff is empty."""
     summary_diffs: list[dict] = []
     for message in messages:
         info = message.get("info") if isinstance(message, dict) else None
@@ -312,7 +312,7 @@ def main() -> int:
         (item for item in visible_changes if isinstance(item, dict) and str(item.get("file") or "").replace("\\", "/").endswith("/hello.txt")),
         None,
     )
-    require(hello_diff is not None, f"hello.txt missing from TL Agent change projection: {visible_changes!r}")
+    require(hello_diff is not None, f"hello.txt missing from TL Studio change projection: {visible_changes!r}")
     require(int(hello_diff.get("additions") or 0) >= 1, f"hello.txt change additions missing: {hello_diff!r}")
 
     interesting = []
