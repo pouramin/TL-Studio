@@ -16,6 +16,7 @@
   const partsOf = (message) => Array.isArray(message?.parts)
     ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
+  const activitiesOf = (message) => Array.isArray(message?.activities) ? message.activities : partsOf(message);
 
   const textOf = (message) => {
     if (typeof message?.text === "string" && message.text) return message.text;
@@ -36,6 +37,10 @@
   };
 
   const fileHint = (item) => {
+    if (item?.kind === "tool" && Array.isArray(item.changes) && item.changes[0]?.file) {
+      const bits = String(item.changes[0].file).split(/[\\/]/);
+      return bits[bits.length - 1] || String(item.changes[0].file);
+    }
     const state = item?.state || {};
     const metadata = state.metadata || {};
     const input = state.input || {};
@@ -47,6 +52,11 @@
   };
 
   const diffHint = (item) => {
+    if (item?.kind === "tool" && Array.isArray(item.changes) && item.changes.length) {
+      const additions = item.changes.reduce((sum, change) => sum + (Number(change?.additions) || 0), 0);
+      const deletions = item.changes.reduce((sum, change) => sum + (Number(change?.deletions) || 0), 0);
+      return `+${additions} −${deletions}`;
+    }
     const state = item?.state || {};
     const metadata = state.metadata || {};
     const diff = metadata.filediff || metadata.fileDiff || state.output?.filediff || {};
@@ -63,6 +73,14 @@
   };
 
   const toolDetails = (item) => {
+    if (item?.kind === "tool") {
+      const blocks = [];
+      if (item.input && typeof item.input === "object" && Object.keys(item.input).length) blocks.push(["Input", safeJSON(item.input)]);
+      if (item.output !== undefined && item.output !== "") blocks.push(["Output", typeof item.output === "string" ? item.output : safeJSON(item.output)]);
+      if (item.error) blocks.push(["Error", errorText(item.error)]);
+      if (item.metadata && Object.keys(item.metadata).length) blocks.push(["Metadata", safeJSON(item.metadata)]);
+      return blocks;
+    }
     const state = item?.state || {};
     const blocks = [];
     if (state.input && Object.keys(state.input).length) blocks.push(["Input", safeJSON(state.input)]);
@@ -310,6 +328,34 @@
   };
 
   const activityNode = (item) => {
+    if (item?.kind === "reasoning" && item.text) {
+      return activityCard({
+        title: "Reasoning",
+        status: item.status || "completed",
+        blocks: [["Thought process", item.text]],
+        reasoning: true,
+      });
+    }
+
+    if (item?.kind === "tool") {
+      const meta = [item.category, item.permissionClass, fileHint(item), diffHint(item)].filter(Boolean).join(" · ");
+      return activityCard({
+        title: item.toolName || "Runtime tool",
+        status: item.status || "pending",
+        meta,
+        blocks: toolDetails(item),
+      });
+    }
+
+    if (item?.kind === "subtask") {
+      return activityCard({
+        title: "Subtask",
+        status: item.status || "created",
+        meta: item.agent || "",
+        blocks: [["Task", item.text || ""]],
+      });
+    }
+
     if (item?.type === "reasoning" && item.text) {
       return activityCard({
         title: "Reasoning",
@@ -344,7 +390,7 @@
 
   const appendAssistantContent = (node, message, error = "") => {
     const content = node.querySelector(".message-content");
-    const parts = partsOf(message);
+    const parts = activitiesOf(message);
 
     // Keep operational activity above the user-facing answer. Some providers
     // append reasoning after text in the raw part array even though it belongs
@@ -354,11 +400,13 @@
       if (activity) content.appendChild(activity);
     }
 
-    const text = parts
-      .filter((part) => part?.type === "text" && !part.ignored && part.text)
-      .map((part) => part.text)
-      .join("\n")
-      .trim() || textOf(message);
+    const text = typeof message?.text === "string"
+      ? message.text.trim()
+      : partsOf(message)
+        .filter((part) => part?.type === "text" && !part.ignored && part.text)
+        .map((part) => part.text)
+        .join("\n")
+        .trim() || textOf(message);
 
     if (text) {
       const body = document.createElement("div");
@@ -376,6 +424,27 @@
   };
 
   const renderEnvelope = (view, message) => {
+    if (message?.role) {
+      const time = message.createdAt ?? message.completedAt;
+      if (message.role === "user") {
+        view.appendChild(messageNode("user", "You", message.text || "", time));
+        return true;
+      }
+      if (message.role === "assistant") {
+        const error = errorText(message.error);
+        const node = messageNode("assistant", message.agent || "Agent", "", time, "");
+        if (error) node.classList.add("error");
+        appendAssistantContent(node, message, error);
+        view.appendChild(node);
+        return true;
+      }
+      if (message.role === "system") {
+        view.appendChild(messageNode("system", "System", message.text || "", time));
+        return true;
+      }
+      return false;
+    }
+
     if (!message?.info || !Array.isArray(message.parts)) return false;
     const info = message.info;
     const time = info.time?.created ?? info.time?.completed;
