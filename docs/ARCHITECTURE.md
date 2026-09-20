@@ -10,7 +10,7 @@ The launcher is also the filesystem trust boundary for browser IDE operations. B
 
 ### Bundled coding runtime
 
-The current implementation starts the bundled runtime on loopback with a random per-launch password. The runtime remains responsible for sessions, agents, tools, provider integrations, model execution, and filesystem operations initiated by the agent.
+The current implementation starts the bundled runtime on loopback with a random per-launch password. The runtime remains responsible for sessions, agents, actual tool execution, provider integrations, model execution, and filesystem operations initiated by the agent. TL Studio owns the semantic identity and presentation metadata for known tools through its Tool Registry.
 
 The runtime is behind TL Studio's product boundary. The browser never connects to it directly and never receives its server password.
 
@@ -66,7 +66,7 @@ Only loopback preview URLs are accepted. Static preview file serving remains pro
 ```text
 Browser TL Studio UI
   │
-  ├── /local/*  ───────────────► launcher project/files/search/process/preview/permission boundary
+  ├── /local/*  ───────────────► launcher project/files/search/process/preview/tool-registry/permission boundary
   │
   └── /runtime/*
           │
@@ -123,6 +123,14 @@ The launcher translates managed definitions to the current engine's provider con
 API keys are deliberately excluded from TL Studio's provider registry and browser storage. In this phase, credentials are still delegated to the bundled runtime's local credential store. Moving credential ownership to a TL Studio-controlled secure store is a separate future security milestone.
 
 Session and tool ownership still remain in the runtime for now. Permission request generation and enforcement also still happen in the runtime, but permission policy and remembered approval semantics are now owned by TL Studio as described below.
+
+## Tool Registry ownership
+
+TL Studio owns a versioned semantic Tool Registry exposed by the launcher at `GET /local/tools`. Known runtime tool IDs are mapped to TL Studio descriptors containing a stable semantic ID, product-facing name and description, category, capability flags, permission class, and a presentation hint. Browser activity cards resolve tool labels through this registry instead of treating the runtime's raw tool ID as product metadata.
+
+The registry is deliberately descriptive. It does not execute tools, grant permissions, or weaken the runtime's enforcement. Unknown runtime tools fall back to a conservative `runtime.unknown` descriptor with no invented capabilities, and the original runtime ID remains observable for diagnostics. If registry metadata and runtime behavior ever disagree, runtime enforcement is authoritative.
+
+This boundary is intentionally extensible for future runtimes: runtime-specific IDs can change behind the mapping while TL Studio's semantic tool concepts remain stable.
 
 ## Permission policy ownership
 
