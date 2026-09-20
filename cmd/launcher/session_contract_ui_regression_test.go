@@ -35,7 +35,7 @@ func TestBrowserSessionReadsUseTLStudioSemanticContract(t *testing.T) {
 	}
 	for _, forbidden := range []string{
 		"list: async ({ limit = 50",
-		"status: async () =>",
+		`request(route("/session/status"))`,
 		"get: async (sessionID",
 		"diff: async (sessionID",
 		"messages: async (sessionID",
