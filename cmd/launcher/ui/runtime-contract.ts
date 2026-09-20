@@ -177,8 +177,9 @@ interface TLStudioRuntimeContract {
     removeRule(ruleID: string): Promise<unknown>;
   };
   sessions: {
-    list(options?: { limit?: number; directory?: string }): Promise<unknown>;
     create(input?: RuntimeSessionCreateInput): Promise<unknown>;
+    update(sessionID: RuntimeSessionID, input?: { title?: string }, options?: { directory?: string }): Promise<unknown>;
+    remove(sessionID: RuntimeSessionID, options?: { directory?: string }): Promise<unknown>;
     promptAsync(sessionID: RuntimeSessionID, input?: RuntimePromptInput): Promise<unknown>;
     abort(sessionID: RuntimeSessionID, options?: { scope?: string; directory?: string }): Promise<unknown>;
   };
