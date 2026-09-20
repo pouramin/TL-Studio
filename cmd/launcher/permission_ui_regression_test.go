@@ -1,18 +1,46 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestPermissionRepliesAreMarkedInteractive(t *testing.T) {
+func TestBrowserPermissionsUseTLStudioEngine(t *testing.T) {
 	js, err := webFS.ReadFile("web/runtime-api.js")
 	if err != nil {
 		t.Fatalf("read embedded runtime-api.js: %v", err)
 	}
 	text := string(js)
-	if !strings.Contains(text, `interactive: true`) {
-		t.Fatal("human permission replies must set interactive: true for sensitive runtime permission classes")
+	for _, expected := range []string{
+		`/local/permissions`,
+		`/local/permissions/rules`,
+		`removeRule`,
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("browser permission adapter is missing TL Studio route %q", expected)
+		}
+	}
+	if strings.Contains(text, `request(route("/permission"))`) {
+		t.Fatal("browser permission UI must not list permissions directly from the bundled runtime")
+	}
+
+	root := releaseRepoRoot(t)
+	engine, err := os.ReadFile(filepath.Join(root, "cmd", "launcher", "permission_engine.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engineText := string(engine)
+	for _, expected := range []string{
+		`"interactive": interactive`,
+		`"Approved by TL Studio project permission policy."`,
+		`permissionCanRemember`,
+		`permissions.json`,
+	} {
+		if !strings.Contains(engineText, expected) {
+			t.Fatalf("TL Studio permission engine is missing %q", expected)
+		}
 	}
 }
 
@@ -24,7 +52,8 @@ func TestPermissionUIExplainsScopedAlwaysRules(t *testing.T) {
 	text := string(js)
 	for _, expected := range []string{
 		`Agent wants permission to`,
-		`Always allow these`,
+		`Always allow in this project`,
+		`TL Studio can remember these rules for this project`,
 		`metadata.skillShell === true`,
 		`metadata.sandboxEscalation === true`,
 		`metadata.disableAlways !== true`,
