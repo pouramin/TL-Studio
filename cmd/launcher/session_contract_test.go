@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -73,7 +74,7 @@ func TestSessionReadContractNormalizesMessagesAndToolActivity(t *testing.T) {
 		})
 	})
 
-	messages, err := contract.getMessages(t.Context(), "s1", state.projectPath(), 50)
+	messages, err := contract.getMessages(context.Background(), "s1", state.projectPath(), 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func TestSessionReadContractNormalizesStatus(t *testing.T) {
 		})
 	})
 
-	statuses, err := contract.getStatuses(t.Context(), state.projectPath())
+	statuses, err := contract.getStatuses(context.Background(), state.projectPath())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +149,7 @@ func TestSessionReadContractAggregatesRecentProjects(t *testing.T) {
 	second = t.TempDir()
 	contract.history.remember(second)
 
-	sessions, err := contract.listSessions(t.Context(), 150)
+	sessions, err := contract.listSessions(context.Background(), 150)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +188,7 @@ func TestSessionReadContractChangesFallsBackToSemanticMessages(t *testing.T) {
 		}
 	})
 
-	changes, err := contract.getChanges(t.Context(), "s1", state.projectPath())
+	changes, err := contract.getChanges(context.Background(), "s1", state.projectPath())
 	if err != nil {
 		t.Fatal(err)
 	}
