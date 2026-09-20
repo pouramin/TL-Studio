@@ -62,49 +62,13 @@
     if (readSetting(THEME_KEY, "system") === "system") applyAppearance("system");
   });
 
-  // The bundled runtime scopes session listing to a directory. TL Studio keeps
-  // only a small persistent history of project paths, then asks the runtime for the
-  // authoritative root sessions in every known project and merges the results.
-  // Session content itself never lives in TL Studio's history file.
-  const scopedLoadSessions = K.loadSessions;
+  // TL Studio owns the cross-project session read model. The launcher merges
+  // recent-project histories and returns stable product session descriptors.
   K.loadSessions = async () => {
-    let history;
-    try {
-      history = await K.request("/local/projects");
-    } catch (error) {
-      console.warn("[TL Studio] Recent-project history unavailable; falling back to current project", error);
-      return scopedLoadSessions();
-    }
-
-    const projects = Array.isArray(history?.projects) ? history.projects.filter(Boolean) : [];
-    if (!projects.length && K.state.local?.project) projects.push(K.state.local.project);
-    const results = await Promise.allSettled(
-      projects.map((directory) => K.api.sessions.list({ limit: 50, directory })),
-    );
-
-    const merged = new Map();
-    results.forEach((result, index) => {
-      const directory = projects[index];
-      if (result.status !== "fulfilled") {
-        console.warn(`[TL Studio] Could not read sessions for ${directory}`, result.reason);
-        return;
-      }
-      for (const raw of Array.isArray(result.value?.data) ? result.value.data : []) {
-        if (!raw?.id) continue;
-        const session = { ...raw, directory: raw.directory || directory };
-        const previous = merged.get(session.id);
-        const updated = Number(session.time?.updated || session.time?.created || 0);
-        const previousUpdated = Number(previous?.time?.updated || previous?.time?.created || 0);
-        if (!previous || updated >= previousUpdated) merged.set(session.id, session);
-      }
-    });
-
-    const sessions = [...merged.values()]
-      .sort((a, b) => Number(b?.time?.updated || b?.time?.created || 0) - Number(a?.time?.updated || a?.time?.created || 0))
-      .slice(0, 150);
-    K.state.sessions = sessions;
+    const sessions = await K.api.sessionView.list({ limit: 150 });
+    K.state.sessions = Array.isArray(sessions) ? sessions : [];
     K.renderSessions();
-    return sessions;
+    return K.state.sessions;
   };
 
   const selectSessionInCurrentProject = K.selectSession;
@@ -149,7 +113,7 @@
       const meta = document.createElement("span");
       const directory = sessionDirectory(session);
       const project = directory ? K.basename(directory) : "Unknown project";
-      const age = K.relativeTime(session.time?.updated || session.time?.created);
+      const age = K.relativeTime(session.updatedAt || session.createdAt || session.time?.updated || session.time?.created);
 
       row.className = "session-row";
       open.className = `session-item session-main${K.state.session?.id === session.id ? " active" : ""}`;
