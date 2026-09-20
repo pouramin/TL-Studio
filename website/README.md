@@ -8,7 +8,7 @@ The public site treats **TL Studio as the product identity**. The bundled Agent 
 
 Public docs must be reconciled with the current stable repository before a release-oriented update.
 
-For v0.2, the public site reflects TL Studio-owned capabilities including:
+For stable v0.2.1, the public site reflects TL Studio-owned capabilities including:
 
 - writable Project Workspace and multi-tab Editor;
 - Project Search;
@@ -19,6 +19,8 @@ For v0.2, the public site reflects TL Studio-owned capabilities including:
 - local filesystem, process, Preview, and runtime security boundaries.
 
 Implementation-specific engine naming should remain isolated to the maintainer Runtime Integration reference unless legal attribution or compatibility debugging genuinely requires it.
+
+The public site is stable-first, but repository-wide reviews must also inspect `dev`. Development-only features must be labeled clearly and must not be presented as stable. The current private dev line is `v0.3.0-alpha.6`, with locally bundled Monaco and TL Studio-owned remembered permission policy as its major product-boundary changes.
 
 ## Languages
 

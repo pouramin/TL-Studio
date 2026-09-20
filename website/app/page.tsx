@@ -44,7 +44,7 @@ export default function HomePage() {
         <div className="hero-grid pointer-events-none absolute inset-0 -z-10 opacity-60" />
         <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-20 text-center md:pt-28">
           <div className="tl-brand-lockup mb-7">
-            <img src={site.logoUrl} alt="TL Studio — Code. Reason. Act." />
+            <img src={site.logoUrl} alt="TL Studio" />
           </div>
           <div className="mb-6 rounded-full border bg-fd-card/70 px-4 py-1.5 text-sm text-fd-muted-foreground">
             Stable v0.2.1 · Local-first · Open source
@@ -92,6 +92,19 @@ export default function HomePage() {
               <p className="mt-2 leading-7 text-fd-muted-foreground">{description}</p>
             </article>
           ))}
+        </section>
+
+        <section className="border-t bg-fd-card/20">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <p className="text-sm font-medium text-fd-muted-foreground">Development preview · v0.3.0-alpha.6</p>
+            <h2 className="mt-2 text-3xl font-semibold">The next development line moves more of the workspace into TL Studio.</h2>
+            <p className="mt-4 max-w-3xl leading-7 text-fd-muted-foreground">
+              The private dev preview adds a locally bundled, lazy-loaded Monaco editor and a TL Studio-owned project-scoped permission policy engine. Stable users remain on v0.2.1.
+            </p>
+            <Link href="/docs/reference/development-preview" className="mt-5 inline-flex items-center gap-2 font-medium text-fd-primary">
+              Development preview details <ArrowRight className="size-4" />
+            </Link>
+          </div>
         </section>
 
         <section className="border-t bg-fd-card/35">

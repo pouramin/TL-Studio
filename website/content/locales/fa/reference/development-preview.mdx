@@ -1,0 +1,59 @@
+---
+title: Development Preview
+description: وضعیت فعلی dev، تفاوتش با Stable و نحوه توزیع Preview Buildهای خصوصی.
+icon: FlaskConical
+---
+
+برای استفاده معمول، نسخه **v0.2.1** Stable است. خط Development فعال **v0.3.0-alpha.6** روی `dev` است.
+
+این خط Development عمداً خصوصی نگه داشته می‌شود: روی **npm Publish نمی‌شود** و **GitHub Prerelease عمومی** هم ندارد. GitHub Actions برای تست پروژه **Preview Build**های موقت تولید می‌کند.
+
+## چه چیزهایی در v0.3 Preview جدید است؟
+
+### Monaco Editor کاملاً Local
+
+در Development، Workspace از **Monaco Editor 0.56.0** به‌عنوان Editor Engine پیشرفته استفاده می‌کند.
+
+- همراه خود TL Studio Bundle می‌شود و CDN ندارد؛
+- فقط وقتی Editor لازم شود Lazy Load می‌شود؛
+- Workerها Local و Same-origin هستند؛
+- Multi-file Model، Find/Replace و Multi-cursor را فراهم می‌کند؛
+- Theme با TL Studio هماهنگ می‌شود؛
+- Editor سبک قبلی همچنان Fallback است.
+
+Monaco مالک Filesystem نیست. Project Path، File Buffer، Save، SHA-256 Conflict Check، External-change Reconciliation و Agent Handoff همچنان متعلق به TL Studio هستند.
+
+### Permission Policy Engine خود TL Studio
+
+Persistence مربوط به Remembered Permission به خود TL Studio منتقل می‌شود.
+
+Launcher این Routeها را مالک است:
+
+```text
+GET    /local/permissions
+POST   /local/permissions/{requestID}/reply
+GET    /local/permissions/rules
+DELETE /local/permissions/rules/{ruleID}
+```
+
+Remembered Allow Ruleها داخل `permissions.json` به‌صورت Local و در Scope Project انتخاب‌شده ذخیره می‌شوند.
+
+TL Studio فقط Matcher Token دقیق و قابل‌استفاده‌ای را که Runtime می‌دهد Remember می‌کند. برای Auto Approval باید همه Matcherهای Request آینده پوشش داده شده باشند. `skillShell` و `sandboxEscalation` هیچ‌وقت Remember یا Auto-approve نمی‌شوند و Request دارای `disableAlways` Interactive باقی می‌ماند.
+
+Agent Engine همراه برنامه هنوز Permission Request را در Tool Boundary تولید و نتیجه نهایی را Enforce می‌کند؛ Persistence و Decision Policy متعلق به TL Studio شده است.
+
+## توزیع Preview
+
+Branch `dev` از Workflow به نام **Preview Build** در GitHub Actions استفاده می‌کند. Workflow فعلی یک ZIP برای Windows x64 می‌سازد و Artifact را 14 روز نگه می‌دارد.
+
+این Artifactها برای تست Development هستند و جای مسیر Stable را نمی‌گیرند:
+
+```bash
+npx --yes tl-studio
+```
+
+این دستور همچنان Stable را دنبال می‌کند.
+
+## چه چیزهایی هنوز Runtime-backed هستند؟
+
+حتی در v0.3 Preview، Session Execution، Tool Execution، Question Handling، Provider Credential Persistence و Model Inference هنوز در Agent Engine همراه برنامه هستند. معماری وابستگی را کمتر می‌کند، بدون اینکه ادعا کند Execution Dependency کاملاً حذف شده است.

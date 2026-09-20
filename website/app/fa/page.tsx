@@ -44,7 +44,7 @@ export default function PersianHomePage() {
         <div className="hero-grid pointer-events-none absolute inset-0 -z-10 opacity-60" />
         <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-20 text-center md:pt-28">
           <div className="tl-brand-lockup mb-7" dir="ltr">
-            <img src={site.logoUrl} alt="TL Studio — Code. Reason. Act." />
+            <img src={site.logoUrl} alt="TL Studio" />
           </div>
           <div className="mb-6 rounded-full border bg-fd-card/70 px-4 py-1.5 text-sm text-fd-muted-foreground">
             Stable v0.2.1 · Local-first · Open Source
@@ -92,6 +92,19 @@ export default function PersianHomePage() {
               <p className="mt-2 leading-8 text-fd-muted-foreground">{description}</p>
             </article>
           ))}
+        </section>
+
+        <section className="border-t bg-fd-card/20">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <p className="text-sm font-medium text-fd-muted-foreground">Development Preview · v0.3.0-alpha.6</p>
+            <h2 className="mt-2 text-3xl font-semibold">خط Development دارد بخش بیشتری از Workspace را به خود TL Studio منتقل می‌کند.</h2>
+            <p className="mt-4 max-w-3xl leading-8 text-fd-muted-foreground">
+              Preview خصوصی dev شامل Monaco Editor کاملاً Local و Lazy-loaded و Permission Policy Engine متعلق به TL Studio است. نسخه Stable همچنان v0.2.1 است.
+            </p>
+            <Link href="/fa/docs/reference/development-preview" className="mt-5 inline-flex items-center gap-2 font-medium text-fd-primary">
+              جزئیات Development Preview <ArrowLeft className="size-4" />
+            </Link>
+          </div>
         </section>
 
         <section className="border-t bg-fd-card/35">

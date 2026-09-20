@@ -1,0 +1,59 @@
+---
+title: Development preview
+description: What is currently on dev, how it differs from stable, and how private Preview Builds are distributed.
+icon: FlaskConical
+---
+
+Stable users should use **v0.2.1**. The active development line is **v0.3.0-alpha.6** on `dev`.
+
+The development line is intentionally private: it is **not published to npm** and **not published as a public GitHub prerelease**. GitHub Actions produces short-lived **Preview Build** artifacts for project testing.
+
+## What is new in v0.3 preview
+
+### Locally bundled Monaco Editor
+
+The development workspace uses **Monaco Editor 0.56.0** as the enhanced editor engine.
+
+- bundled with TL Studio; no editor CDN;
+- lazy-loaded when the editor is first needed;
+- same-origin local workers;
+- multi-file models, native find/replace, and multi-cursor workflows;
+- theme follows TL Studio;
+- the original lightweight textarea editor remains the fallback.
+
+Monaco does **not** own filesystem semantics. TL Studio still owns Project paths, file buffers, saves, SHA-256 conflict checks, external-change reconciliation, and Agent handoff.
+
+### TL Studio permission policy engine
+
+Remembered permission persistence moves into TL Studio.
+
+The launcher owns:
+
+```text
+GET    /local/permissions
+POST   /local/permissions/{requestID}/reply
+GET    /local/permissions/rules
+DELETE /local/permissions/rules/{ruleID}
+```
+
+Remembered allow rules are saved locally in `permissions.json` and scoped to the selected Project.
+
+TL Studio only remembers exact reusable matcher tokens supplied by the runtime. Every matcher on a future request must be covered before it can be auto-approved. Sensitive `skillShell` and `sandboxEscalation` requests are never remembered or auto-approved, and requests marked `disableAlways` remain interactive.
+
+The bundled Agent engine still generates permission requests at the Tool boundary and enforces the final decision. TL Studio owns the persistence and decision policy.
+
+## Preview distribution
+
+The `dev` branch uses the **Preview Build** GitHub Actions workflow. The current workflow produces a Windows x64 ZIP and keeps the artifact for 14 days.
+
+These artifacts are for testing the development branch. They do not replace:
+
+```bash
+npx --yes tl-studio
+```
+
+which continues to track the stable line.
+
+## What is still runtime-backed
+
+Even in the v0.3 preview, the bundled Agent engine still owns Session execution, Tool execution, Question handling, Provider credential persistence, and Model inference. The architecture is becoming less coupled without claiming that the execution dependency is already gone.
