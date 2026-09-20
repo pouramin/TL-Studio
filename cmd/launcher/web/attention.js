@@ -123,7 +123,7 @@
     const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata : {};
     const sensitive = metadata.skillShell === true || metadata.sandboxEscalation === true;
     const canAlways = !sensitive && metadata.disableAlways !== true && alwaysRules.length > 0;
-    const always = canAlways ? `Can remember these rules for future matching requests:\n${alwaysRules.join("\n")}` : "";
+    const always = canAlways ? `TL Studio can remember these rules for this project:\n${alwaysRules.join("\n")}` : "";
 
     meta.textContent = [
       patterns.length ? patterns.join("\n") : "",
@@ -136,7 +136,7 @@
       actionButton("Reject", "ghost", () => replyPermission(item, "reject")),
       actionButton(sensitive ? "Allow" : "Allow once", "ghost", () => replyPermission(item, "once")),
     ];
-    if (canAlways) actions.push(actionButton("Always allow these", "primary", () => replyPermission(item, "always")));
+    if (canAlways) actions.push(actionButton("Always allow in this project", "primary", () => replyPermission(item, "always")));
     K.els.attentionActions.append(...actions);
 
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
@@ -145,6 +145,7 @@
   const replyPermission = async (item, reply) => {
     try {
       await K.api.permissions.reply(K.state.session.id, item.id, reply);
+      if (reply === "always") await K.refreshPermissionRules?.();
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
