@@ -5,7 +5,7 @@
   K.refreshAll = async () => {
     K.showError("");
     try {
-      await Promise.all([K.checkBackend(), K.loadLocalStatus(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
+      await Promise.all([K.checkBackend(), K.loadLocalStatus(), K.loadToolRegistry?.(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
       if (K.state.session) {
         const fresh = K.state.sessions.find((item) => item.id === K.state.session.id);
         if (fresh) K.state.session = fresh;
@@ -54,7 +54,7 @@
     try {
       await K.loadLocalStatus();
       if (!await K.checkBackend()) return;
-      await Promise.all([K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
+      await Promise.all([K.loadToolRegistry?.(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
       K.renderSessions();
       K.startEvents();
     } catch (err) { K.showError(err.message || String(err)); }
