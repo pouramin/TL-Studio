@@ -313,6 +313,23 @@ def main() -> int:
     require(any(EXPECTED in assistant_text(m) for m in assistants), f"fixture reply missing: {assistants!r}")
     require(any(has_completed_write(m) for m in assistants), f"completed write tool part missing: {assistants!r}")
 
+    semantic_messages = request(base, f"/local/sessions/{sid}/messages?limit=200")
+    require(isinstance(semantic_messages, list), f"semantic messages missing: {semantic_messages!r}")
+    semantic_write = next((
+        activity
+        for message in semantic_messages if isinstance(message, dict)
+        for activity in message.get("activities", []) if isinstance(activity, dict)
+        if activity.get("kind") == "tool" and activity.get("toolID") == "files.write"
+    ), None)
+    require(semantic_write is not None, f"semantic write activity missing: {semantic_messages!r}")
+    require(semantic_write.get("runtimeToolID") == "write" and semantic_write.get("status") == "completed",
+            f"semantic write activity mismatch: {semantic_write!r}")
+    semantic_changes = request(base, f"/local/sessions/{sid}/changes")
+    require(isinstance(semantic_changes, list) and any(
+        isinstance(change, dict) and str(change.get("file") or "").replace("\\", "/").endswith("/hello.txt")
+        for change in semantic_changes
+    ), f"semantic session changes missing hello.txt: {semantic_changes!r}")
+
     target = os.path.join(project, "hello.txt")
     require(os.path.isfile(target), f"bundled runtime did not create {target}")
     with open(target, "r", encoding="utf-8") as handle:
@@ -353,6 +370,7 @@ def main() -> int:
         "events": interesting,
         "saw_running": saw_running,
         "tool_registry": "files.write",
+        "session_contract": "semantic write activity + changes",
         "permission": "edit/once",
         "file": target,
         "changes_source": change_source,
