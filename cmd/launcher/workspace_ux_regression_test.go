@@ -22,8 +22,13 @@ func TestWorkspaceUXEnhancementsContract(t *testing.T) {
 	}
 
 	editor := read("editor-enhancements.js")
-	for _, required := range []string{"file-editor-highlight", "tok-keyword", "tok-string", "MutationObserver", "refreshEditorHighlight"} {
+	for _, required := range []string{"file-editor-highlight", "tok-keyword", "tok-string", "MutationObserver", "refreshEditorHighlight", "monaco-ready"} {
 		if !strings.Contains(editor, required) { t.Fatalf("editor-enhancements.js missing %q", required) }
+	}
+
+	editorCSS := read("editor-enhancements.css")
+	if !strings.Contains(editorCSS, ".file-editor-surface.monaco-ready .file-editor-highlight") {
+		t.Fatal("legacy syntax layer is not hidden when Monaco is active")
 	}
 
 	settings := read("settings-enhancements.js")
