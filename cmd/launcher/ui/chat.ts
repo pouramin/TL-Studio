@@ -45,6 +45,12 @@
     return { status, detail: details.filter(Boolean).join("\n\n") };
   };
 
+  const toolDescriptor = (item) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
+    name: "Runtime tool",
+    category: "runtime",
+    permissionClass: "runtime",
+  };
+
   const messageNode = (kind, author, text, time, error) => {
     const row = document.createElement("article");
     const avatar = document.createElement("div");
@@ -95,7 +101,8 @@
       if (item?.type === "reasoning" && item.text) content.appendChild(toolNode("Reasoning", "completed", item.text));
       if (item?.type === "tool") {
         const summary = toolSummary(item);
-        content.appendChild(toolNode(item.tool || item.name || "tool", summary.status, summary.detail));
+        const descriptor = toolDescriptor(item);
+        content.appendChild(toolNode(descriptor.name, summary.status, summary.detail));
       }
       if (item?.type === "subtask") {
         content.appendChild(toolNode("Subtask", item.status || "created", item.description || item.prompt || ""));
