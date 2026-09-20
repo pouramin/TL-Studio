@@ -25,3 +25,10 @@ When the bundled engine exposes a hosted account flow, TL Studio presents that a
 ## Provider failures
 
 Transient upstream failures can happen while TL Studio itself remains healthy. After the engine exhausts a retry cycle for a retryable provider error, TL Studio can offer **Resume** and continue from the preserved workspace state instead of starting the task from scratch.
+
+
+## Development preview: Tool semantics
+
+Private **v0.3.0-alpha.7** adds a TL Studio-owned Tool Registry. Known runtime tool IDs are resolved to stable TL Studio semantic descriptors for activity cards and product UI: name, description, category, permission class, capability flags, and presentation hint.
+
+The registry does not execute tools and does not grant permissions. Unknown tools use a conservative fallback with no invented capabilities, and runtime enforcement remains authoritative.

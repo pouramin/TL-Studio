@@ -25,3 +25,10 @@ Model Picker می‌تواند Modelهای Hosted یا Runtime-discovered را �
 ## Provider Failure
 
 Failure موقت Upstream ممکن است رخ دهد درحالی‌که خود TL Studio سالم است. اگر Retry Cycle مربوط به Engine با Error قابل‌Retry تمام شود، TL Studio می‌تواند **Resume** را نشان دهد تا Task از Workspace State حفظ‌شده ادامه پیدا کند.
+
+
+## Development Preview: Tool Semantics
+
+در Preview خصوصی **v0.3.0-alpha.7**، Tool Registry متعلق به TL Studio اضافه شده است. Runtime Tool IDهای شناخته‌شده برای Activity Card و Product UI به Descriptorهای Semantic پایدار TL Studio Resolve می‌شوند: Name، Description، Category، Permission Class، Capability Flag و Presentation Hint.
+
+Registry Tool اجرا نمی‌کند و Permission نمی‌دهد. Tool ناشناخته از Fallback محافظه‌کار با Capability خالی استفاده می‌کند و Runtime Enforcement همچنان مرجع نهایی است.

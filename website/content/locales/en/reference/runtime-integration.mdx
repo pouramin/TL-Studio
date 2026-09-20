@@ -44,6 +44,9 @@ Before changing the bundled engine, compatibility checks must cover Project rout
 
 In stable v0.2.1, Provider/Model definitions are TL Studio-owned while Permission persistence is still runtime-backed.
 
-In private **v0.3.0-alpha.6**, the browser no longer lists or replies to permissions through raw runtime routes. TL Studio exposes `/local/permissions*`, stores Project-scoped remembered rules itself, and translates explicit or remembered decisions to the bundled engine.
+In private **v0.3.0-alpha.7**, two more semantic boundaries move into TL Studio:
 
-The engine still owns Session execution, Tool execution, Question handling, Provider credentials, and Model inference. This is another step toward replaceability without pretending the execution dependency has disappeared.
+- `GET /local/tools` exposes the TL Studio Tool Registry. Runtime tool IDs are translated to TL Studio-owned semantic IDs, labels, categories, capability flags, permission classes, and presentation hints. This registry is descriptive; actual tool execution and final enforcement stay in the engine.
+- the browser no longer lists or replies to permissions through raw runtime routes. TL Studio exposes `/local/permissions*`, stores Project-scoped remembered rules itself, and translates explicit or remembered decisions to the bundled engine.
+
+The engine still owns Session execution, actual Tool execution, Question handling, Provider credentials, and Model inference. This is another step toward replaceability without pretending the execution dependency has disappeared.

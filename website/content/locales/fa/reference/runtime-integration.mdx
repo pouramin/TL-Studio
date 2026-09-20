@@ -44,6 +44,9 @@ tl-studio --runtime-bin /path/to/runtime
 
 در Stable v0.2.1، Provider/Model Definition متعلق به TL Studio است اما Permission Persistence هنوز Runtime-backed است.
 
-در Preview خصوصی **v0.3.0-alpha.6**، Browser دیگر Permissionها را از Raw Runtime Route لیست یا Reply نمی‌کند. TL Studio Routeهای `/local/permissions*` را ارائه می‌دهد، Remembered Ruleهای Project-scoped را خودش ذخیره می‌کند و Decision صریح یا Remembered را برای Engine همراه برنامه Translate می‌کند.
+در Preview خصوصی **v0.3.0-alpha.7** دو Boundary دیگر به TL Studio منتقل شده‌اند:
 
-Session Execution، Tool Execution، Question Handling، Provider Credential و Model Inference هنوز در Engine باقی می‌مانند. این یک قدم دیگر به سمت Replaceability است، نه ادعای حذف کامل Execution Dependency.
+- Route `GET /local/tools`، Tool Registry خود TL Studio را ارائه می‌دهد. Runtime Tool IDها به Semantic ID، Label، Category، Capability Flag، Permission Class و Presentation Hint متعلق به TL Studio Translate می‌شوند. Registry فقط توصیفی است؛ Tool Execution واقعی و Enforcement نهایی همچنان در Engine است.
+- Browser دیگر Permissionها را از Raw Runtime Route لیست یا Reply نمی‌کند. TL Studio Routeهای `/local/permissions*` را ارائه می‌دهد، Remembered Ruleهای Project-scoped را خودش ذخیره می‌کند و Decision صریح یا Remembered را برای Engine همراه برنامه Translate می‌کند.
+
+Session Execution، Tool Execution واقعی، Question Handling، Provider Credential و Model Inference هنوز در Engine باقی می‌مانند. این یک قدم دیگر به سمت Replaceability است، نه ادعای حذف کامل Execution Dependency.

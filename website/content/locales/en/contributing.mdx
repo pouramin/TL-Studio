@@ -62,11 +62,12 @@ Keep user-facing language centered on **TL Studio**. Name the bundled engine onl
 
 ## Current dev line
 
-The current private development line is **v0.3.0-alpha.6**.
+The current private development line is **v0.3.0-alpha.7**.
 
-Two boundaries are especially important when contributing on `dev`:
+Three boundaries are especially important when contributing on `dev`:
 
 - Monaco is a locally bundled, lazy-loaded editor engine. Do not move file ownership, save/conflict logic, or project-path authority into Monaco.
+- Tool identity/presentation semantics belong to TL Studio in `cmd/launcher/tool_registry.go` and are exposed through `GET /local/tools`. Do not make the registry execute tools or override runtime enforcement.
 - Remembered permission policy belongs to TL Studio in `cmd/launcher/permission_engine.go`. Keep sensitive requests interactive and keep the browser on `/local/permissions*` rather than raw engine permission routes.
 
 Preview builds from `dev` are GitHub Actions artifacts only. Do not add npm alpha publishing or public GitHub prereleases unless the release model is deliberately changed.

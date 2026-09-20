@@ -52,6 +52,6 @@ If open tabs contain unsaved edits, TL Studio protects them before switching to 
 
 Stable v0.2.1 keeps the lightweight built-in editor surface and all of the file/save/conflict rules described above.
 
-The private **v0.3.0-alpha.6** development line adds **Monaco Editor 0.56.0** as an enhanced editor engine. Monaco is bundled with TL Studio, loaded lazily on first file use, and uses same-origin local workers — no editor CDN is required.
+The private **v0.3.0-alpha.7** development line adds **Monaco Editor 0.56.0** as an enhanced editor engine. Monaco is bundled with TL Studio, loaded lazily on first file use, and uses same-origin local workers — no editor CDN is required.
 
 The original textarea-based editor remains a functional fallback if the Monaco bundle cannot load. TL Studio still owns the file buffers, save flow, SHA-256 conflict checks, project boundary, and external-change reconciliation; Monaco is only the editor/presentation engine. The enhanced editor also brings native Monaco workflows such as find/replace and multi-cursor editing.

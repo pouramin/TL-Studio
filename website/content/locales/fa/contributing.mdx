@@ -62,11 +62,12 @@ npm run build
 
 ## خط Development فعلی
 
-خط خصوصی Development فعلی **v0.3.0-alpha.6** است.
+خط خصوصی Development فعلی **v0.3.0-alpha.7** است.
 
-هنگام کار روی `dev` دو Boundary مهم‌اند:
+هنگام کار روی `dev` سه Boundary مهم‌اند:
 
 - Monaco فقط یک Editor Engine کاملاً Local و Lazy-loaded است. File Ownership، Save/Conflict Logic و Project Path Authority نباید به Monaco منتقل شوند.
+- Tool Identity/Presentation Semantics متعلق به TL Studio و در `cmd/launcher/tool_registry.go` است و از `GET /local/tools` ارائه می‌شود. Registry نباید Tool اجرا کند یا Runtime Enforcement را Override کند.
 - Remembered Permission Policy متعلق به TL Studio و در `cmd/launcher/permission_engine.go` است. Request حساس باید Interactive بماند و Browser باید از `/local/permissions*` استفاده کند، نه Raw Permission Route مربوط به Engine.
 
 Preview Buildهای `dev` فقط Artifactهای GitHub Actions هستند. Alpha روی npm یا GitHub Prerelease عمومی منتشر نشود مگر اینکه Release Model عمداً تغییر کند.
