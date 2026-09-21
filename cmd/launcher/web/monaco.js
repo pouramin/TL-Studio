@@ -228,6 +228,11 @@
       state.editor.setModel(null);
       return;
     }
+    if (detail?.viewOnly) {
+      state.activePath = path;
+      state.editor.setModel(null);
+      return;
+    }
     const currentPath = document.getElementById("fileEditorPath")?.textContent || "";
     const content = pathKey(currentPath) === pathKey(path) && state.textarea
       ? state.textarea.value
@@ -258,7 +263,7 @@
 
   const handleRender = async (detail) => {
     state.pendingRender = detail || {};
-    if (!detail?.path) {
+    if (!detail?.path || detail?.viewOnly) {
       if (state.editor) activateRender(detail);
       return;
     }

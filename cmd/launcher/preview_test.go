@@ -117,7 +117,8 @@ func TestPreviewCapabilityRegistryCoversSupportedFileTypes(t *testing.T) {
 		"clip.mp4":     "video",
 		"sound.mp3":    "audio",
 		"README.md":    "markdown",
-		"notes.txt":    "",
+		"notes.txt":    "text",
+		"session.log":  "text",
 		"styles.css":   "",
 	}
 	for path, wantKind := range cases {
@@ -133,7 +134,7 @@ func TestPreviewCapabilityRegistryCoversSupportedFileTypes(t *testing.T) {
 		}
 	}
 	registry := previewRegistry()
-	if registry.Version != 1 || len(registry.Capabilities) < 7 {
+	if registry.Version != 1 || len(registry.Capabilities) < 8 {
 		t.Fatalf("unexpected preview registry: %#v", registry)
 	}
 }
@@ -233,7 +234,7 @@ func TestPreviewCapabilityRoute(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&registry); err != nil {
 		t.Fatal(err)
 	}
-	if registry.Version != 1 || len(registry.Capabilities) < 7 {
+	if registry.Version != 1 || len(registry.Capabilities) < 8 {
 		t.Fatalf("unexpected preview capability registry response: %#v", registry)
 	}
 }
@@ -403,6 +404,9 @@ func TestFilePreviewCanSwitchBetweenDifferentPreviewKindsOnOneServer(t *testing.
 	if err := os.WriteFile(filepath.Join(project, "README.md"), []byte("# Preview"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(project, "notes.txt"), []byte("plain text preview"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	state := &appState{project: project}
 	manager := newPreviewManager(state)
@@ -445,6 +449,18 @@ func TestFilePreviewCanSwitchBetweenDifferentPreviewKindsOnOneServer(t *testing.
 	}
 	if md.EntryMeta == nil || md.EntryMeta.Kind != "markdown" || mdURL.Host != htmlURL.Host || mdURL.Path != "/.tl-preview/markdown" {
 		t.Fatalf("Markdown preview did not use the generic renderer route: %#v", md)
+	}
+
+	textPreview, err := manager.start("notes.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	textURL, err := url.Parse(textPreview.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if textPreview.EntryMeta == nil || textPreview.EntryMeta.Kind != "text" || textURL.Host != htmlURL.Host || !strings.HasSuffix(textPreview.URL, "/notes.txt") {
+		t.Fatalf("plain-text preview did not use the file preview route: %#v", textPreview)
 	}
 }
 

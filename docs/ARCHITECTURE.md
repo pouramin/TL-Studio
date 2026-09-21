@@ -65,14 +65,15 @@ The registry maps supported file extensions to TL Studio preview concepts. Curre
 - video: `.mp4`, `.webm`, `.ogv`, `.m4v`
 - audio: `.mp3`, `.wav`, `.ogg`, `.oga`, `.m4a`, `.aac`, `.flac`
 - Markdown: `.md`, `.markdown`, `.mdown`
+- plain text: `.txt`, `.text`, `.log`
 
 Browser-native file previews are served by the same TL Studio-owned loopback-only file preview server. Markdown uses a TL Studio-owned safe renderer on that preview origin: raw HTML is escaped, common headings/lists/blockquote/code/strong/emphasis are rendered, and a `<base>` path keeps relative project resources anchored to the Markdown file's directory.
 
-The Browser does not hard-code preview extensions. It loads the Preview Capability Registry and uses it to decide whether the active Editor tab can replace the current Preview entry. While Preview is open, activating a previewable file automatically switches to that file. Activating a non-previewable code/text file leaves the current Preview unchanged. File mutations continue to reload the active file Preview.
+The Browser does not hard-code preview extensions. It loads the Preview Capability Registry and uses it to decide whether the active Workspace tab can replace the current Preview entry. Text-editable preview types such as HTML, SVG, Markdown, and plain text stay normal editor tabs. Binary media capabilities such as raster images, PDF, video, and audio open as read-only Workspace tabs: they carry path/type metadata, publish the same active-tab event, and never create a Monaco text model. While Preview is open, activating any previewable tab automatically switches to that file. Activating a non-previewable code file leaves the current Preview unchanged.
 
 Node projects keep project-aware behavior: when the active previewable file is HTML and a `package.json` `dev` script exists, TL Studio runs the project's dev server instead of serving the raw HTML file. Activating a standalone previewable asset such as an image, PDF, audio/video file, or Markdown document temporarily switches to file Preview; returning to HTML restores the dev-server path.
 
-File discovery stays project-scoped, does not follow symlink entries, skips `.git` and `node_modules`, and is bounded. Switching between file previews reuses the same loopback server whenever possible. The floating Preview window persists its geometry and exposes a dedicated left-edge width resize handle for side-by-side editing.
+File discovery stays project-scoped, does not follow symlink entries, skips `.git` and `node_modules`, and is bounded. Large preview-only binary files are not loaded into the Workspace text-buffer path; only metadata is returned while the isolated preview server streams/serves the actual file. Switching between file previews reuses the same loopback server whenever possible. The floating Preview window persists its geometry and exposes a dedicated left-edge width resize handle for side-by-side editing.
 
 Preview content intentionally runs on a **separate loopback origin** from the TL Studio control origin. Project content must not share an origin with TL Studio's `/local/*` control APIs.
 

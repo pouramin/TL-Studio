@@ -39,6 +39,7 @@ var previewFileCapabilities = []previewCapabilityDescriptor{
 	{ID: "media.video", Name: "Video", Kind: "video", Renderer: "browser", Extensions: []string{".mp4", ".webm", ".ogv", ".m4v"}},
 	{ID: "media.audio", Name: "Audio", Kind: "audio", Renderer: "browser", Extensions: []string{".mp3", ".wav", ".ogg", ".oga", ".m4a", ".aac", ".flac"}},
 	{ID: "document.markdown", Name: "Markdown", Kind: "markdown", Renderer: "markdown", Extensions: []string{".md", ".markdown", ".mdown"}},
+	{ID: "document.text", Name: "Text", Kind: "text", Renderer: "browser", Extensions: []string{".txt", ".text", ".log"}},
 }
 
 func previewRegistry() previewCapabilityRegistry {

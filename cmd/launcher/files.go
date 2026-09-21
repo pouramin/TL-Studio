@@ -32,14 +32,19 @@ type localFileList struct {
 }
 
 type localFilePreview struct {
-	Name     string `json:"name"`
-	Path     string `json:"path"`
-	Size     int64  `json:"size"`
-	Mime     string `json:"mime"`
-	Binary   bool   `json:"binary"`
-	Content  string `json:"content,omitempty"`
-	Modified string `json:"modified,omitempty"`
-	SHA256   string `json:"sha256,omitempty"`
+	Name                string `json:"name"`
+	Path                string `json:"path"`
+	Size                int64  `json:"size"`
+	Mime                string `json:"mime"`
+	Binary              bool   `json:"binary"`
+	Previewable         bool   `json:"previewable"`
+	ViewOnly            bool   `json:"viewOnly"`
+	PreviewKind         string `json:"previewKind,omitempty"`
+	PreviewCapabilityID string `json:"previewCapabilityID,omitempty"`
+	PreviewName         string `json:"previewName,omitempty"`
+	Content             string `json:"content,omitempty"`
+	Modified            string `json:"modified,omitempty"`
+	SHA256              string `json:"sha256,omitempty"`
 }
 
 type localFileWriteRequest struct {
@@ -302,6 +307,28 @@ func decodeLocalJSON(r *http.Request, target any) error {
 	return nil
 }
 
+func binaryPreviewKind(kind string) bool {
+	switch kind {
+	case "image", "pdf", "video", "audio":
+		return true
+	default:
+		return false
+	}
+}
+
+func applyLocalPreviewCapability(preview *localFilePreview, rel string) {
+	if preview == nil {
+		return
+	}
+	if capability, ok := previewCapabilityForPath(rel); ok {
+		preview.Previewable = true
+		preview.ViewOnly = binaryPreviewKind(capability.Kind)
+		preview.PreviewKind = capability.Kind
+		preview.PreviewCapabilityID = capability.ID
+		preview.PreviewName = capability.Name
+	}
+}
+
 func readLocalFilePreview(project, requested string) (localFilePreview, int, error) {
 	target, rel, err := resolveProjectEntry(project, requested)
 	if err != nil {
@@ -317,15 +344,31 @@ func readLocalFilePreview(project, requested string) (localFilePreview, int, err
 	if !info.Mode().IsRegular() {
 		return localFilePreview{}, http.StatusBadRequest, fmt.Errorf("requested path is not a regular file")
 	}
+	capability, previewable := previewCapabilityForPath(rel)
+	mimeType := mime.TypeByExtension(strings.ToLower(filepath.Ext(target)))
+	if mimeType == "" && previewable {
+		mimeType = previewMIMEForPath(rel, capability)
+	}
+	if previewable && binaryPreviewKind(capability.Kind) && info.Size() > maxLocalPreviewBytes {
+		preview := localFilePreview{
+			Name:     filepath.Base(target),
+			Path:     rel,
+			Size:     info.Size(),
+			Mime:     mimeType,
+			Binary:   true,
+			Modified: info.ModTime().UTC().Format("2006-01-02T15:04:05Z"),
+		}
+		applyLocalPreviewCapability(&preview, rel)
+		return preview, http.StatusOK, nil
+	}
 	if info.Size() > maxLocalPreviewBytes {
-		return localFilePreview{}, http.StatusRequestEntityTooLarge, fmt.Errorf("file is too large to preview (max %d MiB)", maxLocalPreviewBytes/(1024*1024))
+		return localFilePreview{}, http.StatusRequestEntityTooLarge, fmt.Errorf("file is too large to edit or inspect as text (max %d MiB)", maxLocalPreviewBytes/(1024*1024))
 	}
 	data, err := os.ReadFile(target)
 	if err != nil {
 		return localFilePreview{}, http.StatusInternalServerError, err
 	}
 	binary := bytes.IndexByte(data, 0) >= 0 || !utf8.Valid(data)
-	mimeType := mime.TypeByExtension(strings.ToLower(filepath.Ext(target)))
 	if mimeType == "" {
 		if binary {
 			mimeType = "application/octet-stream"
@@ -342,6 +385,7 @@ func readLocalFilePreview(project, requested string) (localFilePreview, int, err
 		Modified: info.ModTime().UTC().Format("2006-01-02T15:04:05Z"),
 		SHA256:   fileSHA256(data),
 	}
+	applyLocalPreviewCapability(&preview, rel)
 	if !binary {
 		preview.Content = string(data)
 	}
