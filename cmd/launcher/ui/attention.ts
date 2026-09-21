@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
 
   const parseDeviceCode = (input: any) => input?.match(/code:\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase()
     || input?.match(/\b[A-Z0-9]{4,}(?:-[A-Z0-9]{3,})+\b/i)?.[0]?.toUpperCase() || "";
