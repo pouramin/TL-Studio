@@ -1,4 +1,5 @@
-# Browser JavaScript under cmd/launcher/web is generated from cmd/launcher/ui TypeScript.
+# Browser JavaScript is generated from cmd/launcher/ui TypeScript during local/CI builds
+# and intentionally remains untracked.
 cmd/launcher/web/*.js linguist-generated=true
 
 # Monaco browser bundles/workers are generated third-party build artifacts.

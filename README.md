@@ -8,7 +8,7 @@
   A fast local development workspace with AI built in.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.6</strong> · Stable release remains v0.2.1.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.18</strong> · Stable release remains v0.2.1.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -55,8 +55,7 @@ The release already includes the pinned local agent runtime.
 - **Integrated terminal** — project-scoped command execution, output history, stop controls, and process-tree termination.
 - **Live Preview** — capability-driven local preview in a movable/resizable browser window. TL Studio follows the active previewable file across HTML, SVG/raster images, PDF, video, audio, rendered Markdown, and rendered plain text; PDF is served directly with inline MIME/disposition and HTTP range support for the browser's native PDF viewer. Previewable binary media opens as a real read-only Workspace tab, while the floating Preview can be resized from all four edges and all four corners.
 - **Appearance & editor settings** — System, Dark, and Light themes plus editor theme and separate UI/code/terminal font controls.
-- **Strict TypeScript browser source** — all Browser UI source under `cmd/launcher/ui` is compiled and type-checked with `strict: true`; shared `TLStudioKernel`, state, DOM element, runtime API, session, tool, and live-event contracts replace the former global `any` surface.
-- **Strict TypeScript browser source** — all Browser UI source under `cmd/launcher/ui` is compiled and type-checked with `strict: true`; the shared `TLStudioKernel`, state, DOM element, runtime API, session, tool, and live-event contracts replace the former global `any` surface.
+- **Strict TypeScript + bundled Browser modules** — all Browser UI source under `cmd/launcher/ui` is type-checked with `strict: true`; `browser.ts` defines the ES-module graph and esbuild produces one primary `browser.js` bundle. Generated Browser JavaScript is build output rather than tracked source, while the typed `TLStudioKernel`, state, DOM, runtime API, session, tool, and live-event contracts preserve the Phase 1 safety boundary.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
 - **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
 
@@ -123,7 +122,17 @@ tl-studio/
 Development requirements:
 
 - Go 1.23+
+- Node.js 18+ and npm for the local Browser build
 - the compatible local runtime binary in `PATH`, beside the launcher, or supplied explicitly
+
+Build the Browser assets once after cloning or after Browser-source changes:
+
+```bash
+npm install --ignore-scripts --no-audit --no-fund
+npm run build:web
+```
+
+Then run the launcher:
 
 ```bash
 go run ./cmd/launcher

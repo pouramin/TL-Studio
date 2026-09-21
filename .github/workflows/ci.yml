@@ -26,6 +26,15 @@ jobs:
         run: npm run check:web
       - name: Build browser UI
         run: npm run build:web
+      - name: Verify generated Browser JavaScript is untracked
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files 'cmd/launcher/web/*.js' | grep -q .; then
+            echo "Generated Browser JavaScript must not be committed." >&2
+            git ls-files 'cmd/launcher/web/*.js' >&2
+            exit 1
+          fi
       - name: Verify local Monaco bundle
         run: |
           test -s cmd/launcher/web/monaco-editor.js
@@ -48,12 +57,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files=(cmd/launcher/web/*.js)
-          if grep -nE '/kilo|Kilo backend|Sign in to Kilo|Kilo account' "${files[@]}" --exclude=runtime-api.js; then
-            echo "Browser UI must not depend on or expose the bundled runtime implementation." >&2
-            exit 1
-          fi
-          if grep -nE '/kilo' cmd/launcher/ui/*.ts --exclude=runtime-api.ts; then
+          if grep -nE '/kilo|Kilo backend|Sign in to Kilo|Kilo account' cmd/launcher/ui/*.ts --exclude=runtime-api.ts; then
             echo "TypeScript UI modules must access the bundled engine only through runtime-api.ts." >&2
             exit 1
           fi
