@@ -335,7 +335,7 @@
   });
 
   // Editor/file mutations use fetch directly. Dispatch a narrow local event only
-  // after successful workspace mutations so static previews update automatically.
+  // after successful workspace mutations so file previews update automatically.
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     const response = await nativeFetch(input, init);
