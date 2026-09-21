@@ -197,6 +197,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	permissionEngine.setEventBus(liveEvents.bus)
 	nativeTools := newNativeToolExecutor(processes, permissionEngine)
 	nativeAgent := newNativeAgentRuntime(providerManager, newNativeModelClient(), nativeTools, sessionRead.store, liveEvents.bus)
+	sessionRead.setNativeStatusProvider(nativeAgent)
 	sessionCommands := newSessionCommandContract(state, backend, sessionRead)
 	sessionCommands.adapter = newHybridSessionCommandAdapter(sessionCommands.adapter, nativeAgent)
 
