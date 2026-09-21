@@ -24,10 +24,6 @@ type runtimeEngine interface {
 	PrepareRequest(req *http.Request, project string, credentials runtimeCredentials)
 }
 
-func defaultRuntimeEngine() runtimeEngine {
-	return kiloRuntimeEngine{}
-}
-
 type runtimeBackend struct {
 	state       *appState
 	target      *url.URL
