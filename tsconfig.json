@@ -5,12 +5,11 @@
     "lib": ["DOM", "ES2020", "DOM.Iterable"],
     "rootDir": "cmd/launcher/ui",
     "outDir": "cmd/launcher/web",
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
     "removeComments": false,
-    "sourceMap": false,
-    "noCheck": true
+    "sourceMap": false
   },
-  "include": ["cmd/launcher/ui/**/*.ts"],
-  "exclude": ["cmd/launcher/ui/**/*.d.ts", "cmd/launcher/ui/runtime-contract.ts"]
+  "include": ["cmd/launcher/ui/**/*.ts", "cmd/launcher/ui/**/*.d.ts"],
+  "exclude": ["cmd/launcher/ui/runtime-contract.ts"]
 }
