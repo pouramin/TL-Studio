@@ -107,6 +107,24 @@ interface TLStudioSessionMessage {
   [key: string]: any;
 }
 
+interface TLStudioSessionCreateInput {
+  parentID?: string;
+  title?: string;
+}
+
+interface TLStudioSessionUpdateInput {
+  title: string;
+}
+
+interface TLStudioSessionRunInput {
+  text?: string;
+  parts?: TLStudioDynamicRecord[];
+  agent?: string;
+  model?: TLStudioSessionModelRef;
+  variant?: string;
+  messageID?: string;
+}
+
 interface TLStudioToolCapabilities {
   read: boolean;
   write: boolean;
@@ -185,12 +203,12 @@ interface TLStudioRuntimeContract {
     messages(sessionID: string, options?: { limit?: number; directory?: string }): Promise<TLStudioSessionMessage[]>;
     changes(sessionID: string, options?: { directory?: string }): Promise<Array<{ file: string; additions: number; deletions: number; patch?: string }>>;
   };
-  sessions: {
-    create(input?: TLStudioDynamicRecord): Promise<any>;
-    update(sessionID: string, input?: TLStudioDynamicRecord, options?: { directory?: string }): Promise<any>;
-    remove(sessionID: string, options?: { directory?: string }): Promise<any>;
-    promptAsync(sessionID: string, input?: TLStudioDynamicRecord): Promise<any>;
-    abort(sessionID: string, options?: { scope?: string; directory?: string }): Promise<any>;
+  sessionCommands: {
+    create(input?: TLStudioSessionCreateInput, options?: { directory?: string }): Promise<TLStudioSessionView>;
+    update(sessionID: string, input: TLStudioSessionUpdateInput, options?: { directory?: string }): Promise<TLStudioSessionView>;
+    remove(sessionID: string, options?: { directory?: string }): Promise<{ deleted: boolean; sessionID: string }>;
+    run(sessionID: string, input?: TLStudioSessionRunInput, options?: { directory?: string }): Promise<{ accepted: boolean; sessionID: string }>;
+    abort(sessionID: string, options?: { scope?: string; directory?: string }): Promise<{ aborted: boolean; sessionID: string }>;
   };
   legacySessions: {
     list(options?: TLStudioDynamicRecord): Promise<any>;
