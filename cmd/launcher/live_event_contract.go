@@ -24,25 +24,25 @@ type liveEventView struct {
 }
 
 type liveEventContract struct {
-	state    *appState
-	target   *url.URL
-	username string
-	password string
-	client   *http.Client
+	state   *appState
+	backend *runtimeBackend
 }
 
 func newLiveEventContract(state *appState, backendURL, username, password string) (*liveEventContract, error) {
-	target, err := url.Parse(backendURL)
+	backend, err := newRuntimeBackend(
+		state,
+		backendURL,
+		runtimeCredentials{Username: username, Password: password},
+		defaultRuntimeEngine(),
+	)
 	if err != nil {
 		return nil, err
 	}
-	return &liveEventContract{
-		state:    state,
-		target:   target,
-		username: username,
-		password: password,
-		client:   &http.Client{},
-	}, nil
+	return newLiveEventContractWithBackend(state, backend), nil
+}
+
+func newLiveEventContractWithBackend(state *appState, backend *runtimeBackend) *liveEventContract {
+	return &liveEventContract{state: state, backend: backend}
 }
 
 func eventMap(value any) map[string]any {
@@ -166,25 +166,18 @@ func projectRuntimeEvent(raw map[string]any) (liveEventView, bool) {
 }
 
 func (c *liveEventContract) runtimeStream(ctx context.Context, directory string) (*http.Response, error) {
-	target := *c.target
-	target.Path = "/global/event"
-	query := target.Query()
+	query := url.Values{}
 	if directory != "" {
 		query.Set("directory", directory)
 	}
-	target.RawQuery = query.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
+	req, err := c.backend.newRequest(ctx, http.MethodGet, "/global/event", directory, query, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(c.username, c.password)
 	req.Header.Set("Accept", "text/event-stream")
-	if directory != "" {
-		req.Header.Set("x-kilo-directory", strings.ReplaceAll(url.QueryEscape(directory), "+", "%20"))
-	}
 
-	response, err := c.client.Do(req)
+	response, err := c.backend.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

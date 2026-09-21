@@ -305,34 +305,33 @@ func (e *runtimePermissionError) Error() string {
 }
 
 type permissionEngine struct {
-	state    *appState
-	target   *url.URL
-	username string
-	password string
-	client   *http.Client
-	store    *permissionPolicyStore
+	state   *appState
+	backend *runtimeBackend
+	store   *permissionPolicyStore
 }
 
 func newPermissionEngine(state *appState, backendURL, username, password string) (*permissionEngine, error) {
-	target, err := url.Parse(backendURL)
+	backend, err := newRuntimeBackend(
+		state,
+		backendURL,
+		runtimeCredentials{Username: username, Password: password},
+		defaultRuntimeEngine(),
+	)
 	if err != nil {
 		return nil, err
 	}
+	return newPermissionEngineWithBackend(state, backend), nil
+}
+
+func newPermissionEngineWithBackend(state *appState, backend *runtimeBackend) *permissionEngine {
 	return &permissionEngine{
-		state:    state,
-		target:   target,
-		username: username,
-		password: password,
-		client:   &http.Client{},
-		store:    newPermissionPolicyStore(permissionPolicyPath()),
-	}, nil
+		state:   state,
+		backend: backend,
+		store:   newPermissionPolicyStore(permissionPolicyPath()),
+	}
 }
 
 func (e *permissionEngine) runtimeRequest(ctx context.Context, method, route string, query url.Values, body any) (json.RawMessage, error) {
-	target := *e.target
-	target.Path = route
-	target.RawQuery = query.Encode()
-
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -341,19 +340,15 @@ func (e *permissionEngine) runtimeRequest(ctx context.Context, method, route str
 		}
 		reader = bytes.NewReader(encoded)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, target.String(), reader)
+	req, err := e.backend.newRequest(ctx, method, route, e.state.projectPath(), query, reader)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(e.username, e.password)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if project := e.state.projectPath(); project != "" {
-		req.Header.Set("x-kilo-directory", strings.ReplaceAll(url.QueryEscape(project), "+", "%20"))
-	}
 
-	response, err := e.client.Do(req)
+	response, err := e.backend.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
