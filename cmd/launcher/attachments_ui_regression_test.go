@@ -18,7 +18,7 @@ func TestComposerAttachmentsAreEmbeddedAndWired(t *testing.T) {
 		`MAX_FILE_BYTES`,
 		`attachmentInput.multiple = true`,
 		`K.sendPrompt = async () =>`,
-		`K.api.sessions.promptAsync`,
+		`K.api.sessionCommands.run`,
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("attachments.ts is missing expected behavior %q", expected)
@@ -29,9 +29,10 @@ func TestComposerAttachmentsAreEmbeddedAndWired(t *testing.T) {
 	}
 
 	adapterText := readBrowserSource(t, "runtime-api.ts")
-	if !strings.Contains(adapterText, "{ text, parts, agent, model") ||
-		!strings.Contains(adapterText, "Array.isArray(parts) && parts.length ? parts") {
-		t.Fatal("runtime API adapter does not preserve structured prompt parts")
+	if !strings.Contains(adapterText, "sessionCommands: {") ||
+		!strings.Contains(adapterText, "/local/sessions/") ||
+		!strings.Contains(adapterText, "/runs") {
+		t.Fatal("runtime API adapter does not route structured prompts through the TL Studio session command contract")
 	}
 
 	css, err := webFS.ReadFile("web/attachments.css")
