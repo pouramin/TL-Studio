@@ -314,36 +314,35 @@ func (e *runtimeProviderError) Error() string {
 }
 
 type runtimeProviderManager struct {
-	state       *appState
-	target      *url.URL
-	username    string
-	password    string
-	store       *providerRegistryStore
-	client      *http.Client
-	bootstrapMu sync.Mutex
+	state        *appState
+	backend      *runtimeBackend
+	store        *providerRegistryStore
+	bootstrapMu  sync.Mutex
 	bootstrapped bool
 }
 
 func newRuntimeProviderManager(state *appState, backendURL, username, password string) (*runtimeProviderManager, error) {
-	target, err := url.Parse(backendURL)
+	backend, err := newRuntimeBackend(
+		state,
+		backendURL,
+		runtimeCredentials{Username: username, Password: password},
+		defaultRuntimeEngine(),
+	)
 	if err != nil {
 		return nil, err
 	}
+	return newRuntimeProviderManagerWithBackend(state, backend), nil
+}
+
+func newRuntimeProviderManagerWithBackend(state *appState, backend *runtimeBackend) *runtimeProviderManager {
 	return &runtimeProviderManager{
-		state:    state,
-		target:   target,
-		username: username,
-		password: password,
-		store:    newProviderRegistryStore(providerRegistryPath()),
-		client:   &http.Client{},
-	}, nil
+		state:   state,
+		backend: backend,
+		store:   newProviderRegistryStore(providerRegistryPath()),
+	}
 }
 
 func (m *runtimeProviderManager) requestRaw(ctx context.Context, method, route string, query url.Values, body any) (json.RawMessage, error) {
-	target := *m.target
-	target.Path = route
-	target.RawQuery = query.Encode()
-
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -352,19 +351,15 @@ func (m *runtimeProviderManager) requestRaw(ctx context.Context, method, route s
 		}
 		reader = bytes.NewReader(encoded)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, target.String(), reader)
+	req, err := m.backend.newRequest(ctx, method, route, m.state.projectPath(), query, reader)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(m.username, m.password)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if project := m.state.projectPath(); project != "" {
-		req.Header.Set("x-kilo-directory", strings.ReplaceAll(url.QueryEscape(project), "+", "%20"))
-	}
 
-	response, err := m.client.Do(req)
+	response, err := m.backend.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
