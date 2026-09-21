@@ -21,6 +21,11 @@ type nativeModelResolver interface {
 	resolveNativeModel(providerID, modelID string) (tlProviderDefinition, tlProviderModel, string, error)
 }
 
+type nativeRunHandle struct {
+	cancel    context.CancelFunc
+	directory string
+}
+
 type nativeAgentRuntime struct {
 	resolver nativeModelResolver
 	model    nativeModelClient
@@ -29,7 +34,7 @@ type nativeAgentRuntime struct {
 	events   *liveEventBus
 
 	mu   sync.Mutex
-	runs map[string]context.CancelFunc
+	runs map[string]nativeRunHandle
 }
 
 func newNativeAgentRuntime(
@@ -45,7 +50,7 @@ func newNativeAgentRuntime(
 		tools:    tools,
 		store:    store,
 		events:   events,
-		runs:     map[string]context.CancelFunc{},
+		runs:     map[string]nativeRunHandle{},
 	}
 }
 
@@ -75,7 +80,7 @@ func (r *nativeAgentRuntime) Start(directory, sessionID string, input sessionRun
 		return errors.New("session already has an active native run")
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
-	r.runs[sessionID] = cancel
+	r.runs[sessionID] = nativeRunHandle{cancel: cancel, directory: directory}
 	r.mu.Unlock()
 
 	if err := r.store.recordAcceptedRun(sessionID, directory, input); err != nil {
@@ -105,13 +110,27 @@ func (r *nativeAgentRuntime) finishRun(sessionID string) {
 func (r *nativeAgentRuntime) Abort(sessionID string) bool {
 	sessionID = strings.TrimSpace(sessionID)
 	r.mu.Lock()
-	cancel, ok := r.runs[sessionID]
+	handle, ok := r.runs[sessionID]
 	r.mu.Unlock()
 	if !ok {
 		return false
 	}
-	cancel()
+	handle.cancel()
 	return true
+}
+
+func (r *nativeAgentRuntime) NativeStatuses(directory string) map[string]sessionStatusView {
+	directory = strings.TrimSpace(directory)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	result := map[string]sessionStatusView{}
+	for sessionID, handle := range r.runs {
+		if directory != "" && !sameProjectPath(handle.directory, directory) {
+			continue
+		}
+		result[sessionID] = sessionStatusView{State: "running", Active: true}
+	}
+	return result
 }
 
 func (r *nativeAgentRuntime) publish(event liveEventView) {
