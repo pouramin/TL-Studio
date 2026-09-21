@@ -54,6 +54,7 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"entrySwitchGeneration",
 		"activeEntry !== entry",
 		"Preview file",
+		"capability?.kind === \"html\"",
 		"tl-studio:project-file-changed",
 		"startsWith(\"file.\")",
 		"keepalive: true",
