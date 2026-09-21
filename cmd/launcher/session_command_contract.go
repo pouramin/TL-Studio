@@ -203,6 +203,9 @@ func (c *sessionCommandContract) run(ctx context.Context, directory, sessionID s
 		ownsPersistence = owner.ownsRunPersistence(input)
 	}
 	if !ownsPersistence && c.read != nil && c.read.store != nil {
+		if err := c.read.store.markSessionExecution(sessionID, directory, "compatibility"); err != nil {
+			return err
+		}
 		if err := c.read.store.recordAcceptedRun(sessionID, directory, input); err != nil {
 			return err
 		}
