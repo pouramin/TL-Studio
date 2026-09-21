@@ -1,34 +1,41 @@
 ---
 title: Models and agents
-description: Choose Agents and Models through TL Studio's product-facing runtime contract.
+description: Understand Agent/Model selection and the stable v0.3 native versus compatibility execution paths.
 icon: Bot
 ---
 
-TL Studio keeps Agent execution behind a generic local runtime contract while owning more of the Provider/Model product surface itself.
+TL Studio owns the product-facing Provider/Model and Session contracts. Stable v0.3 can also execute supported custom-provider coding runs through a native Agent path.
 
-## Agents
+## Agent and Model selection
 
-The primary coding workflow uses the available coding Agent exposed through TL Studio. Agent selection happens in the TL Studio workspace; the bundled engine executes the task behind the adapter boundary.
+Agent and Model selection happens in the TL Studio composer.
 
-## Models and Providers
+For a custom Provider/Model that TL Studio can resolve from its own registry and credential vault, the run can use the TL Studio-native Agent loop.
 
-Custom Provider and Model definitions are TL Studio-owned data. They are stored in TL Studio's local provider registry and translated to the active engine internally.
+Hosted models and capabilities that are not native yet remain behind the compatibility adapter.
 
-The Model picker can also include hosted/runtime-discovered models. Runtime-specific Provider IDs and preferred hosted routes are delivered as metadata to the UI rather than hard-coded into product modules.
+## Native model protocols
 
-See [Custom providers](./custom-providers) for the supported API families and storage model.
+The direct native model path supports:
+
+- OpenAI-compatible Chat Completions;
+- OpenAI Responses;
+- Anthropic Messages compatible APIs.
+
+See [Native Agent and tools](./native-agent-and-tools) for the model/tool/model loop and native Tool set.
+
+## Tool semantics
+
+TL Studio owns the semantic Tool Registry used by the Browser UI. Known Tool IDs resolve to TL Studio descriptors containing names, categories, Permission classes, capability metadata, schemas, and presentation hints.
+
+On the native path, the core Tool Executor runs supported coding Tools through TL Studio-owned handlers. On the compatibility path, execution remains with the bundled engine while Browser presentation stays mapped to TL Studio semantics.
 
 ## Hosted account flow
 
-When the bundled engine exposes a hosted account flow, TL Studio presents that authorization through generic local routes. The browser does not need implementation-specific endpoint knowledge.
+Hosted authentication/models remain a compatibility capability. TL Studio presents authorization through generic local product routes so the Browser does not need engine-specific auth endpoints.
 
-## Provider failures
+## Failures and recovery
 
-Transient upstream failures can happen while TL Studio itself remains healthy. After the engine exhausts a retry cycle for a retryable provider error, TL Studio can offer **Resume** and continue from the preserved workspace state instead of starting the task from scratch.
+Upstream authentication, quota, context, or transient failures can occur while TL Studio itself remains healthy.
 
-
-## Development preview: Tool semantics
-
-Private **v0.3.0-alpha.7** adds a TL Studio-owned Tool Registry. Known runtime tool IDs are resolved to stable TL Studio semantic descriptors for activity cards and product UI: name, description, category, permission class, capability flags, and presentation hint.
-
-The registry does not execute tools and does not grant permissions. Unknown tools use a conservative fallback with no invented capabilities, and runtime enforcement remains authoritative.
+Compatibility runs can expose **Resume** after retryable failures. Native runs preserve semantic Session state and file Changes through TL Studio persistence; cancellation and failure state are recorded locally.

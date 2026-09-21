@@ -1,27 +1,69 @@
 ---
 title: Projects and sessions
-description: Learn how TL Studio scopes workspace and Agent activity to the selected local project.
+description: Understand TL Studio v0.3 Project scoping, semantic Session contracts, persistence, and live activity.
 icon: FolderCode
 ---
 
-## Local projects
+## Project boundary
 
-A selected Project is the working boundary for TL Studio. Files, Editor tabs, Search, Terminal commands, Preview, Sessions, Changes, Agent context, Permission requests, and Questions all follow the active project.
+The selected Project is the working boundary for TL Studio. Files, Editor tabs, Search, Terminal commands, Preview, Sessions, Changes, Agent context, Permissions, and Questions all follow the active Project.
 
-Switching projects clears pending composer attachments. If you have unsaved editor changes, TL Studio asks before discarding that work during a project switch.
+Switching Projects clears pending composer attachments. Unsaved Editor buffers are protected before the active Project changes.
 
-## Sessions
+## TL Studio semantic Sessions
 
-TL Studio presents and manages coding sessions while Agent execution remains behind the local runtime contract. You can create, rename, delete, reopen, and inspect sessions from the workspace.
+Stable v0.3 no longer exposes raw engine Session envelopes as the normal Browser model.
 
-Starting a new session clears unsent attachments. Attachments that were already sent remain represented on their message in conversation history.
+Current Session reads use launcher-owned semantic routes under:
 
-A read-only compatibility bridge can open older alpha-era sessions that used an earlier protocol. Those legacy histories are project-scoped and are not mutated through the compatibility path.
+```text
+/local/sessions*
+```
 
-## Messages and live activity
+TL Studio projects Session metadata, Messages, activity, status, usage, and Changes into its own product-facing shapes.
 
-TL Studio follows session state and live events rather than treating the first HTTP response as the final answer. The interface can render assistant text, Reasoning, Tools, file activity, Permission requests, Questions, and attachments as a task progresses.
+Session commands use the same product boundary for:
 
-## Usage summaries
+- create;
+- rename;
+- delete;
+- run/prompt;
+- abort.
 
-Where execution data is available, TL Studio shows per-turn and project-level totals such as tokens, requests, elapsed time, Reasoning, and cache usage. These are local workspace summaries, not telemetry uploaded to a TL Studio service.
+The active execution adapter translates those commands to either the native TL Studio path or the compatibility path.
+
+## Local Session persistence
+
+TL Studio mirrors semantic Session state into its own local state directory.
+
+Persisted snapshots can include:
+
+- Session metadata;
+- user/assistant transcript;
+- Agent/Model selection;
+- usage/activity history;
+- file Changes.
+
+This means history can remain readable even if compatibility-engine history disappears. A persisted-only Session can still be renamed or deleted locally.
+
+TL Studio records whether a Session is owned by native execution or the compatibility path so native semantic history is not accidentally overwritten by compatibility reads.
+
+## Live activity
+
+Browser updates arrive through TL Studio's semantic SSE endpoint:
+
+```text
+/local/events
+```
+
+The event surface projects changes into product concepts such as Session state, Message changes, workspace changes, and attention requests for Permissions or Questions.
+
+Native runs and compatibility runs share the same Browser event architecture.
+
+## Legacy Sessions
+
+A narrow read-only bridge remains for Sessions created during an older alpha protocol window. Those histories are Project-scoped and are not mutated through the legacy bridge.
+
+## Usage
+
+Where data is available, TL Studio shows per-turn and Project-level totals such as tokens, requests, elapsed time, Reasoning, and cache usage. These are local workspace summaries, not telemetry sent to a TL Studio cloud service.

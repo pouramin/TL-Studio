@@ -1,76 +1,83 @@
 ---
 title: Troubleshooting
-description: Diagnose common TL Studio startup, editor, Search, Terminal, Preview, Provider, and Agent problems.
+description: Diagnose common TL Studio v0.3 startup, editor, Preview, Provider, Session, permission, and Agent issues.
 icon: Wrench
 ---
 
-## TL Studio does not open a browser
+## Browser does not open
 
-The local server may still be running. Copy the `Local:` URL printed in the terminal and open it manually. If you used `--no-browser`, this is expected.
+The local server may still be running. Open the `Local:` URL printed in the terminal manually. If you used `--no-browser`, this is expected.
 
-## Project picker does not accept a folder
+## Project picker rejects a folder
 
 Choose an existing directory. TL Studio normalizes and validates the path before switching Project context.
 
+## Monaco does not appear
+
+TL Studio keeps a lightweight Editor fallback. If the enhanced Monaco bundle cannot load, file editing should remain available through the fallback surface.
+
+Official builds bundle Monaco and its workers locally; no CDN is required.
+
 ## A file will not save because it changed on disk
 
-TL Studio detected that the File revision changed after you opened it. This protects newer Agent/Git/external edits from being silently overwritten.
-
-Review the disk change first. Use force-save only when you intentionally want your editor buffer to replace the newer disk version.
+TL Studio detected that the file revision changed after you opened it. Review the newer disk content first. Use force-save only if you deliberately want your buffer to replace it.
 
 ## Unsaved tabs block Project switching
 
-Save the dirty tabs or explicitly choose to discard them. TL Studio protects unsaved editor state before changing Project context.
+Save the dirty tabs or explicitly discard them. TL Studio protects unsaved Editor state before changing Project context.
 
-## Project Search does not show a file
+## Project Search misses a file
 
-Search skips binary/non-UTF-8 files, symlinks, and common generated/heavy directories such as `.git`, `node_modules`, `dist`, `build`, `out`, `coverage`, and `.next`. Also check your include/exclude patterns and case-sensitive setting.
+Search skips binary/non-UTF-8 files, symlinks, and common generated/heavy directories such as `.git`, `node_modules`, `dist`, `build`, `out`, `coverage`, and `.next`. Check include/exclude patterns and case sensitivity too.
 
-## A Terminal program expects an interactive TTY
+## A Terminal app needs an interactive TTY
 
-The current Terminal is a project command runner, not a full PTY. Interactive TUI applications may not work correctly in v0.2.
+The current Terminal is a command runner, not a full PTY. Interactive TUI applications may not work correctly.
 
-## Preview is unavailable
+## Preview does not open the file
 
-Automatic Preview currently supports either:
+Only registered Preview capabilities are opened automatically. Stable v0.3 recognizes HTML, SVG/raster images, PDF, supported video/audio, Markdown, and plain text/log files.
 
-- a root `index.html`; or
-- a `package.json` project with a `dev` script.
+For a Node dev server, make sure `package.json` contains a `dev` script and that the server reports a loopback URL.
 
-For another stack, run its development command manually in Terminal.
+## PDF Preview behaves strangely
 
-## Preview starts but no URL appears
+TL Studio serves PDF inline with HTTP range support. Browser PDF viewer behavior can still vary by Browser. Use **Open in Browser** if the embedded view is limited.
 
-For Node projects, TL Studio detects loopback URLs reported by the development server. Make sure the dev server actually starts and reports a local URL. External/non-loopback Preview URLs are intentionally rejected.
+## A custom Provider is missing
 
-## Bundled engine not found
+Check **Settings → Providers**, the Provider ID, protocol, Base URL, Model ID, and credential state.
 
-Official TL Studio portable releases include the compatible Agent engine. This error is more likely when running from source or using `--runtime-bin`.
+Provider definitions live in TL Studio's own registry. API keys live separately in the TL Studio credential vault.
 
-## An attachment is rejected
+## A credential cannot be restored
 
-Current limits are **8 files**, **10 MB per file**, and **20 MB total**. Unsupported binary formats are rejected before send.
+On Windows, the vault uses DPAPI. On macOS it prefers Keychain; on Linux it prefers Secret Service when `secret-tool` is available, otherwise TL Studio uses an encrypted private-file fallback.
 
-## Models or Providers are missing
+A credential created under a different OS user/account context may not be decryptable by the current environment.
 
-For a Custom Provider, check **Settings → Providers**, Base URL, protocol, Model ID, and API-key state.
+## Why did a run use the compatibility path?
 
-TL Studio v0.2 owns the Provider/Model definition registry. If you upgraded from an older alpha build, compatible definitions are imported on first use only when no TL Studio registry exists yet.
+Native execution is used only when TL Studio can resolve the selected custom Provider/Model and supports its protocol/model path.
 
-## A Provider request ended after retries
-
-Retryable upstream failures can expose **Resume** after the retry cycle ends. Existing file changes remain in the workspace so the task can continue from the current state.
-
-Authentication, quota/usage-limit, context-overflow, and similar terminal failures should be fixed at the Provider/account level first.
-
-## Why is “Always allow these” missing?
-
-Persistent approval is shown only when reusable matching rules are available and the Permission class can safely support persistence. Sensitive requests can require explicit approval every time.
+Hosted accounts, unresolved legacy runtime Providers, or capabilities without native handlers use the compatibility adapter.
 
 ## Agent is waiting
 
-Check for a pending Permission request or interactive Question.
+Check for an active Permission request or interactive Question.
+
+## “Always allow” is unavailable
+
+Persistent approval is intentionally disabled for sensitive execution/network requests and for compatibility requests that do not provide safe reusable matchers.
+
+## Session history exists after engine history disappeared
+
+This can be expected in v0.3. TL Studio mirrors semantic Session history into its own local persistence. Persisted-only Sessions can still be read, renamed, or deleted locally.
+
+## Attachment rejected
+
+The composer currently limits attachments to **8 files**, **10 MB per file**, and **20 MB total**, and rejects unsupported binary types.
 
 ## Reporting a bug
 
-Include your operating system, TL Studio version, reproduction steps, and non-secret error output. Include Agent-engine compatibility details only when the issue appears runtime-specific. Never publish API keys or Provider tokens.
+Include your operating system, TL Studio version, reproduction steps, execution path if known, and non-secret error output. Never publish Provider API keys or credentials.

@@ -1,76 +1,83 @@
 ---
 title: رفع مشکل
-description: بررسی مشکل‌های Startup، Editor، Search، Terminal، Preview، Provider و Agent در TL Studio.
+description: بررسی مشکل‌های Startup، Editor، Preview، Provider، Session، Permission و Agent در TL Studio v0.3.
 icon: Wrench
 ---
 
 ## Browser خودکار باز نشد
 
-ممکن است Local Server همچنان در حال اجرا باشد. آدرس `Local:` را از Terminal کپی و دستی باز کنید. اگر `--no-browser` داده‌اید، این رفتار طبیعی است.
+ممکن است Local Server همچنان در حال اجرا باشد. آدرس `Local:` چاپ‌شده در Terminal را دستی باز کنید. اگر `--no-browser` داده‌اید، این رفتار طبیعی است.
 
 ## Folder Picker پوشه را قبول نمی‌کند
 
 یک Directory موجود انتخاب کنید. TL Studio قبل از Project Switch مسیر را Normalize و Validate می‌کند.
 
+## Monaco دیده نمی‌شود
+
+TL Studio یک Editor سبک به‌عنوان Fallback نگه می‌دارد. اگر Monaco Bundle نتواند Load شود، Edit فایل باید از Surface جایگزین قابل انجام باشد.
+
+Build رسمی، Monaco و Workerها را Local Bundle می‌کند و CDN لازم نیست.
+
 ## File به‌دلیل تغییر روی Disk Save نمی‌شود
 
-TL Studio تشخیص داده Revision فایل بعد از بازشدن تغییر کرده است. این کار جلوی Silent Overwrite شدن تغییر جدید Agent، Git یا برنامه دیگر را می‌گیرد.
-
-اول Disk Change را بررسی کنید. Force Save را فقط وقتی استفاده کنید که عمداً می‌خواهید Editor Buffer نسخه جدید روی Disk را جایگزین کند.
+Revision فایل بعد از Open تغییر کرده است. اول نسخه جدید روی Disk را بررسی کنید. Force Save را فقط وقتی استفاده کنید که آگاهانه می‌خواهید Buffer خودتان جایگزین نسخه جدید شود.
 
 ## Unsaved Tab جلوی Project Switch را می‌گیرد
 
-Dirty Tabها را Save کنید یا آگاهانه Discard را انتخاب کنید. TL Studio قبل از عوض‌کردن Project از Unsaved Editor State محافظت می‌کند.
+Dirty Tabها را Save کنید یا صریحاً Discard را انتخاب کنید. TL Studio قبل از تغییر Project از Unsaved State محافظت می‌کند.
 
-## Project Search یک File را نشان نمی‌دهد
+## Project Search یک File را پیدا نمی‌کند
 
-Search فایل Binary/Non-UTF8، Symlink و Directoryهای Generated/سنگین مثل `.git`، `node_modules`، `dist`، `build`، `out`، `coverage` و `.next` را Skip می‌کند. Include/Exclude Pattern و Case-sensitive Setting را هم بررسی کنید.
+Search فایل Binary/Non-UTF8، Symlink و Directoryهای سنگین مثل `.git`، `node_modules`، `dist`، `build`، `out`، `coverage` و `.next` را Skip می‌کند. Include/Exclude و Case-sensitive Setting را هم بررسی کنید.
 
-## برنامه داخل Terminal به Interactive TTY نیاز دارد
+## برنامه Terminal به Interactive TTY نیاز دارد
 
-Terminal فعلی Project Command Runner است و Full PTY نیست. بعضی Interactive TUIها در v0.2 درست کار نمی‌کنند.
+Terminal فعلی Command Runner است، نه Full PTY. بعضی TUIهای Interactive ممکن است درست کار نکنند.
 
-## Preview در دسترس نیست
+## Preview یک File را باز نمی‌کند
 
-Preview خودکار فعلاً یکی از این دو حالت را لازم دارد:
+فقط Capabilityهای ثبت‌شده خودکار Preview می‌شوند. Stable v0.3، HTML، SVG/Raster Image، PDF، Video/Audio پشتیبانی‌شده، Markdown و Plain Text/Log را می‌شناسد.
 
-- `index.html` در Root؛
-- Project دارای `package.json` و Script به اسم `dev`.
+برای Node Dev Server مطمئن شوید `package.json` دارای Script به اسم `dev` است و Server یک Loopback URL اعلام می‌کند.
 
-برای Stackهای دیگر Development Command را دستی در Terminal اجرا کنید.
+## PDF Preview رفتار عجیبی دارد
 
-## Preview اجرا می‌شود ولی URL پیدا نمی‌شود
+TL Studio فایل PDF را Inline و با HTTP Range Support سرو می‌کند. رفتار PDF Viewer خود Browser ممکن است متفاوت باشد. در صورت نیاز از **Open in Browser** استفاده کنید.
 
-در Node Project، TL Studio Loopback URL اعلام‌شده توسط dev server را تشخیص می‌دهد. مطمئن شوید Server واقعاً Start شده و Local URL چاپ می‌کند. External/Non-loopback URL عمداً رد می‌شود.
+## Custom Provider دیده نمی‌شود
 
-## Agent Engine همراه برنامه پیدا نمی‌شود
+از **Settings → Providers**، Provider ID، Protocol، Base URL، Model ID و Credential را بررسی کنید.
 
-Release رسمی Portable، Engine سازگار را همراه خودش دارد. این Error بیشتر هنگام اجرای Source یا استفاده از `--runtime-bin` دیده می‌شود.
+Provider Definition در Registry خود TL Studio است و API Key جداگانه در Credential Vault نگه‌داری می‌شود.
 
-## Attachment رد می‌شود
+## Credential Restore نمی‌شود
 
-Limit فعلی **8 فایل**، **10 MB برای هر File** و **20 MB مجموع** است. Binary Format پشتیبانی‌نشده قبل از Send رد می‌شود.
+در Windows از DPAPI استفاده می‌شود. در macOS اولویت با Keychain است. در Linux اگر `secret-tool` موجود باشد از Secret Service استفاده می‌شود و در غیر این صورت Encrypted Private-file Fallback فعال می‌شود.
 
-## Model یا Provider دیده نمی‌شود
+Credential ساخته‌شده زیر User/Account سیستم‌عامل دیگر ممکن است در Environment فعلی قابل Decrypt نباشد.
 
-برای Custom Provider وارد **Settings → Providers** شوید و Base URL، Protocol، Model ID و وضعیت API Key را بررسی کنید.
+## چرا Run از Compatibility Path استفاده کرد؟
 
-در v0.2 تعریف Provider/Model متعلق به Registry خود TL Studio است. اگر از Alpha قدیمی Upgrade کرده‌اید، Import تعریف‌های سازگار فقط در اولین استفاده و زمانی انجام می‌شود که Registry خود TL Studio هنوز وجود نداشته باشد.
+Native Execution فقط وقتی انتخاب می‌شود که TL Studio بتواند Custom Provider/Model انتخاب‌شده را Resolve کند و Protocol/Model آن پشتیبانی شود.
 
-## Provider بعد از Retryها متوقف شد
-
-Failure قابل‌Retry می‌تواند بعد از پایان Retry Cycle دکمه **Resume** نشان دهد. File Changeهای قبلی حفظ می‌شوند و Task از Workspace State فعلی ادامه پیدا می‌کند.
-
-Authentication، Quota/Usage Limit، Context Overflow و Errorهای نهایی مشابه را باید اول در Provider/Account رفع کنید.
-
-## چرا Always allow these نمایش داده نمی‌شود؟
-
-Persistent Approval فقط وقتی نمایش داده می‌شود که Rule قابل‌استفاده موجود باشد و Permission Class اجازه نگه‌داری امن آن را بدهد. Request حساس ممکن است هر بار Approval صریح بخواهد.
+Hosted Account، Legacy Provider Resolve‌نشده یا Capability بدون Handler Native از Compatibility Adapter استفاده می‌کند.
 
 ## Agent منتظر مانده
 
-Permission Request یا Question باز را بررسی کنید.
+Permission Request یا Question فعال را بررسی کنید.
+
+## چرا Always allow ندارم؟
+
+برای Request حساس دارای Execute/Network و همچنین Compatibility Request بدون Matcher امن و قابل‌استفاده، Persistent Approval عمداً غیرفعال است.
+
+## History باقی مانده ولی Engine History ندارد
+
+در v0.3 این می‌تواند طبیعی باشد. TL Studio Semantic Session History را داخل Persistence خودش Mirror می‌کند. Session فقط‌ذخیره‌شده همچنان قابل Read، Rename یا Delete است.
+
+## Attachment رد می‌شود
+
+Limit فعلی **8 فایل**، **10 MB برای هر File** و **20 MB مجموع** است و Binary Type پشتیبانی‌نشده رد می‌شود.
 
 ## گزارش Bug
 
-OS، نسخه TL Studio، مراحل Reproduce و Error غیرحساس را بفرستید. جزئیات Agent Engine را فقط وقتی اضافه کنید که مشکل ظاهراً Runtime-specific است. API Key یا Provider Token را منتشر نکنید.
+OS، نسخه TL Studio، مراحل Reproduce، Execution Path در صورت مشخص‌بودن و Error غیرحساس را بفرستید. API Key یا Credential را منتشر نکنید.

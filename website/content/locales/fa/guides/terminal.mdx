@@ -4,26 +4,36 @@ description: اجرای Commandهای Project با Local Process Manager خود 
 icon: Terminal
 ---
 
-TL Studio یک Command Runner داخلی دارد که روی Local Process Manager خود برنامه ساخته شده است.
+TL Studio یک Command Runner در Scope همان Project دارد که روی Local Process Manager خود برنامه ساخته شده است.
 
 ## Command در Scope Project
 
-هر Command با Project فعال به‌عنوان Working Directory اجرا می‌شود. بعد از Project Switch، Commandهای جدید CWD همان Project جدید را می‌گیرند.
+هر Command با Project فعال به‌عنوان Working Directory اجرا می‌شود. Output داخل Workspace Stream می‌شود و History آن به‌صورت Bounded در Local State نگه داشته می‌شود.
 
-Output به‌صورت Stream داخل Workspace نمایش داده می‌شود و History آن به‌صورت Bounded در حافظه Local نگه داشته می‌شود.
+بعد از Project Switch، Commandهای جدید CWD مربوط به Project جدید را می‌گیرند.
 
 ## Stop کردن Process
 
-Processهای طولانی را می‌توانید از داخل TL Studio Stop کنید. در Windows، Stop کل Process Tree را می‌بندد تا Child Processهایی مثل dev server ناخواسته باز نمانند.
+Process طولانی را می‌توانید از داخل TL Studio Stop کنید. در Windows، Stop کل Process Tree را می‌بندد تا Child Processهایی مثل Dev Server ناخواسته باقی نمانند.
 
-Stop عمدی هم به‌عنوان حالت `stopped` در نظر گرفته می‌شود، نه Crash نامشخص.
+Stop عمدی به‌عنوان حالت متوقف‌شده ثبت می‌شود، نه Crash نامشخص.
 
-## محدودیت نسخه فعلی
+## استفاده توسط Native Agent
 
-Terminal فعلی **Full PTY Terminal Emulator نیست**. برای Project Command، Build/Test، Script و Processهایی طراحی شده که در مدل Command Runner کار می‌کنند.
+در Stable v0.3، Native Tool Executor از همین Process Layer برای Tool زیر استفاده می‌کند:
 
-Interactive TUIهایی که به Terminal Device واقعی نیاز دارند خارج از Foundation فعلی v0.2 هستند.
+```text
+terminal.command
+```
+
+Command Tool قبل از اجرا نیاز به Permission دارد. چون Execution حساس است، Approval مربوط به Native Terminal به Rule دائمی قابل Remember تبدیل نمی‌شود.
+
+## محدودیت فعلی
+
+Terminal فعلی **Full PTY Terminal Emulator نیست**. برای Project Command، Build/Test، Script و Processهایی طراحی شده که با Command Runner کار می‌کنند.
+
+Interactive TUIهایی که Terminal Device واقعی می‌خواهند ممکن است درست کار نکنند.
 
 ## Security
 
-Commandها روی سیستم خودتان و با Permissionهای User فعلی اجرا می‌شوند. Local بودن Terminal به معنی امن‌بودن هر Command نیست؛ قبل از اجرا مخصوصاً Commandهای مخرب Filesystem یا Credential را بررسی کنید.
+Command با Permissionهای User سیستم اجرا می‌شود. Local بودن به معنی Safe بودن هر Command نیست. قبل از اجرا یا Approval، Commandهای مخرب، Network، Package Manager یا Credential-sensitive را بررسی کنید.

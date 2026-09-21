@@ -1,57 +1,57 @@
 ---
 title: Workspace and editor
-description: Work with project files in TL Studio's writable multi-tab editor.
+description: Work with Project files in TL Studio v0.3 using locally bundled Monaco and TL Studio-owned file semantics.
 icon: FolderCode
 ---
 
-TL Studio v0.2 turns the project pane into a writable local workspace rather than a read-only file viewer.
+Stable v0.3 uses **Monaco Editor 0.56.0** as the enhanced Editor engine while TL Studio remains the authority for Project files, buffers, saves, conflicts, and external-change reconciliation.
 
-## File explorer
+## File Explorer
 
-From the Files area you can:
+From **Files** you can:
 
 - open files;
 - create files and folders;
 - rename entries;
 - delete entries;
-- refresh the project tree.
+- refresh the Project tree;
+- reveal the active file with **Show in Folder**.
 
-All filesystem operations are resolved inside the selected Project boundary.
+Filesystem operations are resolved inside the selected Project boundary.
+
+## Monaco is local
+
+Monaco and its workers are bundled with TL Studio and loaded from the local application origin. The enhanced Editor is lazy-loaded when first needed; no Editor CDN is required.
+
+If the Monaco bundle cannot load, the lightweight textarea-based Editor remains a functional fallback.
 
 ## Multi-tab editing
 
-Each open file has its own in-memory editor buffer. TL Studio tracks clean and dirty tabs independently, so you can move between several files without losing unsaved edits.
+Each open file has its own in-memory buffer. Clean and dirty tabs are tracked independently, so you can move between files without losing unsaved edits.
 
 Use `Ctrl+S` on Windows/Linux or `Cmd+S` on macOS to save the active file.
+
+Monaco also provides standard workflows such as Find/Replace and multi-cursor editing.
 
 ## Conflict protection
 
 When TL Studio reads a file, it records a SHA-256 revision token. A normal save sends that revision back. If the file changed on disk after you opened it, TL Studio refuses to silently overwrite the newer version.
 
-You can then review the conflict and deliberately choose a force-save only when replacing the disk version is really what you want.
+Force-save is a separate deliberate action after reviewing the conflict.
 
-## External and Agent changes
+## Agent, Git, and external changes
 
-Files may change because of the Agent, Git, a build tool, or another application.
+A file can change because of the Agent, Git, a build tool, or another application.
 
-- clean editor buffers follow external disk changes automatically;
+- clean buffers follow external disk changes automatically;
 - dirty buffers are preserved and marked when the disk version changes or disappears.
 
-This keeps your unsaved work from being silently replaced while still keeping the workspace synchronized with Agent activity.
+## Read-only preview tabs
+
+Previewable binary/media files can open as real read-only Workspace tabs. Their content is rendered by the Preview system rather than treated as editable text.
+
+See [Live Preview](./live-preview) for the supported capability types.
 
 ## Ask Agent from selected code
 
-Selected editor content can be handed to the Agent as context, so you can move from reading code to asking for an explanation or change without manually copying the surrounding file context.
-
-## Project switching
-
-If open tabs contain unsaved edits, TL Studio protects them before switching to another project. Save or intentionally discard those changes before leaving the current Project.
-
-
-## Development preview: Monaco
-
-Stable v0.2.1 keeps the lightweight built-in editor surface and all of the file/save/conflict rules described above.
-
-The private **v0.3.0-alpha.7** development line adds **Monaco Editor 0.56.0** as an enhanced editor engine. Monaco is bundled with TL Studio, loaded lazily on first file use, and uses same-origin local workers — no editor CDN is required.
-
-The original textarea-based editor remains a functional fallback if the Monaco bundle cannot load. TL Studio still owns the file buffers, save flow, SHA-256 conflict checks, project boundary, and external-change reconciliation; Monaco is only the editor/presentation engine. The enhanced editor also brings native Monaco workflows such as find/replace and multi-cursor editing.
+Selected Editor content can be handed to the Agent as context without manually copying the surrounding file.

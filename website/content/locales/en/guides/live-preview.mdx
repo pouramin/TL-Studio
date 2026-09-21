@@ -1,37 +1,55 @@
 ---
 title: Live Preview
-description: Preview supported local web projects from inside TL Studio.
+description: Use TL Studio's capability-driven local Preview for web pages, documents, media, and supported dev servers.
 icon: Play
 ---
 
-Live Preview lets you view a supported web project without leaving the TL Studio workspace.
+Stable v0.3 generalizes Preview beyond a root `index.html`. TL Studio has a versioned file-capability registry and follows the active previewable file in the Workspace.
 
-## Supported preview paths
+## Previewable file types
 
-TL Studio currently detects two kinds of preview:
+The current capability registry recognizes:
 
-1. **Static project** — a root `index.html` is served by a TL Studio-owned local static server.
-2. **Node development project** — if `package.json` contains a `dev` script, TL Studio runs `npm run dev` through its local process manager and discovers the loopback URL reported by the dev server.
+- **HTML** — `.html`, `.htm`;
+- **SVG**;
+- **raster images** — PNG, JPEG, WebP, GIF, AVIF, ICO, BMP, APNG;
+- **PDF**;
+- **video** — MP4, WebM, OGV, M4V;
+- **audio** — MP3, WAV, OGG/OGA, M4A, AAC, FLAC;
+- **Markdown** — rendered locally;
+- **plain text/log files** — rendered locally.
 
-## Controls
+TL Studio can preview arbitrary supported files in the Project, not only a root HTML file.
 
-The Preview surface supports:
+## Follow the active file
 
-- **Start**
-- **Stop**
-- **Reload**
-- **Open** in the browser
+When the active Workspace tab changes to another previewable file, the floating Preview can follow that file.
 
-The Preview window can be moved and resized, and TL Studio remembers its position and size locally.
+Previewable binary/media files can open as real read-only Workspace tabs so they participate in the same tab workflow as editable code.
 
-Static previews reload after project file changes.
+## Web development Preview
 
-## Separate local origin
+For supported Node Projects with a `package.json` `dev` script, TL Studio can run `npm run dev` through its own local process manager and detect the reported loopback URL.
 
-Previewed project code does **not** run on the same origin as TL Studio's control API. Static Preview gets a separate loopback server, and Node Preview only accepts a detected loopback URL.
+Static HTML/files are served by a TL Studio-owned loopback Preview server.
 
-This separation prevents project JavaScript from sharing the privileged origin used by TL Studio's local control routes.
+## PDF behavior
 
-## When Preview is unavailable
+PDF files are served with an inline PDF MIME/disposition and HTTP range support. This allows the Browser's native PDF viewer to load and seek through the document without routing it through an external service.
 
-A project is not currently previewable when it has neither a root `index.html` nor a supported `package.json` `dev` script. Use the Terminal to run another workflow manually when needed.
+## Controls and resizing
+
+The floating Preview supports Start/Stop where applicable, Reload, and Open in Browser.
+
+The window can be moved and resized from all four edges and all four corners. Its local position/size is preserved by the workspace UI.
+
+## Security boundary
+
+Previewed Project content does **not** share the privileged origin used by TL Studio's local control API.
+
+- static/file Preview uses a separate loopback origin;
+- Node Preview accepts loopback URLs only;
+- Project path traversal and symlink escapes are rejected;
+- obvious heavy directories are not treated as normal Preview discovery roots.
+
+This isolation keeps Project JavaScript away from TL Studio's privileged `/local/*` routes.

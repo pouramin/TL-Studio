@@ -1,34 +1,41 @@
 ---
 title: Model و Agent
-description: انتخاب Agent و Model از طریق Runtime Contract عمومی TL Studio.
+description: انتخاب Agent/Model و تفاوت Native Execution با Compatibility Path در Stable v0.3.
 icon: Bot
 ---
 
-TL Studio، Agent Execution را پشت یک Runtime Contract عمومی و Local نگه می‌دارد و بخش بیشتری از Product Surface مربوط به Provider و Model را خودش مدیریت می‌کند.
+TL Studio مالک Contractهای Product-facing مربوط به Provider/Model و Session است. در Stable v0.3، اجرای Coding برای Custom Providerهای پشتیبانی‌شده می‌تواند از Native Agent Path خود TL Studio انجام شود.
 
-## Agent
+## انتخاب Agent و Model
 
-Coding Agent در Workspace خود TL Studio انتخاب می‌شود و Engine همراه برنامه Task را پشت Adapter Boundary اجرا می‌کند.
+انتخاب Agent و Model داخل Composer خود TL Studio انجام می‌شود.
 
-## Model و Provider
+اگر Custom Provider و Model از Registry و Credential Vault خود TL Studio قابل Resolve باشند، Run می‌تواند از Native Agent Loop استفاده کند.
 
-تعریف Custom Provider و Model داده‌ی متعلق به TL Studio است. این تعریف‌ها در Local Provider Registry خود TL Studio ذخیره می‌شوند و Launcher آن‌ها را برای Engine فعال ترجمه می‌کند.
+Modelهای Hosted و Capabilityهایی که هنوز Native نشده‌اند پشت Compatibility Adapter باقی می‌مانند.
 
-Model Picker می‌تواند Modelهای Hosted یا Runtime-discovered را هم نمایش دهد. Provider ID و Preferred Routeهای مربوط به Engine به‌صورت Metadata به UI داده می‌شوند و داخل Product Moduleها Hard-code نمی‌شوند.
+## Protocolهای Native Model
 
-برای API Familyهای پشتیبانی‌شده و Storage Model، [Custom Provider](./custom-providers) را ببینید.
+مسیر مستقیم Native از این API Familyها پشتیبانی می‌کند:
+
+- OpenAI-compatible Chat Completions؛
+- OpenAI Responses؛
+- Anthropic Messages compatible.
+
+برای جزئیات Model/Tool/Model Loop و Toolهای Native، [Native Agent و Toolها](./native-agent-and-tools) را ببینید.
+
+## Tool Semantics
+
+TL Studio مالک Tool Registry Semantic مربوط به Browser UI است. Toolهای شناخته‌شده به Descriptorهایی با Name، Category، Permission Class، Capability Metadata، Schema و Presentation Hint متعلق به TL Studio Resolve می‌شوند.
+
+در Native Path، Core Tool Executor از Handlerهای خود TL Studio استفاده می‌کند. در Compatibility Path، اجرای واقعی در Engine همراه باقی می‌ماند ولی Presentation در Browser همچنان از Semanticهای TL Studio استفاده می‌کند.
 
 ## Hosted Account Flow
 
-وقتی Engine همراه برنامه Hosted Account Flow داشته باشد، TL Studio آن Authorization را از طریق Routeهای Local عمومی خودش نمایش می‌دهد. Browser نیازی به دانستن Endpointهای Implementation-specific ندارد.
+Hosted Authentication و Hosted Model هنوز Capability مربوط به Compatibility Path هستند. TL Studio آن‌ها را از Product Routeهای عمومی خودش نمایش می‌دهد تا Browser به Auth Endpoint مخصوص Engine وابسته نشود.
 
-## Provider Failure
+## Failure و Recovery
 
-Failure موقت Upstream ممکن است رخ دهد درحالی‌که خود TL Studio سالم است. اگر Retry Cycle مربوط به Engine با Error قابل‌Retry تمام شود، TL Studio می‌تواند **Resume** را نشان دهد تا Task از Workspace State حفظ‌شده ادامه پیدا کند.
+Authentication، Quota، Context یا Failure موقت Upstream ممکن است رخ دهد درحالی‌که خود TL Studio سالم است.
 
-
-## Development Preview: Tool Semantics
-
-در Preview خصوصی **v0.3.0-alpha.7**، Tool Registry متعلق به TL Studio اضافه شده است. Runtime Tool IDهای شناخته‌شده برای Activity Card و Product UI به Descriptorهای Semantic پایدار TL Studio Resolve می‌شوند: Name، Description، Category، Permission Class، Capability Flag و Presentation Hint.
-
-Registry Tool اجرا نمی‌کند و Permission نمی‌دهد. Tool ناشناخته از Fallback محافظه‌کار با Capability خالی استفاده می‌کند و Runtime Enforcement همچنان مرجع نهایی است.
+در Compatibility Run، Error قابل‌Retry می‌تواند **Resume** را فعال کند. در Native Run، Session State و File Changes توسط Persistence خود TL Studio حفظ می‌شوند و Cancellation/Failure هم Local ثبت می‌شود.

@@ -1,29 +1,39 @@
 ---
 title: Terminal
-description: Run project-scoped commands with TL Studio's local process manager.
+description: Run Project-scoped commands with TL Studio's local process manager.
 icon: Terminal
 ---
 
-TL Studio includes a project-scoped command runner backed by its own local process manager.
+TL Studio includes a Project-scoped command runner backed by its own local process manager.
 
 ## Project-scoped commands
 
-Commands run with the currently selected project as their working directory. When you switch projects, new commands follow the new Project CWD.
+Commands run with the active Project as their working directory. Output is streamed into the Workspace and retained in a bounded local history.
 
-Output is streamed into the workspace and kept in a bounded local history.
+When you switch Projects, new commands follow the new Project CWD.
 
 ## Stop a process
 
-Long-running commands can be stopped from TL Studio. On Windows, Stop terminates the process tree so child processes such as development servers are not intentionally left behind.
+Long-running commands can be stopped from TL Studio. On Windows, Stop terminates the process tree so child development servers are not intentionally left behind.
 
-An intentional stop is treated as a stopped command rather than a mysterious crash.
+An intentional stop is represented as a stopped command rather than an unexplained crash.
 
-## What the current Terminal is not
+## Native Agent use
 
-The current Terminal is **not a full PTY terminal emulator**. It is designed for project commands, build/test tasks, scripts, and processes that work in this command-runner model.
+The stable v0.3 native Tool Executor reuses this same process layer for:
 
-Interactive TUI applications that require a real terminal device are outside the current v0.2 foundation.
+```text
+terminal.command
+```
+
+Command Tool calls require Permission authorization. Because execution is sensitive, native terminal requests are not remembered as reusable approvals.
+
+## Current limitation
+
+The current Terminal is **not a full PTY terminal emulator**. It is designed for Project commands, builds/tests, scripts, and processes that work in a command-runner model.
+
+Interactive TUI applications that require a real terminal device may not work correctly.
 
 ## Security
 
-Commands execute on your machine with your user account's permissions. The Terminal being Local does not make an arbitrary command safe. Review commands before running them and be especially careful with destructive filesystem or credential operations.
+Commands execute on your machine with your user account's permissions. Local execution does not make an arbitrary command safe. Review destructive, network, package-manager, and credential-sensitive commands before running or approving them.

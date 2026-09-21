@@ -1,46 +1,59 @@
 ---
 title: Permissions and questions
-description: Handle permission requests and interactive questions safely inside TL Studio.
+description: Handle TL Studio-owned permission policy and semantic interactive Questions in stable v0.3.
 icon: ShieldCheck
 ---
 
-Coding agents may need approval before executing a sensitive action or may need an answer before continuing.
+Stable v0.3 owns the product-facing Permission policy and Question contracts while keeping final enforcement at the execution boundary.
 
 ## Permission decisions
 
-TL Studio renders the decision options supported by the current request:
+A request can expose:
 
-- **Reject** — deny the request;
-- **Allow once** — approve only this request;
-- **Always allow these** — save the runtime-provided matching rules for future requests, when persistent approval is safe and supported.
+- **Reject** — deny the action;
+- **Allow once** — approve this request only;
+- **Always allow these** — remember exact reusable matching rules when persistence is safe.
 
-For sensitive permission classes such as skill-shell or sandbox-escalation, TL Studio intentionally does not offer a persistent **Always allow** action. Those requests are shown as **Allow** and require an explicit human decision each time. The same applies when the runtime disables persistent approval or does not provide reusable matching rules.
+Remembered allow rules are stored locally in:
 
-Every approval made through the TL Studio permission dialog is sent to the pinned runtime as an interactive human reply. This matters because the current runtime requires an explicit interactive flag for sensitive permission classes; a non-interactive approval is intentionally ignored.
+```text
+permissions.json
+```
 
-Always read the requested action, patterns, and metadata before approving command execution, file changes, or elevated tool behavior.
+They are scoped to the selected Project.
 
-## Development preview: TL Studio permission policy
+## Conservative remembered rules
 
-In stable v0.2.1, remembered approval behavior still follows the bundled runtime's reusable permission rules.
+TL Studio does not invent broad wildcard Permission rules.
 
-In private **v0.3.0-alpha.7**, persistence moves into TL Studio. The launcher owns `/local/permissions*` routes and stores remembered **allow** rules in a local `permissions.json` policy file scoped to the selected Project.
+For compatibility requests, it stores exact canonical matcher tokens supplied by the runtime. Every matcher on a future request must already be covered before automatic approval.
 
-The preview policy is deliberately conservative:
+For the native Tool path, write/edit requests can produce Project-scoped reusable matchers. Execute- or network-capable Tool requests are treated as sensitive and cannot be remembered.
 
-- TL Studio remembers only runtime-provided canonical matcher tokens; it does not invent broader wildcard rules;
-- every matcher on a future request must already be covered before automatic approval;
-- sensitive `skillShell` and `sandboxEscalation` requests are never remembered or auto-approved;
-- requests marked `disableAlways` remain interactive;
-- remembered rules are visible in Settings and can be forgotten there;
-- an explicit human click is forwarded as an interactive approval, while a matched remembered rule is applied as a non-interactive one-time approval.
+Sensitive compatibility classes such as `skillShell` and `sandboxEscalation`, and requests marked `disableAlways`, always remain interactive.
 
-The runtime still generates the permission request at the tool boundary and enforces the final result; TL Studio owns the persistence and decision policy.
+Remembered rules are visible in Settings and can be forgotten.
+
+## Native Tool permissions
+
+Read-only native Tools that have no write/execute/network capability can run without an approval prompt.
+
+Write/edit and command execution pass through TL Studio's native Permission authorizer before the Tool Executor performs the action.
+
+Unknown native Tools cannot be authorized.
 
 ## Questions
 
-Interactive questions can be answered directly inside TL Studio. Depending on the request, the interface can present option lists, single or multiple selection, default choices, and custom answers.
+Interactive Questions use TL Studio-owned routes:
 
-TL Studio requires an answer for every question block before continuing, or you can reject the question request.
+```text
+GET  /local/questions
+POST /local/questions/{requestID}/reply
+POST /local/questions/{requestID}/reject
+```
 
-Localhost isolation protects the network surface, but safe use still depends on the permissions you grant to the coding agent.
+The UI can represent option lists, single or multiple selection, defaults, and custom answers. TL Studio validates that the Question request is active for the target Session before forwarding the decision through the active engine adapter.
+
+## Human responsibility
+
+Loopback isolation protects the network surface, but approving a local command or write still grants real access on your machine. Read the requested action, patterns, and metadata before approving.

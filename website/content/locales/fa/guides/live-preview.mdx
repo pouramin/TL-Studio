@@ -1,37 +1,57 @@
 ---
 title: Live Preview
-description: Preview کردن Web Projectهای پشتیبانی‌شده داخل TL Studio.
+description: Preview مبتنی بر Capability برای Web، Document، Media و Dev Server در TL Studio.
 icon: Play
 ---
 
-Live Preview اجازه می‌دهد Web Project پشتیبانی‌شده را بدون خروج از Workspace ببینید.
+در Stable v0.3، Preview دیگر فقط به `index.html` در Root محدود نیست. TL Studio یک File Capability Registry دارد و می‌تواند File قابل Preview فعال در Workspace را دنبال کند.
 
-## مسیرهای Preview پشتیبانی‌شده
+## File Typeهای قابل Preview
 
-TL Studio فعلاً دو حالت را تشخیص می‌دهد:
+Registry فعلی این موارد را می‌شناسد:
 
-1. **Static Project** — اگر در Root فایل `index.html` باشد، TL Studio آن را با Static Server لوکال خودش Serve می‌کند.
-2. **Node Development Project** — اگر `package.json` دارای Script به اسم `dev` باشد، TL Studio از طریق Local Process Manager دستور `npm run dev` را اجرا می‌کند و Loopback URL اعلام‌شده توسط dev server را پیدا می‌کند.
+- **HTML** با پسوندهای `.html` و `.htm`؛
+- **SVG**؛
+- **Raster Image** شامل PNG، JPEG، WebP، GIF، AVIF، ICO، BMP و APNG؛
+- **PDF**؛
+- **Video** شامل MP4، WebM، OGV و M4V؛
+- **Audio** شامل MP3، WAV، OGG/OGA، M4A، AAC و FLAC؛
+- **Markdown** با Render محلی؛
+- **Plain Text/Log** با Render محلی.
 
-## Controlها
+هر File پشتیبانی‌شده در Project می‌تواند Preview شود و دیگر فقط Root HTML مطرح نیست.
 
-Preview این Controlها را دارد:
+## دنبال‌کردن File فعال
 
-- **Start**
-- **Stop**
-- **Reload**
-- **Open** در Browser
+وقتی Tab فعال Workspace به File Previewable دیگری تغییر کند، Floating Preview می‌تواند همان File را دنبال کند.
 
-Preview Window قابل Move و Resize است و Position و Size آن به‌صورت Local حفظ می‌شود.
+Fileهای Binary/Media قابل Preview هم می‌توانند به‌عنوان Tab واقعی و Read-only داخل Workspace باز شوند.
 
-Static Preview بعد از تغییر Project Fileها Reload می‌شود.
+## Preview برای Web Development
 
-## Origin جداگانه
+اگر Project دارای `package.json` و Script به اسم `dev` باشد، TL Studio می‌تواند با Local Process Manager خودش دستور `npm run dev` را اجرا کند و Loopback URL اعلام‌شده را تشخیص دهد.
 
-Project Code داخل Preview روی Origin مربوط به Control API خود TL Studio اجرا نمی‌شود. Static Preview یک Loopback Server جدا دارد و Node Preview فقط Loopback URL را قبول می‌کند.
+HTML و Fileهای Static از Loopback Preview Server متعلق به TL Studio Serve می‌شوند.
 
-این جداسازی باعث می‌شود JavaScript پروژه به Origin دارای دسترسی Local Control API شریک نشود.
+## رفتار PDF
 
-## وقتی Preview در دسترس نیست
+PDF با MIME و `Content-Disposition: inline` و همچنین HTTP Range Support سرو می‌شود. در نتیجه Browser می‌تواند از PDF Viewer Native خودش استفاده کند و فایل از سرویس خارجی عبور نمی‌کند.
 
-اگر Project نه `index.html` در Root داشته باشد و نه `package.json` با Script پشتیبانی‌شده‌ی `dev`، فعلاً Preview خودکار ندارد. در این حالت Workflow لازم را می‌توانید از Terminal اجرا کنید.
+## Control و Resize
+
+Floating Preview در حالت‌های مربوطه Start/Stop، Reload و Open in Browser دارد.
+
+پنجره از هر 4 لبه و هر 4 گوشه قابل Resize است و Position/Size آن در UI به‌صورت Local حفظ می‌شود.
+
+## Security Boundary
+
+Project Content داخل Preview روی Origin دارای دسترسی Control API خود TL Studio اجرا نمی‌شود.
+
+- File/Static Preview روی Loopback Origin جدا قرار دارد؛
+- Node Preview فقط Loopback URL را قبول می‌کند؛
+- Path Traversal و Symlink Escape رد می‌شوند؛
+- Project JavaScript به Origin مربوط به Routeهای Privileged زیر دسترسی مشترک ندارد:
+
+```text
+/local/*
+```

@@ -1,24 +1,24 @@
 ---
 title: Custom providers
-description: Manage compatible Provider and Model definitions in TL Studio's own local registry.
+description: Manage TL Studio-owned Provider/Model definitions and credentials in stable v0.3.
 icon: Cable
 ---
 
-TL Studio manages compatible custom Provider definitions from **Settings → Providers** without requiring a TL Studio-hosted gateway.
+TL Studio manages custom Provider definitions from **Settings → Providers** without requiring a TL Studio-hosted gateway.
 
-## Supported provider APIs
+## Supported API families
 
-The current form supports three protocol families:
+The current Provider form supports:
 
-- **OpenAI Compatible**
-- **OpenAI Responses**
-- **Anthropic Messages**
+- **OpenAI Compatible**;
+- **OpenAI Responses**;
+- **Anthropic Messages**.
 
-The form is intentionally vendor-agnostic. You provide the endpoint and Model details instead of choosing from a hard-coded vendor preset.
+For supported models, these same protocol families can be used by the TL Studio-native Agent runtime.
 
-## Add a provider
+## Add a Provider
 
-Open **Settings → Providers → Add provider** and enter:
+Open **Settings → Providers → Add provider** and configure:
 
 - Provider ID;
 - display name;
@@ -26,32 +26,50 @@ Open **Settings → Providers → Add provider** and enter:
 - Base URL;
 - API key;
 - Model ID and optional display name;
-- optional context and output limits;
+- optional context/output limits;
 - Tool Calling support;
 - Reasoning support.
 
-After saving, the Provider/Model definitions become part of TL Studio's local configuration and are translated to the active Agent engine behind the runtime adapter.
+## Provider registry
 
-## TL Studio owns the provider registry
+Provider/Model definitions are stored in TL Studio's versioned local `providers.json`.
 
-Custom Provider definitions are persisted by TL Studio in a versioned `providers.json` file under TL Studio's local application state.
+That registry contains TL Studio concepts only:
 
-That file contains TL Studio concepts only: Provider ID/name, protocol, Base URL, Model definitions, capability flags, and optional limits. Engine package names and implementation-specific configuration shapes are deliberately excluded.
+- Provider ID/name;
+- protocol;
+- Base URL;
+- Model definitions;
+- capability flags;
+- optional context/output limits.
 
-On the first run after upgrading from older alpha builds, if no TL Studio provider registry exists yet, TL Studio can import compatible custom Provider definitions from the older runtime configuration. After that migration, the TL Studio registry becomes the source of truth for managed definitions.
+Implementation-specific engine package names and private config shapes are excluded.
 
-## API keys are separate
+## Credential vault
 
-API keys are **not** written into `providers.json` and are not stored in browser storage.
+API keys are **not** written into `providers.json` and are not stored in Browser storage.
 
-In v0.2, credential persistence is still delegated to the bundled engine's local credential store. Moving credentials into a TL Studio-controlled secure store is a separate future milestone.
+Stable v0.3 owns credential persistence through the TL Studio credential vault:
 
-Removing a managed Provider removes its translated engine configuration and the matching local credential entry.
+- **Windows:** DPAPI;
+- **macOS:** Keychain when the system `security` tool is available;
+- **Linux:** Secret Service through `secret-tool` when available;
+- **fallback:** an encrypted private-file store under TL Studio's local state.
 
-## Context and output limits
+The fallback uses a local private master key and authenticated encryption; credential files and the key are created with private filesystem permissions where supported.
 
-If you know a custom Model's context or maximum output limit, enter it. Accurate limits help the execution layer handle longer conversations more reliably.
+## Native execution selection
+
+A custom Provider/Model can use the native TL Studio Agent loop when the Provider definition and credential are resolvable by TL Studio and the protocol/model is supported.
+
+Hosted accounts, unresolved legacy runtime Providers, and capabilities without native handlers fall back to the compatibility adapter.
+
+## Migration and removal
+
+When upgrading from older builds, TL Studio can import compatible Provider definitions from previous runtime configuration when its own registry does not exist yet.
+
+Managed credentials are synchronized to compatibility execution only when needed. Removing a managed Provider also removes its TL Studio-managed credential.
 
 ## Security note
 
-A custom Base URL receives the prompts and Model requests sent through that Provider. Only add endpoints you trust, and never publish API keys in screenshots, logs, Issues, or bug reports.
+The configured Base URL receives prompts and Model requests for that Provider. Only add endpoints you trust, and never publish API keys in screenshots, logs, Issues, or bug reports.

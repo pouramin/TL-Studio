@@ -1,24 +1,24 @@
 ---
 title: Custom Provider
-description: مدیریت Provider و Modelهای سازگار در Local Registry خود TL Studio.
+description: مدیریت Provider/Model و Credential متعلق به TL Studio در Stable v0.3.
 icon: Cable
 ---
 
 TL Studio تعریف Custom Providerها را از **Settings → Providers** مدیریت می‌کند و برای این کار به Gateway ابری متعلق به TL Studio نیاز ندارد.
 
-## Provider APIهای پشتیبانی‌شده
+## API Familyهای پشتیبانی‌شده
 
-Form فعلی از این Protocol Familyها پشتیبانی می‌کند:
+Form فعلی از این Protocolها پشتیبانی می‌کند:
 
-- **OpenAI Compatible**
-- **OpenAI Responses**
-- **Anthropic Messages**
+- **OpenAI Compatible**؛
+- **OpenAI Responses**؛
+- **Anthropic Messages**.
 
-این بخش عمداً Vendor-agnostic است. Endpoint و Model را خودتان مشخص می‌کنید و Vendor Preset ثابت داخل Product وجود ندارد.
+برای Modelهای پشتیبانی‌شده، همین Protocolها می‌توانند توسط Native Agent Runtime خود TL Studio استفاده شوند.
 
 ## اضافه‌کردن Provider
 
-از **Settings → Providers → Add provider** این موارد را وارد کنید:
+از **Settings → Providers → Add provider** این موارد را تنظیم کنید:
 
 - Provider ID؛
 - Display Name؛
@@ -26,32 +26,54 @@ Form فعلی از این Protocol Familyها پشتیبانی می‌کند:
 - Base URL؛
 - API Key؛
 - Model ID و Display Name اختیاری؛
-- Context و Output Limit اختیاری؛
-- پشتیبانی Tool Calling؛
-- پشتیبانی Reasoning.
+- Context/Output Limit اختیاری؛
+- Tool Calling؛
+- Reasoning.
 
-بعد از Save، تعریف Provider و Model وارد Local Configuration خود TL Studio می‌شود و Launcher آن را پشت Runtime Adapter برای Agent Engine فعال ترجمه می‌کند.
+## Provider Registry
 
-## Provider Registry متعلق به TL Studio است
+تعریف Provider و Model داخل فایل Versioned متعلق به TL Studio ذخیره می‌شود:
 
-تعریف Custom Providerها توسط خود TL Studio داخل فایل Versioned به نام `providers.json` در Local App State ذخیره می‌شود.
+```text
+providers.json
+```
 
-این فایل فقط Conceptهای خود TL Studio را نگه می‌دارد: Provider ID/Name، Protocol، Base URL، Model Definition، Capability Flag و Limitهای اختیاری. Engine Package Name یا Config Shape مخصوص Implementation داخل این Registry ذخیره نمی‌شود.
+این Registry فقط Conceptهای TL Studio را نگه می‌دارد:
 
-در اولین اجرا بعد از Upgrade از Alphaهای قدیمی، اگر Registry خود TL Studio هنوز وجود نداشته باشد، برنامه می‌تواند Custom Providerهای سازگار را از Config قدیمی Import کند. بعد از این Migration، Registry خود TL Studio Source of Truth تعریف‌های مدیریت‌شده است.
+- Provider ID/Name؛
+- Protocol؛
+- Base URL؛
+- Model Definition؛
+- Capability Flag؛
+- Context/Output Limit اختیاری.
 
-## API Key جداست
+Engine Package Name یا Config Shape خصوصی داخل این فایل قرار نمی‌گیرد.
 
-API Key داخل `providers.json` یا Browser Storage ذخیره نمی‌شود.
+## Credential Vault
 
-در v0.2 نگه‌داری Credential هنوز به Local Credential Store مربوط به Engine همراه برنامه سپرده شده است. انتقال Credential Ownership به Secure Store خود TL Studio یک Milestone جدا برای آینده است.
+API Key داخل `providers.json` یا Browser Storage نوشته نمی‌شود.
 
-با حذف Provider مدیریت‌شده، Config ترجمه‌شده در Engine و Credential محلی متناظر هم پاک می‌شوند.
+در Stable v0.3، Credential Persistence متعلق به Credential Vault خود TL Studio است:
 
-## Context و Output Limit
+- در Windows از **DPAPI** استفاده می‌شود؛
+- در macOS در صورت وجود ابزار `security` از **Keychain** استفاده می‌شود؛
+- در Linux در صورت وجود `secret-tool` از **Secret Service** استفاده می‌شود؛
+- در حالت Fallback از Encrypted Private-file Store داخل Local State خود TL Studio استفاده می‌شود.
 
-اگر Context Limit یا Max Output مربوط به Model را می‌دانید، وارد کنید. Limit دقیق به Execution Layer کمک می‌کند Taskهای طولانی را قابل‌اعتمادتر مدیریت کند.
+Fallback یک Master Key خصوصی Local و Authenticated Encryption دارد و Fileها با Permission خصوصی ساخته می‌شوند، جایی که سیستم‌عامل پشتیبانی کند.
+
+## انتخاب Native Execution
+
+وقتی Provider Definition، Credential و Protocol/Model توسط TL Studio قابل Resolve و پشتیبانی باشند، Run می‌تواند از Native Agent Loop استفاده کند.
+
+Hosted Account، Legacy Provider Resolve‌نشده یا Capability بدون Handler Native از Compatibility Adapter عبور می‌کند.
+
+## Migration و Remove
+
+هنگام Upgrade از Buildهای قدیمی، اگر Registry خود TL Studio هنوز وجود نداشته باشد، تعریف Provider سازگار می‌تواند از Config قبلی Import شود.
+
+Credential مدیریت‌شده فقط هنگام نیاز با Compatibility Execution Sync می‌شود. با Remove کردن Provider مدیریت‌شده، Credential متعلق به TL Studio هم حذف می‌شود.
 
 ## نکته Security
 
-Custom Base URL محتوای Prompt و Model Request را دریافت می‌کند. فقط Endpoint قابل‌اعتماد اضافه کنید و API Key را داخل Screenshot، Log، Issue یا Bug Report منتشر نکنید.
+Base URL تنظیم‌شده محتوای Prompt و Model Request همان Provider را دریافت می‌کند. فقط Endpoint قابل‌اعتماد اضافه کنید و API Key را داخل Screenshot، Log، Issue یا Bug Report منتشر نکنید.

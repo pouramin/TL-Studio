@@ -1,46 +1,59 @@
 ---
-title: Permissionها و سؤال‌ها
-description: مدیریت امن Permission Requestها و Questionهای تعاملی Agent در TL Studio.
+title: Permissionها و Questionها
+description: Permission Policy و Question Contract متعلق به TL Studio در Stable v0.3.
 icon: ShieldCheck
 ---
 
-Coding Agent ممکن است قبل از انجام یک عملیات حساس نیاز به Permission داشته باشد یا برای ادامه کار از شما Question بپرسد.
+در Stable v0.3، Product-facing Permission Policy و Question Contract متعلق به TL Studio هستند، درحالی‌که Enforcement نهایی در Execution Boundary انجام می‌شود.
 
-## تصمیم‌های Permission
+## Permission Decision
 
-TL Studio براساس خود Request گزینه‌های قابل استفاده را نشان می‌دهد:
+Request می‌تواند این گزینه‌ها را داشته باشد:
 
-- **Reject** — درخواست را رد می‌کند؛
-- **Allow once** — فقط همان Request را تأیید می‌کند؛
-- **Always allow these** — اگر Runtime Ruleهای قابل‌استفاده برای Requestهای مشابه بدهد و ذخیره‌کردن Approval امن باشد، آن Ruleها را برای دفعات بعد نگه می‌دارد.
+- **Reject** برای رد Action؛
+- **Allow once** فقط برای همان Request؛
+- **Always allow these** برای Remember کردن Matcher دقیق، فقط وقتی Persistence امن باشد.
 
-برای Permissionهای حساس مثل skill-shell یا sandbox-escalation، TL Studio عمداً گزینه Persistent **Always allow** را نشان نمی‌دهد. این Requestها با **Allow** نمایش داده می‌شوند و هر بار به تصمیم صریح کاربر نیاز دارند. اگر Runtime هم Persistent Approval را Disable کرده باشد یا Rule قابل‌استفاده‌ای ندهد، گزینه Always نمایش داده نمی‌شود.
+Remembered Allow Ruleها داخل فایل Local زیر ذخیره می‌شوند:
 
-هر Approval که از Dialog خود TL Studio انجام می‌دهید به Runtime پین‌شده به‌عنوان پاسخ Human و Interactive فرستاده می‌شود. این نکته مهم است چون Runtime فعلی برای Permissionهای حساس به `interactive: true` نیاز دارد و Approval غیرInteractive را عمداً نادیده می‌گیرد.
+```text
+permissions.json
+```
 
-قبل از Allow کردن Command، File Change یا Tool Behavior حساس، Action، Patternها و Metadata درخواست را بخوانید.
+این Ruleها به Project انتخاب‌شده Scope می‌شوند.
 
-## Development Preview: Permission Policy خود TL Studio
+## Ruleهای محافظه‌کارانه
 
-در Stable v0.2.1، رفتار Remembered Approval هنوز به Ruleهای قابل‌استفاده‌ای وابسته است که Runtime ارائه می‌کند.
+TL Studio برای Permission، Wildcard گسترده اختراع نمی‌کند.
 
-در Preview خصوصی **v0.3.0-alpha.7**، Persistence به خود TL Studio منتقل شده است. Launcher Routeهای `/local/permissions*` را مالک است و Ruleهای Remembered از نوع **allow** را داخل فایل Local به نام `permissions.json` و در Scope همان Project ذخیره می‌کند.
+در Compatibility Request فقط Matcher Tokenهای canonical ارائه‌شده توسط Runtime ذخیره می‌شوند و برای Auto Approval باید همه Matcherهای Request بعدی از قبل پوشش داده شده باشند.
 
-Policy در Preview عمداً محافظه‌کار است:
+در Native Tool Path، Write/Edit می‌تواند Matcher Project-scoped قابل Remember داشته باشد. Tool دارای Execute یا Network حساس در نظر گرفته می‌شود و Remember نمی‌شود.
 
-- فقط Matcher Tokenهای canonical که Runtime می‌دهد ذخیره می‌شوند و TL Studio Wildcard گسترده‌تر اختراع نمی‌کند؛
-- برای Auto Approval باید همه Matcherهای Request آینده از قبل پوشش داده شده باشند؛
-- Requestهای حساس `skillShell` و `sandboxEscalation` هیچ‌وقت Remember یا Auto-approve نمی‌شوند؛
-- Request دارای `disableAlways` همیشه Interactive می‌ماند؛
-- Ruleهای ذخیره‌شده در Settings دیده می‌شوند و می‌توان آن‌ها را Forget کرد؛
-- کلیک صریح User به‌صورت Interactive Approval فرستاده می‌شود، اما Rule ذخیره‌شده به یک One-time Approval غیرInteractive تبدیل می‌شود.
+Classهای حساس Compatibility مثل `skillShell` و `sandboxEscalation` و همچنین Request دارای `disableAlways` همیشه Interactive باقی می‌مانند.
 
-خود Runtime همچنان Permission Request را در مرز Tool تولید و نتیجه نهایی را Enforce می‌کند؛ Persistence و Decision Policy متعلق به TL Studio می‌شود.
+Ruleهای Remembered در Settings دیده می‌شوند و قابل Forget هستند.
+
+## Permission برای Native Tool
+
+Tool فقط‌خواندنی که قابلیت Write/Execute/Network ندارد می‌تواند بدون Prompt اجرا شود.
+
+Write/Edit و Command Execution قبل از اجرای Tool Executor از Native Permission Authorizer خود TL Studio عبور می‌کنند.
+
+Tool ناشناخته در Native Path قابل Authorize نیست.
 
 ## Questionها
 
-Questionهای تعاملی را می‌توانید مستقیم داخل TL Studio پاسخ دهید. بسته به Request، UI می‌تواند Single Select، Multi Select، Default Option و Custom Answer نشان دهد.
+Questionهای تعاملی از Routeهای متعلق به TL Studio استفاده می‌کنند:
 
-قبل از ادامه باید برای تمام Question Blockها پاسخ انتخاب شود؛ در غیر این صورت می‌توانید کل Question Request را Reject کنید.
+```text
+GET  /local/questions
+POST /local/questions/{requestID}/reply
+POST /local/questions/{requestID}/reject
+```
 
-Loopback-only بودن سطح Network را محدود می‌کند، اما امنیت نهایی همچنان به Permissionهایی بستگی دارد که به Agent می‌دهید.
+UI می‌تواند Option List، Single/Multi Select، Default و Custom Answer را نمایش دهد. قبل از Forward کردن پاسخ، TL Studio بررسی می‌کند که Request هنوز برای همان Session فعال باشد.
+
+## مسئولیت User
+
+Loopback بودن Network Surface را محدود می‌کند، اما Allow کردن Command یا Write همچنان دسترسی واقعی روی سیستم می‌دهد. قبل از Approval، Action، Pattern و Metadata درخواست را بررسی کنید.

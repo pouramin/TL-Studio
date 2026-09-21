@@ -1,57 +1,57 @@
 ---
 title: Workspace و Editor
-description: کار با Project Files در Multi-tab Editor قابل‌نوشتن TL Studio.
+description: کار با Project Fileها در Monaco لوکال و File Contract متعلق به TL Studio v0.3.
 icon: FolderCode
 ---
 
-در TL Studio v0.2 بخش Project دیگر فقط File Viewer نیست؛ یک Workspace قابل‌نوشتن برای کار مستقیم روی Project است.
+در Stable v0.3، **Monaco Editor 0.56.0** نقش Editor Engine پیشرفته را دارد، اما Project File، Buffer، Save، Conflict و External-change Reconciliation همچنان در مالکیت TL Studio هستند.
 
 ## File Explorer
 
-از بخش Files می‌توانید:
+از بخش **Files** می‌توانید:
 
 - File باز کنید؛
 - File و Folder بسازید؛
 - Rename کنید؛
 - Delete کنید؛
-- Project Tree را Refresh کنید.
+- Project Tree را Refresh کنید؛
+- با **Show in Folder** محل File فعال را در File Manager سیستم باز کنید.
 
 همه عملیات Filesystem داخل Boundary همان Project انتخاب‌شده Resolve می‌شوند.
 
-## Multi-tab Editor
+## Monaco کاملاً Local است
 
-هر File بازشده Buffer مستقل خودش را دارد. TL Studio وضعیت Clean و Dirty هر Tab را جدا نگه می‌دارد، بنابراین می‌توانید بین چند File جابه‌جا شوید بدون اینکه Editهای Save‌نشده از بین بروند.
+Monaco و Workerهایش همراه TL Studio Bundle می‌شوند و از Local Application Origin Load می‌شوند. Editor پیشرفته فقط هنگام اولین نیاز Lazy Load می‌شود و CDN برای Editor لازم نیست.
 
-برای Save از `Ctrl+S` در Windows/Linux و `Cmd+S` در macOS استفاده کنید.
+اگر Monaco Load نشود، Editor سبک مبتنی بر textarea همچنان به‌عنوان Fallback کار می‌کند.
+
+## Multi-tab Editing
+
+هر File بازشده Buffer مستقل دارد. TL Studio وضعیت Clean و Dirty هر Tab را جدا نگه می‌دارد تا با جابه‌جایی بین Fileها Editهای Save‌نشده از بین نروند.
+
+برای Save از `Ctrl+S` در Windows/Linux یا `Cmd+S` در macOS استفاده کنید.
+
+قابلیت‌های استاندارد Monaco مثل Find/Replace و Multi-cursor هم در دسترس‌اند.
 
 ## Conflict Protection
 
-وقتی TL Studio یک File را می‌خواند، SHA-256 Revision آن را نگه می‌دارد. Save معمولی همان Revision را برمی‌گرداند. اگر از زمان بازشدن File، نسخه روی Disk تغییر کرده باشد، TL Studio اجازه نمی‌دهد نسخه جدید بی‌صدا Overwrite شود.
+وقتی File خوانده می‌شود، TL Studio یک SHA-256 Revision Token نگه می‌دارد. Save معمولی همان Revision را برمی‌گرداند. اگر نسخه روی Disk بعد از Open تغییر کرده باشد، Silent Overwrite انجام نمی‌شود.
 
-بعد می‌توانید Conflict را بررسی کنید و فقط اگر واقعاً می‌خواهید نسخه Disk جایگزین شود، Force Save را آگاهانه انتخاب کنید.
+Force Save یک Action جدا و آگاهانه بعد از بررسی Conflict است.
 
-## تغییرات خارجی و Agent
+## تغییرات Agent، Git و برنامه‌های دیگر
 
 File ممکن است توسط Agent، Git، Build Tool یا برنامه‌ای دیگر تغییر کند.
 
 - Buffer تمیز تغییر Disk را خودکار دنبال می‌کند؛
-- Buffer کثیف حفظ می‌شود و اگر نسخه Disk تغییر کند یا حذف شود، علامت می‌خورد.
+- Buffer کثیف حفظ می‌شود و تغییر یا حذف نسخه Disk را علامت می‌زند.
 
-این رفتار هم Unsaved Work شما را حفظ می‌کند و هم Workspace را با Agent Activity هماهنگ نگه می‌دارد.
+## Read-only Preview Tab
+
+Fileهای Binary/Media قابل Preview می‌توانند به‌عنوان Tab واقعی و Read-only داخل Workspace باز شوند. Render محتوا از Preview System می‌آید و File به Text قابل‌ویرایش تبدیل نمی‌شود.
+
+برای فرمت‌ها، [Live Preview](./live-preview) را ببینید.
 
 ## Ask Agent از Selected Code
 
-بخش انتخاب‌شده‌ی Code را می‌توانید مستقیم به Agent بدهید تا بدون Copy/Paste اضافی درباره همان Context سؤال بپرسید یا Change بخواهید.
-
-## Project Switch
-
-اگر Tab باز با تغییر Save‌نشده داشته باشید، TL Studio قبل از رفتن به Project دیگر از آن محافظت می‌کند. اول Save کنید یا آگاهانه تغییر را Discard کنید.
-
-
-## Development Preview: Monaco
-
-در Stable v0.2.1 همان Editor سبک داخلی و تمام Contractهای File/Save/Conflict توضیح‌داده‌شده در بالا استفاده می‌شوند.
-
-در خط Development خصوصی **v0.3.0-alpha.7**، **Monaco Editor 0.56.0** به‌عنوان Editor Engine پیشرفته اضافه شده است. Monaco همراه خود TL Studio Bundle می‌شود، با اولین استفاده از File به‌صورت Lazy Load بالا می‌آید و Workerهای آن هم Local و Same-origin هستند؛ CDN برای Editor لازم نیست.
-
-Editor قبلی مبتنی بر textarea همچنان Fallback قابل‌استفاده است. File Buffer، Save Flow، SHA-256 Conflict Check، Project Boundary و External-change Reconciliation همچنان متعلق به TL Studio هستند و Monaco فقط Editor/Presentation Engine است. قابلیت‌های استاندارد Monaco مثل Find/Replace و Multi-cursor هم در Preview در دسترس‌اند.
+بخش انتخاب‌شده‌ی Code را می‌توانید مستقیم به Agent بدهید تا Context لازم بدون Copy/Paste دستی منتقل شود.
