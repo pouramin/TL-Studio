@@ -51,7 +51,7 @@
     permissionClass: "runtime",
   };
 
-  const messageNode = (kind: any, author: any, text: any, time: any, error: any) => {
+  const messageNode = (kind: any, author: any, text: any, time: any, error: any = "") => {
     const row = document.createElement("article");
     const avatar = document.createElement("div");
     const content = document.createElement("div");
@@ -148,7 +148,7 @@
         view.appendChild(node);
       } else if (message?.type === "shell") {
         const node = messageNode("assistant", "Shell", "", message.time?.created);
-        node.querySelector(".message-content").appendChild(toolNode(message.command || "command", message.time?.completed ? "completed" : "running", message.output || ""));
+        node.querySelector<HTMLElement>(".message-content")!.appendChild(toolNode(message.command || "command", message.time?.completed ? "completed" : "running", message.output || ""));
         view.appendChild(node);
       } else if (message?.type === "system" || message?.type === "synthetic") {
         view.appendChild(messageNode("system", "System", message.text || "", message.time?.created));
@@ -157,7 +157,7 @@
 
     if (K.state.session && (K.isSessionRunning(K.state.session.id) || K.state.sending)) {
       const row = messageNode("assistant", K.state.session.agent || "Agent", "", Date.now());
-      row.querySelector(".message-text").innerHTML = 'Working <span class="typing"><i></i><i></i><i></i></span>';
+      row.querySelector<HTMLElement>(".message-text")!.innerHTML = 'Working <span class="typing"><i></i><i></i><i></i></span>';
       view.appendChild(row);
     }
     requestAnimationFrame(() => { view.scrollTop = view.scrollHeight; });
@@ -211,7 +211,7 @@
   };
 
   K.createSession = async () => {
-    const input = {};
+    const input: any = {};
     const agent = K.els.agentSelect.value || undefined;
     const model = K.selectedModel();
     if (agent) input.agent = agent;
@@ -236,7 +236,7 @@
     K.renderSessionHeader();
   };
 
-  let refreshTimer = null;
+  let refreshTimer: number | null = null;
   const scheduleSelectedRefresh = (delay = 80) => {
     if (refreshTimer) window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(async () => {
@@ -249,7 +249,7 @@
         K.renderMessages();
         K.renderSessionHeader();
         K.renderSessions();
-      } catch (err) { K.showError(err.message || String(err)); }
+      } catch (err) { K.showError((err as any).message || String(err)); }
     }, delay);
   };
 
@@ -277,7 +277,7 @@
     if (K.state.fallbackPolling) window.clearInterval(K.state.fallbackPolling);
     K.state.fallbackPolling = null;
 
-    if (!("EventSource" in window)) {
+    if (typeof globalThis.EventSource === "undefined") {
       K.state.fallbackPolling = window.setInterval(() => scheduleSelectedRefresh(0), 1200);
       return;
     }
@@ -322,7 +322,7 @@
       } catch (err) {
         K.state.sending = false;
         K.stopSessionPolling();
-        K.showError(err.message || String(err));
+        K.showError((err as any).message || String(err));
         K.renderMessages();
       }
     }, 700);
@@ -356,13 +356,13 @@
       });
       K.renderMessages();
 
-      await K.api.sessions.promptAsync(K.state.session.id, { text, agent, model, variant: model?.variant });
+      await K.api.sessions.promptAsync(K.state.session!.id, { text, agent, model, variant: model?.variant });
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       K.renderMessages();
       K.startSessionPolling(startedAt);
     } catch (err) {
       K.state.sending = false;
-      K.showError(err.message || String(err));
+      K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {
       K.els.sendButton.disabled = false;
@@ -376,8 +376,8 @@
       K.state.local = await K.request("/local/pick-directory", { method: "POST" });
       await K.afterProjectChange();
     } catch (err) {
-      if (/no supported folder picker/i.test(err.message || "")) return K.openManualProject();
-      K.showError(err.message || String(err));
+      if (/no supported folder picker/i.test((err as any).message || "")) return K.openManualProject();
+      K.showError((err as any).message || String(err));
     }
   };
 
@@ -396,15 +396,15 @@
       K.state.local = await K.request("/local/project", { method: "POST", body: JSON.stringify({ path }) });
       K.els.pathDialog.close();
       await K.afterProjectChange();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
   K.afterProjectChange = async () => {
     K.stopEvents();
     Object.assign(K.state, { session: null, sessions: [], messages: [], activeSessions: {}, sending: false });
-    K.els.projectName.textContent = K.basename(K.state.local.project);
-    K.els.projectPath.textContent = K.state.local.project;
-    K.els.projectPath.title = K.state.local.project;
+    K.els.projectName.textContent = K.basename(K.state.local!.project);
+    K.els.projectPath.textContent = K.state.local!.project;
+    K.els.projectPath.title = K.state.local!.project;
     K.newSession();
     await Promise.all([K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
     K.startEvents();
