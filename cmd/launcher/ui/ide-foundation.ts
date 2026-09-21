@@ -17,9 +17,7 @@
     const type = response.headers.get("content-type") || "";
     const payload = type.includes("application/json") ? await response.json().catch(() => null) : await response.text().catch(() => "");
     if (!response.ok) {
-      const error = new Error(payload?.error || payload?.message || String(payload || `${response.status} ${response.statusText}`));
-      error.status = response.status;
-      throw error;
+      throw Object.assign(new Error(payload?.error || payload?.message || String(payload || `${response.status} ${response.statusText}`)), { status: response.status });
     }
     return payload;
   };
@@ -36,7 +34,7 @@
   };
 
   const rerenderTabs = () => {
-    const buttons = [...document.querySelectorAll(".file-tab-open")];
+    const buttons = [...document.querySelectorAll<HTMLElement>(".file-tab-open")];
     if (!buttons.length) return;
     const active = buttons.find((button) => pathKey(button.title) === pathKey(K.state.activeEditorPath));
     (active || buttons[0]).click();
@@ -59,7 +57,7 @@
           applyPreview(tab, preview);
         }
       } catch (error) {
-        if (error.status !== 404) continue;
+        if ((error as any).status !== 404) continue;
         if (isDirty(tab)) {
           tab.externalChanged = true;
         } else {
@@ -70,7 +68,7 @@
     if (removed.size) {
       K.state.editorTabs = K.state.editorTabs.filter((tab) => !removed.has(pathKey(tab.path)));
       if (removed.has(pathKey(K.state.activeEditorPath))) {
-        K.state.activeEditorPath = K.state.editorTabs.at(-1)?.path || "";
+        K.state.activeEditorPath = K.state.editorTabs[K.state.editorTabs.length - 1]?.path || "";
       }
     }
     rerenderTabs();
@@ -99,7 +97,7 @@
     };
   }
 
-  let refreshTimer = null;
+  let refreshTimer: number | null = null;
   const scheduleRefresh = () => {
     if (refreshTimer) window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(() => {
