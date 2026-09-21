@@ -78,7 +78,7 @@
       applyHostedMeta(payload.hosted);
       return {
         all: Array.isArray(payload.all) ? payload.all : [],
-        connected: new Set(Array.isArray(payload.connected) ? payload.connected : []),
+        connected: new Set<string>(Array.isArray(payload.connected) ? payload.connected.map(String) : []),
         defaults: payload.default && typeof payload.default === "object" ? payload.default : {},
         failed: Array.isArray(payload.failed) ? payload.failed : [],
       };
