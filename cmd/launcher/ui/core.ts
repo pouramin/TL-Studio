@@ -1,7 +1,11 @@
 (() => {
   "use strict";
 
-  const $ = (id) => document.getElementById(id);
+  const $ = (id: string): HTMLElement => {
+    const element = document.getElementById(id);
+    if (!element) throw new Error(`Missing required UI element #${id}`);
+    return element;
+  };
   const K = window.KLU = {
     els: {
       projectName: $("projectName"), projectPath: $("projectPath"), pickProject: $("pickProject"), manualProject: $("manualProject"),
@@ -13,7 +17,7 @@
       authDialog: $("authDialog"), authInstructions: $("authInstructions"), authCodeWrap: $("authCodeWrap"), authCode: $("authCode"),
       authCancel: $("authCancel"), authOpen: $("authOpen"), attentionDialog: $("attentionDialog"), attentionTitle: $("attentionTitle"),
       attentionBody: $("attentionBody"), attentionActions: $("attentionActions"),
-    },
+    } as TLStudioElements,
     state: {
       local: null,
       sessions: [],
@@ -27,27 +31,28 @@
       connectedProviders: new Set(),
       eventSource: null,
       fallbackPolling: null,
+      sessionPolling: null,
       sending: false,
       revision: 0,
       authController: null,
       authURL: "",
       attentionKey: "",
-    },
-  };
+    } as TLStudioState,
+  } as TLStudioKernel;
 
-  K.basename = (path) => {
+  K.basename = (path?: string) => {
     if (!path) return "No project";
     const bits = path.replace(/[\\/]+$/, "").split(/[\\/]/);
     return bits[bits.length - 1] || path;
   };
 
-  K.formatTime = (input) => {
+  K.formatTime = (input?: string | number | Date) => {
     if (!input) return "";
     const date = new Date(input);
     return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(date);
   };
 
-  K.relativeTime = (input) => {
+  K.relativeTime = (input?: string | number | Date) => {
     if (!input) return "";
     const ts = new Date(input).getTime();
     if (!Number.isFinite(ts)) return "";
@@ -58,13 +63,13 @@
     return `${Math.floor(diff / 86_400_000)}d`;
   };
 
-  K.showError = (message) => {
+  K.showError = (message?: string) => {
     const e = K.els.errorBanner;
     e.textContent = message || "";
     e.classList.toggle("hidden", !message);
   };
 
-  K.request = async (path, options = {}) => {
+  K.request = async <T = any>(path: string, options: RequestInit = {}): Promise<T> => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
@@ -79,10 +84,10 @@
       const ref = payload && typeof payload === "object" ? payload.ref || payload.data?.ref || payload.data?.data?.ref : "";
       throw new Error(ref && !String(detail).includes(ref) ? `${detail} [${ref}]` : detail);
     }
-    return payload;
+    return payload as T;
   };
 
-  K.normalizeAgents = (input) => {
+  K.normalizeAgents = (input: any) => {
     if (!Array.isArray(input)) return [];
     return input.flatMap((agent) => {
       if (!agent || agent.hidden || agent.mode === "subagent") return [];
@@ -93,7 +98,7 @@
     });
   };
 
-  K.extractModels = (providers) => {
+  K.extractModels = (providers: any) => {
     const result = [];
     for (const provider of Array.isArray(providers) ? providers : []) {
       if (!provider?.id) continue;
@@ -134,12 +139,12 @@
     } catch (err) {
       K.els.backendStatus.className = "status-dot error";
       K.els.backendStatus.innerHTML = "<i></i> Offline";
-      K.showError(`Runtime backend: ${err.message}`);
+      K.showError(`Runtime backend: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   };
 
-  K.modelValue = (model) => model ? `${model.providerID}::${model.id}${model.variant ? `::${model.variant}` : ""}` : "";
+  K.modelValue = (model?: TLStudioModelRef | TLStudioSessionModelRef) => model ? `${model.providerID}::${model.id}${model.variant ? `::${model.variant}` : ""}` : "";
 
   K.preferredHostedModel = () => {
     if (!K.state.connectedProviders.has(K.api.hosted.providerID)) return undefined;
@@ -177,7 +182,7 @@
     const select = K.els.modelSelect;
     const current = select.value;
     select.innerHTML = '<option value="">Backend default</option>';
-    let group = null;
+    let group: HTMLOptGroupElement | null = null;
     let last = "";
     for (const model of K.state.models) {
       if (model.providerID !== last) {
@@ -243,7 +248,7 @@
     catch { K.state.activeSessions = {}; }
   };
 
-  K.isSessionRunning = (sessionID) => {
+  K.isSessionRunning = (sessionID?: string) => {
     const status = sessionID ? K.state.activeSessions?.[sessionID] : undefined;
     return status?.active === true;
   };
