@@ -224,8 +224,8 @@ def main() -> int:
     else:
         raise E2EError(f"test provider models have invalid shape: {models!r}")
 
-    created = unwrap(request(base, routed("/runtime/session", project), method="POST", payload={}))
-    require(isinstance(created, dict) and isinstance(created.get("id"), str), f"session creation failed: {created!r}")
+    created = request(base, routed("/local/sessions", project), method="POST", payload={})
+    require(isinstance(created, dict) and isinstance(created.get("id"), str), f"semantic session creation failed: {created!r}")
     session_id = created["id"]
     sid = urllib.parse.quote(session_id, safe="")
 
@@ -237,16 +237,18 @@ def main() -> int:
     require(ready.wait(5), f"TL Studio semantic SSE did not connect: {events!r}")
     require(not any(event.get("type") == "test.sse.error" for event in events), f"SSE failed: {events!r}")
 
-    request(
+    run_result = request(
         base,
-        routed(f"/runtime/session/{sid}/prompt_async", project),
+        routed(f"/local/sessions/{sid}/runs", project),
         method="POST",
         payload={
             "agent": "code",
-            "model": {"providerID": "test", "modelID": "test-model"},
+            "model": {"providerID": "test", "id": "test-model"},
             "parts": [{"type": "text", "text": "Create the requested fixture file, then confirm completion."}],
         },
     )
+    require(isinstance(run_result, dict) and run_result.get("accepted") is True,
+            f"semantic session run was not accepted: {run_result!r}")
 
     deadline = time.time() + 45
     messages: list[dict] = []
@@ -370,7 +372,7 @@ def main() -> int:
         "live_event_contract": "semantic /local/events",
         "saw_running": saw_running,
         "tool_registry": "files.write",
-        "session_contract": "semantic write activity + changes",
+        "session_contract": "semantic create/run + write activity + changes",
         "permission": "edit/once",
         "file": target,
         "changes_source": change_source,
