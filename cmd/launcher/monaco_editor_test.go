@@ -22,6 +22,8 @@ func TestMonacoEditorIsLocalLazyAndFallbackSafe(t *testing.T) {
 		"tl-studio:editor-render",
 		"lightweight editor fallback",
 		"state.editor?.layout?.()",
+		"detail?.viewOnly",
+		"state.editor.setModel(null)",
 	} {
 		if !strings.Contains(source, required) {
 			t.Fatalf("Monaco bridge missing %q", required)
