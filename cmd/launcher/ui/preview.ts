@@ -49,7 +49,7 @@
     </div>
     <div id="previewEmpty" class="preview-empty">
       <strong>Preview this project</strong>
-      <span id="previewHint">TL Studio can preview a root index.html or run a package.json dev script.</span>
+      <span id="previewHint">TL Studio can preview HTML files or run a package.json dev script.</span>
       <pre id="previewLogs" class="preview-logs hidden"></pre>
     </div>
     <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
