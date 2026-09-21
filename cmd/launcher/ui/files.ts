@@ -84,6 +84,10 @@
             <strong>Open a project file</strong>
             <span>Edit locally, save directly to disk, and hand selected code back to the agent.</span>
           </div>
+          <div id="filePreviewOnly" class="file-editor-empty hidden">
+            <strong id="filePreviewOnlyTitle">Preview-only file</strong>
+            <span id="filePreviewOnlyHint">This file is displayed in Live Preview instead of the text editor.</span>
+          </div>
           <div id="fileEditorSurface" class="file-editor-surface hidden">
             <pre id="fileLineNumbers" class="file-line-numbers" aria-hidden="true">1</pre>
             <textarea id="fileEditor" class="file-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="File editor"></textarea>
@@ -109,6 +113,9 @@
       save: $("saveFile"),
       editorBody: $("fileEditorBody"),
       empty: $("fileEditorEmpty"),
+      previewOnly: $("filePreviewOnly"),
+      previewOnlyTitle: $("filePreviewOnlyTitle"),
+      previewOnlyHint: $("filePreviewOnlyHint"),
       surface: $("fileEditorSurface"),
       gutter: $("fileLineNumbers"),
       editor: $("fileEditor"),
@@ -151,7 +158,7 @@
     catch (_) { return String(text || "").length; }
   };
 
-  const isDirty = (tab) => !!tab && tab.content !== tab.savedContent;
+  const isDirty = (tab) => !!tab && !tab.viewOnly && tab.content !== tab.savedContent;
   const activeTab = () => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(K.state.activeEditorPath)) || null;
   const tabFor = (path) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
 
@@ -325,18 +332,21 @@
     }
     if (ui.title) ui.title.textContent = basename(tab.path) || tab.path;
     if (ui.path) { ui.path.textContent = tab.path; ui.path.title = tab.path; }
-    if (ui.meta) ui.meta.textContent = `${extensionLabel(tab.path)} · ${sizeText(byteSize(tab.content))}`;
-    if (ui.save) ui.save.disabled = !isDirty(tab);
+    if (ui.meta) ui.meta.textContent = `${extensionLabel(tab.path)} · ${sizeText(tab.viewOnly ? tab.size : byteSize(tab.content))}`;
+    if (ui.save) ui.save.disabled = tab.viewOnly || !isDirty(tab);
     if (ui.reload) ui.reload.disabled = false;
-    if (ui.ask) ui.ask.disabled = false;
+    if (ui.ask) ui.ask.disabled = !!tab.viewOnly;
     if (ui.status) {
       ui.status.classList.toggle("warning", !!tab.externalChanged);
       ui.status.classList.toggle("dirty", isDirty(tab));
-      ui.status.textContent = tab.externalChanged
-        ? "Changed on disk · reload or save to resolve"
-        : isDirty(tab) ? "Unsaved changes" : "Saved";
+      ui.status.textContent = tab.viewOnly
+        ? `${tab.previewName || "Preview"} · view only`
+        : tab.externalChanged
+          ? "Changed on disk · reload or save to resolve"
+          : isDirty(tab) ? "Unsaved changes" : "Saved";
     }
-    updateCursor();
+    if (ui.cursor && tab.viewOnly) ui.cursor.textContent = "View only";
+    else updateCursor();
   };
 
   const notifyEditorRender = (tab) => {
@@ -344,7 +354,11 @@
       detail: {
         path: tab?.path || "",
         content: tab?.content || "",
-        language: tab ? languageHint(tab.path) : "",
+        language: tab && !tab.viewOnly ? languageHint(tab.path) : "",
+        viewOnly: !!tab?.viewOnly,
+        previewKind: tab?.previewKind || "",
+        previewName: tab?.previewName || "",
+        mime: tab?.mime || "",
       },
     }));
   };
@@ -354,12 +368,22 @@
     renderTabs();
     if (!ui.empty || !ui.surface || !ui.editor) return;
     ui.empty.classList.toggle("hidden", !!tab);
-    ui.surface.classList.toggle("hidden", !tab);
+    ui.previewOnly?.classList.toggle("hidden", !tab?.viewOnly);
+    ui.surface.classList.toggle("hidden", !tab || !!tab.viewOnly);
     if (!tab) {
       ui.editor.value = "";
       renderLineNumbers("");
       updateEditorChrome();
       notifyEditorRender(null);
+      return;
+    }
+    if (tab.viewOnly) {
+      ui.editor.value = "";
+      renderLineNumbers("");
+      if (ui.previewOnlyTitle) ui.previewOnlyTitle.textContent = `${tab.previewName || "Preview"} file`;
+      if (ui.previewOnlyHint) ui.previewOnlyHint.textContent = `${basename(tab.path)} is shown in Live Preview. Binary editing is intentionally disabled.`;
+      updateEditorChrome();
+      notifyEditorRender(tab);
       return;
     }
     if (ui.editor.value !== tab.content) ui.editor.value = tab.content;
@@ -373,7 +397,7 @@
     if (!tab) return;
     K.state.activeEditorPath = tab.path;
     renderEditor();
-    window.setTimeout(() => ui.editor?.focus(), 0);
+    if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
   };
 
   const closeTab = (path, options = {}) => {
@@ -412,21 +436,26 @@
     K.showError("");
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path })}`);
-      if (preview?.binary) throw new Error(`Binary files cannot be edited yet (${preview.mime || "unknown type"}).`);
+      const viewOnly = !!preview?.binary && !!preview?.previewable;
+      if (preview?.binary && !viewOnly) throw new Error(`Binary files without a TL Studio preview cannot be opened yet (${preview.mime || "unknown type"}).`);
       const tab = {
         path: preview.path || path,
-        content: preview.content || "",
-        savedContent: preview.content || "",
+        content: viewOnly ? "" : preview.content || "",
+        savedContent: viewOnly ? "" : preview.content || "",
         sha256: preview.sha256 || "",
         modified: preview.modified || "",
         size: preview.size || 0,
         mime: preview.mime || "text/plain",
+        viewOnly,
+        previewKind: preview.previewKind || "",
+        previewName: preview.previewName || "",
+        previewCapabilityID: preview.previewCapabilityID || "",
         externalChanged: false,
       };
       K.state.editorTabs.push(tab);
       K.state.activeEditorPath = tab.path;
       renderEditor();
-      window.setTimeout(() => ui.editor?.focus(), 0);
+      if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
     } catch (error) {
       K.showError(error.message || String(error));
     }
@@ -436,7 +465,24 @@
     if (!tab?.path) return;
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path: tab.path })}`);
-      if (preview?.binary) return;
+      if (preview?.binary) {
+        if (!preview.previewable) return;
+        tab.viewOnly = true;
+        tab.content = "";
+        tab.savedContent = "";
+        tab.sha256 = preview.sha256 || "";
+        tab.modified = preview.modified || "";
+        tab.size = preview.size || 0;
+        tab.mime = preview.mime || "application/octet-stream";
+        tab.previewKind = preview.previewKind || "";
+        tab.previewName = preview.previewName || "";
+        tab.previewCapabilityID = preview.previewCapabilityID || "";
+        tab.externalChanged = false;
+        if (pathKey(tab.path) === pathKey(K.state.activeEditorPath)) renderEditor();
+        else renderTabs();
+        return;
+      }
+      tab.viewOnly = false;
       if (!options.force && isDirty(tab)) {
         if (preview.sha256 && preview.sha256 !== tab.sha256) tab.externalChanged = true;
       } else {
@@ -452,7 +498,7 @@
 
   const saveActive = async (force = false) => {
     const tab = activeTab();
-    if (!tab || !isDirty(tab)) return;
+    if (!tab || tab.viewOnly || !isDirty(tab)) return;
     K.showError("");
     if (ui.save) ui.save.disabled = true;
     try {
@@ -491,7 +537,7 @@
 
   const askAgentAboutSelection = () => {
     const tab = activeTab();
-    if (!tab || !ui.editor || !K.els?.prompt) return;
+    if (!tab || tab.viewOnly || !ui.editor || !K.els?.prompt) return;
     const start = ui.editor.selectionStart || 0;
     const end = ui.editor.selectionEnd || 0;
     const selected = ui.editor.value.slice(Math.min(start, end), Math.max(start, end));
@@ -642,7 +688,7 @@
     await openFiles();
     await openEditor(path);
     const tab = tabFor(path);
-    if (!tab || !ui.editor) return;
+    if (!tab || !ui.editor || tab.viewOnly) return;
     const content = String(tab.content || "");
     const lines = content.split("\n");
     const lineIndex = Math.max(0, Math.min(lines.length - 1, Number(line || 1) - 1));
@@ -687,7 +733,7 @@
 
   ui.editor?.addEventListener("input", () => {
     const tab = activeTab();
-    if (!tab) return;
+    if (!tab || tab.viewOnly) return;
     tab.content = ui.editor.value;
     renderLineNumbers(tab.content);
     renderTabs();
