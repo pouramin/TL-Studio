@@ -16,6 +16,10 @@ import (
 
 type kiloRuntimeEngine struct{}
 
+func defaultRuntimeEngine() runtimeEngine {
+	return kiloRuntimeEngine{}
+}
+
 func (kiloRuntimeEngine) ID() string {
 	return "kilo-code"
 }
