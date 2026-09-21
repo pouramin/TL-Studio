@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -87,7 +88,7 @@ func TestDetectPreviewCapabilityPrefersOpenHTMLWhenMultipleExist(t *testing.T) {
 	}
 }
 
-func TestDetectPreviewCapabilityKeepsRootIndexPriority(t *testing.T) {
+func TestDetectPreviewCapabilityPrefersRequestedHTMLOverRootIndex(t *testing.T) {
 	project := t.TempDir()
 	if err := os.WriteFile(filepath.Join(project, "index.html"), []byte("index"), 0o600); err != nil {
 		t.Fatal(err)
@@ -96,8 +97,13 @@ func TestDetectPreviewCapabilityKeepsRootIndexPriority(t *testing.T) {
 		t.Fatal(err)
 	}
 	capability := detectPreviewCapability(project, "other.html")
-	if capability.Entry != "index.html" {
-		t.Fatalf("root index.html should keep static preview priority: %#v", capability)
+	if capability.Entry != "other.html" || len(capability.Entries) != 2 {
+		t.Fatalf("active/requested HTML should override the default root index entry: %#v", capability)
+	}
+
+	defaultCapability := detectPreviewCapability(project, "")
+	if defaultCapability.Entry != "index.html" || len(defaultCapability.Entries) != 2 {
+		t.Fatalf("root index.html should remain the default when no HTML is explicitly selected: %#v", defaultCapability)
 	}
 }
 
@@ -225,6 +231,49 @@ func TestStaticPreviewCanStartSelectedHTML(t *testing.T) {
 	previewRes.Body.Close()
 	if !strings.Contains(string(data[:n]), "world") {
 		t.Fatalf("selected HTML preview body mismatch: %q", data[:n])
+	}
+}
+
+func TestStaticPreviewCanSwitchEntriesWithoutRestartingServer(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "hello.html"), []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "index.html"), []byte("index"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := &appState{project: project}
+	manager := newPreviewManager(state)
+	defer manager.stop()
+
+	first, err := manager.start("hello.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(first.URL, "/hello.html") || first.Entry != "hello.html" {
+		t.Fatalf("first static entry mismatch: %#v", first)
+	}
+	firstParsed, err := url.Parse(first.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := manager.start("index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondParsed, err := url.Parse(second.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Entry != "index.html" || second.URL == first.URL {
+		t.Fatalf("static entry did not switch: first=%#v second=%#v", first, second)
+	}
+	if firstParsed.Host != secondParsed.Host {
+		t.Fatalf("switching static HTML should reuse the same preview server: %q -> %q", firstParsed.Host, secondParsed.Host)
+	}
+	if len(second.Entries) != 2 {
+		t.Fatalf("running static preview should still expose all HTML choices: %#v", second)
 	}
 }
 
