@@ -18,9 +18,9 @@
     suppressChange: false,
   };
 
-  const pathKey = (value) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "").toLowerCase();
+  const pathKey = (value: any) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "").toLowerCase();
 
-  const languageForPath = (path) => {
+  const languageForPath = (path: any) => {
     const clean = String(path || "").replace(/\\/g, "/");
     const name = clean.split("/").pop() || "";
     if (/^dockerfile(?:\..+)?$/i.test(name)) return "dockerfile";
@@ -44,7 +44,7 @@
 
   const installWorkerFactory = () => {
     globalThis.MonacoEnvironment = {
-      getWorker(_moduleId, label) {
+      getWorker(_moduleId: any, label: any) {
         const file = label === "json"
           ? "/monaco-json-worker.js"
           : ["css", "scss", "less"].includes(label)
@@ -91,7 +91,7 @@
     document.head.appendChild(script);
   });
 
-  const modelUri = (monaco, path) => {
+  const modelUri = (monaco: any, path: any) => {
     const encoded = String(path || "").replace(/\\/g, "/").split("/").filter(Boolean).map(encodeURIComponent).join("/");
     return monaco.Uri.parse(`tl-studio://workspace/${encoded || "untitled"}`);
   };
@@ -200,7 +200,7 @@
     return state.loading;
   };
 
-  const getOrCreateModel = (path, content) => {
+  const getOrCreateModel = (path: any, content: any) => {
     const monaco = state.monaco;
     const key = pathKey(path);
     let model = state.models.get(key);
@@ -220,7 +220,7 @@
     return model;
   };
 
-  const activateRender = (detail) => {
+  const activateRender = (detail: any) => {
     if (!state.editor || !state.monaco) return;
     const path = String(detail?.path || "");
     if (!path) {
@@ -243,7 +243,7 @@
     window.setTimeout(() => state.editor?.focus?.(), 0);
   };
 
-  const revealInEditor = (detail) => {
+  const revealInEditor = (detail: any) => {
     if (!state.editor || !state.monaco || pathKey(detail?.path) !== pathKey(state.activePath)) return false;
     const model = state.editor.getModel();
     if (!model) return false;
@@ -261,7 +261,7 @@
     return true;
   };
 
-  const handleRender = async (detail) => {
+  const handleRender = async (detail: any) => {
     state.pendingRender = detail || {};
     if (!detail?.path || detail?.viewOnly) {
       if (state.editor) activateRender(detail);
