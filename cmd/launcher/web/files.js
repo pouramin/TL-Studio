@@ -49,6 +49,9 @@
     if (headActions && !$("newFile")) {
       headActions.insertBefore(makeButton("newFile", "+ File", "Create a file in the current folder"), ui.refresh);
       headActions.insertBefore(makeButton("newFolder", "+ Folder", "Create a folder in the current folder"), ui.refresh);
+      const reveal = makeButton("showInFolder", "Show in Folder", "Reveal the active file in the system file manager");
+      reveal.disabled = true;
+      headActions.insertBefore(reveal, ui.refresh);
     }
 
     const browserHead = ui.panel.querySelector(".files-browser-head");
@@ -102,6 +105,7 @@
     Object.assign(ui, {
       newFile: $("newFile"),
       newFolder: $("newFolder"),
+      showInFolder: $("showInFolder"),
       rename: $("renameFile"),
       remove: $("deleteFile"),
       tabs: $("fileTabs"),
@@ -328,6 +332,7 @@
       if (ui.save) ui.save.disabled = true;
       if (ui.reload) ui.reload.disabled = true;
       if (ui.ask) ui.ask.disabled = true;
+      if (ui.showInFolder) ui.showInFolder.disabled = true;
       return;
     }
     if (ui.title) ui.title.textContent = basename(tab.path) || tab.path;
@@ -336,6 +341,10 @@
     if (ui.save) ui.save.disabled = tab.viewOnly || !isDirty(tab);
     if (ui.reload) ui.reload.disabled = false;
     if (ui.ask) ui.ask.disabled = !!tab.viewOnly;
+    if (ui.showInFolder) {
+      ui.showInFolder.disabled = !tab.path;
+      ui.showInFolder.title = tab.path ? `Show ${tab.path} in the system file manager` : "Reveal the active file in the system file manager";
+    }
     if (ui.status) {
       ui.status.classList.toggle("warning", !!tab.externalChanged);
       ui.status.classList.toggle("dirty", isDirty(tab));
@@ -534,6 +543,20 @@
     await refreshTabFromDisk(tab, { force: true });
   };
 
+  const showActiveInFolder = async () => {
+    const tab = activeTab();
+    if (!tab?.path) return;
+    K.showError("");
+    if (ui.showInFolder) ui.showInFolder.disabled = true;
+    try {
+      await localRequest(`/local/reveal?${new URLSearchParams({ path: tab.path })}`, { method: "POST" });
+    } catch (error) {
+      K.showError(error.message || String(error));
+    } finally {
+      if (ui.showInFolder) ui.showInFolder.disabled = !activeTab()?.path;
+    }
+  };
+
   const askAgentAboutSelection = () => {
     const tab = activeTab();
     if (!tab || tab.viewOnly || !ui.editor || !K.els?.prompt) return;
@@ -723,6 +746,7 @@
   ui.up?.addEventListener("click", () => loadDirectory(parentPath(K.state.filesPath)));
   ui.newFile?.addEventListener("click", () => createEntry("file"));
   ui.newFolder?.addEventListener("click", () => createEntry("directory"));
+  ui.showInFolder?.addEventListener("click", showActiveInFolder);
   ui.rename?.addEventListener("click", renameSelected);
   ui.remove?.addEventListener("click", deleteSelected);
   ui.save?.addEventListener("click", () => saveActive(false));

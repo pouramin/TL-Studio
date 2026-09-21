@@ -66,6 +66,7 @@ type localEntryRenameRequest struct {
 
 func registerLocalFileRoutes(mux *http.ServeMux, state *appState) {
 	registerProjectHistoryRoute(mux, state)
+	registerRevealRoute(mux, state)
 
 	mux.HandleFunc("GET /local/files", func(w http.ResponseWriter, r *http.Request) {
 		project := state.projectPath()

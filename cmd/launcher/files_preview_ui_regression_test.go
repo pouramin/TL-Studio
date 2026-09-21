@@ -32,6 +32,10 @@ func TestWorkspacePreviewOnlyBinaryTabContract(t *testing.T) {
 		"Binary files without a TL Studio preview cannot be opened yet",
 		"Binary editing is intentionally disabled",
 		"viewOnly: !!tab?.viewOnly",
+		"Show in Folder",
+		"/local/reveal",
+		"showActiveInFolder",
+		"showInFolder",
 	} {
 		if !strings.Contains(files, required) {
 			t.Fatalf("files.js missing preview-only tab behavior %q", required)
