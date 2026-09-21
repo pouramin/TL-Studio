@@ -53,7 +53,7 @@ The release already includes the pinned local agent runtime.
 - **Project workspace** — writable local file explorer plus a locally bundled, lazy-loaded Monaco editor with multi-tab editing, find/replace, multi-cursor editing, save/create/rename/delete actions, and external-change reconciliation.
 - **Project Search** — fast project-wide text search with include/exclude filters and click-to-open results.
 - **Integrated terminal** — project-scoped command execution, output history, stop controls, and process-tree termination.
-- **Live Preview** — local static HTML or Node dev-server preview in a movable/resizable browser window; while static Preview is open it automatically follows the active HTML editor tab, `index.html` remains the default when no HTML is selected, multiple HTML files can also be selected manually, and the window has a dedicated left-edge width resize handle.
+- **Live Preview** — capability-driven local preview in a movable/resizable browser window. TL Studio can follow the active previewable file across HTML, SVG/raster images, PDF, video, audio, and rendered Markdown; Node projects still use their `package.json` dev server for HTML/app preview. Non-previewable code files leave the current Preview in place, while saves continue to reload file previews.
 - **Appearance & editor settings** — System, Dark, and Light themes plus editor theme and separate UI/code/terminal font controls.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
 - **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
