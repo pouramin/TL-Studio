@@ -218,7 +218,7 @@ import { K } from "./kernel";
     K.showError?.("");
 
     try {
-      await K.api.sessions.abort(session.id, { scope: "session" });
+      await K.api.sessionCommands.abort(session.id, { scope: "session" });
       K.state.sending = false;
       K.stopSessionPolling?.();
 
