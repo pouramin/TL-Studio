@@ -222,6 +222,19 @@ func (s *sessionPersistenceStore) upsertSession(session sessionView) error {
 	if session.CreatedAt == 0 {
 		session.CreatedAt = previous.CreatedAt
 	}
+	if session.Execution == "" {
+		session.Execution = previous.Execution
+	}
+	if previous.Execution == "native" {
+		if previous.Model != nil {
+			model := *previous.Model
+			session.Model = &model
+		}
+		if previous.Agent != "" {
+			session.Agent = previous.Agent
+		}
+		session.UpdatedAt = maxSessionTimestamp(session.UpdatedAt, previous.UpdatedAt)
+	}
 	if session.UpdatedAt == 0 {
 		session.UpdatedAt = maxSessionTimestamp(previous.UpdatedAt, time.Now().UnixMilli())
 	}
