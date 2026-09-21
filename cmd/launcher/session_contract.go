@@ -111,12 +111,9 @@ type sessionStatusView struct {
 }
 
 type sessionReadContract struct {
-	state    *appState
-	target   *url.URL
-	username string
-	password string
-	client   *http.Client
-	history  *projectHistoryStore
+	state   *appState
+	backend *runtimeBackend
+	history *projectHistoryStore
 }
 
 type sessionRuntimeError struct {
@@ -132,41 +129,40 @@ func (e *sessionRuntimeError) Error() string {
 }
 
 func newSessionReadContract(state *appState, backendURL, username, password string) (*sessionReadContract, error) {
-	target, err := url.Parse(backendURL)
+	backend, err := newRuntimeBackend(
+		state,
+		backendURL,
+		runtimeCredentials{Username: username, Password: password},
+		defaultRuntimeEngine(),
+	)
 	if err != nil {
 		return nil, err
 	}
+	return newSessionReadContractWithBackend(state, backend), nil
+}
+
+func newSessionReadContractWithBackend(state *appState, backend *runtimeBackend) *sessionReadContract {
 	return &sessionReadContract{
-		state:    state,
-		target:   target,
-		username: username,
-		password: password,
-		client:   &http.Client{},
-		history:  recentProjects,
-	}, nil
+		state:   state,
+		backend: backend,
+		history: recentProjects,
+	}
 }
 
 func (c *sessionReadContract) runtimeGet(ctx context.Context, route, directory string, query url.Values) (json.RawMessage, error) {
-	target := *c.target
-	target.Path = route
 	if query == nil {
 		query = url.Values{}
 	}
 	if directory != "" {
 		query.Set("directory", directory)
 	}
-	target.RawQuery = query.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
+	req, err := c.backend.newRequest(ctx, http.MethodGet, route, directory, query, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(c.username, c.password)
-	if directory != "" {
-		req.Header.Set("x-kilo-directory", strings.ReplaceAll(url.QueryEscape(directory), "+", "%20"))
-	}
 
-	response, err := c.client.Do(req)
+	response, err := c.backend.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
