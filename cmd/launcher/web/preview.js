@@ -263,14 +263,18 @@
     await loadPreviewRegistry().catch(() => null);
     if (!isPreviewablePath(entry)) return;
     const snapshot = K.state.preview.snapshot;
+    const capability = previewCapabilityForPath(entry);
     if (!snapshot?.running || snapshot?.entry === entry) return;
+    if (snapshot?.kind === "dev-server" && capability?.kind === "html") return;
     if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
     K.state.preview.followTimer = window.setTimeout(() => {
       K.state.preview.followTimer = null;
       const activeEntry = activePreviewEntry();
       const current = K.state.preview.snapshot;
+      const activeCapability = previewCapabilityForPath(activeEntry);
       if (!K.state.preview.open || !current?.running) return;
       if (!activeEntry || activeEntry !== entry || current?.entry === activeEntry) return;
+      if (current?.kind === "dev-server" && activeCapability?.kind === "html") return;
       switchPreviewEntry(activeEntry);
     }, 50);
   };
@@ -307,7 +311,12 @@
       await loadPreviewRegistry().catch(() => null);
       const snapshot = await refreshStatus().catch(() => null);
       const activeEntry = activePreviewEntry();
-      if (snapshot?.running && activeEntry && activeEntry !== snapshot?.entry) {
+      const activeCapability = previewCapabilityForPath(activeEntry);
+      const shouldSwitch = snapshot?.running
+        && activeEntry
+        && activeEntry !== snapshot?.entry
+        && !(snapshot?.kind === "dev-server" && activeCapability?.kind === "html");
+      if (shouldSwitch) {
         await switchPreviewEntry(activeEntry);
         return;
       }
