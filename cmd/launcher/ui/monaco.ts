@@ -43,7 +43,7 @@
   const currentTheme = () => document.documentElement.dataset.resolvedTheme === "light" ? "vs" : "vs-dark";
 
   const installWorkerFactory = () => {
-    globalThis.MonacoEnvironment = {
+    (globalThis as any).MonacoEnvironment = {
       getWorker(_moduleId: any, label: any) {
         const file = label === "json"
           ? "/monaco-json-worker.js"
@@ -59,7 +59,7 @@
     };
   };
 
-  const loadStylesheet = () => new Promise((resolve, reject) => {
+  const loadStylesheet = () => new Promise<void>((resolve, reject) => {
     const existing = document.querySelector('link[data-tl-monaco="style"]');
     if (existing) return resolve();
     const link = document.createElement("link");
@@ -71,11 +71,11 @@
     document.head.appendChild(link);
   });
 
-  const loadModule = () => new Promise((resolve, reject) => {
-    if (globalThis.TLMonaco?.editor) return resolve(globalThis.TLMonaco);
+  const loadModule = () => new Promise<any>((resolve, reject) => {
+    if ((globalThis as any).TLMonaco?.editor) return resolve((globalThis as any).TLMonaco);
     const existing = document.querySelector('script[data-tl-monaco="module"]');
     if (existing) {
-      existing.addEventListener("load", () => resolve(globalThis.TLMonaco), { once: true });
+      existing.addEventListener("load", () => resolve((globalThis as any).TLMonaco), { once: true });
       existing.addEventListener("error", () => reject(new Error("Monaco module failed to load")), { once: true });
       return;
     }
@@ -84,8 +84,8 @@
     script.src = "/monaco-editor.js";
     script.dataset.tlMonaco = "module";
     script.addEventListener("load", () => {
-      if (!globalThis.TLMonaco?.editor) return reject(new Error("Monaco module loaded without editor API"));
-      resolve(globalThis.TLMonaco);
+      if (!(globalThis as any).TLMonaco?.editor) return reject(new Error("Monaco module loaded without editor API"));
+      resolve((globalThis as any).TLMonaco);
     }, { once: true });
     script.addEventListener("error", () => reject(new Error("Monaco module failed to load")), { once: true });
     document.head.appendChild(script);
@@ -280,9 +280,10 @@
     }
   };
 
-  window.addEventListener("tl-studio:editor-render", (event) => handleRender(event.detail));
+  window.addEventListener("tl-studio:editor-render", (event) => handleRender((event as CustomEvent<any>).detail));
   window.addEventListener("tl-studio:editor-tabs", (event) => {
-    const keep = new Set((event.detail?.paths || []).map(pathKey));
+    const detail = (event as CustomEvent<any>).detail;
+    const keep = new Set((detail?.paths || []).map(pathKey));
     for (const [key, model] of state.models) {
       if (keep.has(key)) continue;
       if (state.editor?.getModel?.() === model) state.editor.setModel(null);
@@ -291,13 +292,14 @@
     }
   });
   window.addEventListener("tl-studio:editor-reveal", async (event) => {
-    state.pendingReveal = event.detail;
-    if (revealInEditor(event.detail)) state.pendingReveal = null;
-    else if (event.detail?.path) {
+    const detail = (event as CustomEvent<any>).detail;
+    state.pendingReveal = detail;
+    if (revealInEditor(detail)) state.pendingReveal = null;
+    else if (detail?.path) {
       try {
         await ensureEditor();
         if (state.pendingRender) activateRender(state.pendingRender);
-        if (revealInEditor(event.detail)) state.pendingReveal = null;
+        if (revealInEditor(detail)) state.pendingReveal = null;
       } catch (_) {}
     }
   });
