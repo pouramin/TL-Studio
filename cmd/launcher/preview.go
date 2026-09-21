@@ -299,23 +299,21 @@ func (m *previewManager) snapshot(preferredEntry string) previewSnapshot {
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
 	project := m.state.projectPath()
-	if strings.TrimSpace(preferredEntry) == "" && m.project != "" && m.kind == "file" && m.entry != "" {
-		preferredEntry = m.entry
-	}
-	capability := detectPreviewCapability(project, preferredEntry)
 	if m.project == "" {
+		capability := detectPreviewCapability(project, preferredEntry)
 		return previewSnapshot{previewCapability: capability, Project: project}
 	}
+
 	if m.kind == "file" {
-		capability.Kind = "file"
-		capability.Entry = m.entry
+		capability := previewCapability{Available: true, Kind: "file", Entry: m.entry}
 		if current, ok := validPreviewEntry(project, m.entry); ok {
 			capability.EntryMeta = &current
 		}
-		if len(capability.Entries) == 0 {
-			capability.Entries = previewFileCandidates(project)
-		}
+		capability.Entries = previewFileCandidates(project)
+		return m.snapshotLocked(capability)
 	}
+
+	capability := previewCapability{Available: true, Kind: "dev-server", Command: m.command}
 	return m.snapshotLocked(capability)
 }
 
