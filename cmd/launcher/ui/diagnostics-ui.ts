@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   if (!K || K.__diagnosticsUiInstalled) return;
   K.__diagnosticsUiInstalled = true;
 
