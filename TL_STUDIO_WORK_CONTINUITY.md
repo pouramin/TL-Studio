@@ -11,7 +11,7 @@ This file is a durable operating instruction for future TL Studio development se
 
 ## Branch and release discipline
 
-- `main` is stable production only and remains on the stable `v0.2.1` line.
+- `main` is stable production only and is promoted to the stable `v0.3.0` line after Phase 2 validation.
 - `dev` is the next private alpha line.
 - Feature/fix branches start from `dev`.
 - Experimental work must not be merged into `main`.
@@ -20,9 +20,9 @@ This file is a durable operating instruction for future TL Studio development se
 
 ## Current development state
 
-Current private preview version:
+Current stable baseline after Phase 2 promotion:
 
-`0.3.0-alpha.23`
+`0.3.0`
 
 Phase 2 native execution milestone was squash-merged through PR:
 
@@ -32,7 +32,7 @@ Phase 2 merge commit:
 
 `1c3fcd05280e3e80d03a1b949f81ae627820b6fd`
 
-The final Preview Build status and final post-checkpoint `dev` head must be re-read from GitHub when resuming because this continuity update itself creates a later documentation commit.
+Phase 2 was promoted only after the final Preview Build passed and the Windows preview was hands-on validated. Re-read current `main`, `dev`, Release, and CI state from GitHub when resuming.
 
 ## Phase 2 ownership — complete
 
@@ -159,7 +159,7 @@ user request
 
 Additional tests cover provider translation/normalization, path traversal rejection, unknown tools, native permission behavior, terminal cancellation, and prevention of Kilo-private protocol leakage into native runtime files.
 
-## CI status at Phase 2 merge
+## CI and validation status at Phase 2 promotion
 
 Before PR #90 was squash-merged, the final `0.3.0-alpha.23` head passed:
 
