@@ -1,73 +1,89 @@
 ---
 title: Contributing
-description: Contribute while preserving TL Studio's product, local-security, and runtime-abstraction boundaries.
+description: Contribute while preserving TL Studio v0.3 ownership, local security, and compatibility boundaries.
 icon: GitPullRequest
 ---
 
-TL Studio application code and the public documentation site use separate build paths.
+## Product source
 
-## Product development
+The Go launcher and TL Studio-owned local capabilities live under:
 
-The Go launcher and TL Studio-owned local APIs live under `cmd/launcher/`.
+```text
+cmd/launcher/
+```
 
-Browser application **source** lives in TypeScript under:
+Browser source is strict TypeScript under:
 
 ```text
 cmd/launcher/ui/
 ```
 
-Compiled browser JavaScript is emitted under:
+Generated Browser output lives under:
 
 ```text
 cmd/launcher/web/
 ```
 
-Do not treat generated `web/*.js` as the primary source when changing product behavior.
+Do not edit generated JavaScript as the primary source.
 
-Before proposing browser changes:
+## Browser architecture
+
+The Browser no longer depends on a global `window.KLU` kernel.
+
+- `kernel.ts` exports the shared typed kernel;
+- feature modules use real ES imports;
+- `browser.ts` defines the module graph;
+- esbuild emits the primary `browser.js` bundle;
+- TypeScript is checked with `strict: true`.
+
+## Before proposing changes
 
 ```bash
-npm install
+npm install --ignore-scripts --no-audit --no-fund
 npm run check:web
 npm run build:web
 go test ./...
+go vet ./...
 ```
 
-## Architecture rules
+Run the relevant contract/regression scripts when changing runtime, Provider, Session, Permission, Tool, or release behavior.
 
-- Project filesystem/Search/process/Preview capabilities belong behind TL Studio's `/local/*` APIs.
-- Agent execution concepts belong behind the TL Studio-owned `/runtime/*` contract.
-- Browser feature modules must not construct implementation-specific engine routes.
-- Provider/Model product definitions belong to TL Studio's registry, not to browser-local vendor config.
-- New editor/runtime assets must remain bundled locally rather than loaded from a CDN.
-- Preview project code must stay on a separate local origin from TL Studio's control API.
+## Stable architecture rules
 
-## Internal engineering docs
+- Project filesystem/Search/process/Preview stay behind TL Studio-owned local APIs.
+- Provider/Model definitions and credentials belong to TL Studio-owned state.
+- Native core Tool execution must reuse Project-boundary, process, Search, and Permission infrastructure rather than duplicating it.
+- Tool Registry metadata is descriptive; it must not bypass execution enforcement.
+- Browser Session/Question/Permission/Event features must use TL Studio semantic contracts.
+- Engine-specific routes, auth details, headers, and protocol quirks stay behind compatibility adapters.
+- Monaco remains a replaceable Editor engine, not a filesystem authority.
+- Preview Project code stays on a separate local origin from the privileged control API.
+- No new Editor/runtime assets should be loaded from a CDN.
 
-Engineering notes live under `docs/` in the main repository.
+## Native Agent changes
 
-## Public documentation
+When changing the native path, preserve:
 
-The Fumadocs site lives under `website/`.
-
-```bash
-cd website
-npm install
-npm run typecheck
-npm run build
-```
-
-Keep user-facing language centered on **TL Studio**. Name the bundled engine only in the maintainer compatibility reference or where legal attribution genuinely requires it.
-
+- supported Provider protocol normalization;
+- strict Tool IDs and input schemas;
+- unknown Tool rejection;
+- Project confinement and symlink protections;
+- Permission enforcement;
+- cancellation/timeouts;
+- Agent/Tool loop guards;
+- semantic Session persistence and live events;
+- no API secrets in Session history.
 
 ## Current dev line
 
-The current private development line is **v0.3.0-alpha.7**.
+The private next line is `v0.4.0-alpha.1`.
 
-Three boundaries are especially important when contributing on `dev`:
+Phase 3 implementation has not started. Do not document Phase 3 goals as shipped behavior.
 
-- Monaco is a locally bundled, lazy-loaded editor engine. Do not move file ownership, save/conflict logic, or project-path authority into Monaco.
-- Tool identity/presentation semantics belong to TL Studio in `cmd/launcher/tool_registry.go` and are exposed through `GET /local/tools`. Do not make the registry execute tools or override runtime enforcement.
-- Remembered permission policy belongs to TL Studio in `cmd/launcher/permission_engine.go`. Keep sensitive requests interactive and keep the browser on `/local/permissions*` rather than raw engine permission routes.
+Preview alphas remain GitHub Actions artifacts only; stable npm/GitHub Releases change only after deliberate promotion.
 
-Preview builds from `dev` are GitHub Actions artifacts only. Do not add npm alpha publishing or public GitHub prereleases unless the release model is deliberately changed.
+## Public documentation
+
+The Fumadocs site lives under `website/` and is bilingual.
+
+Keep user-facing language centered on **TL Studio**. Name the bundled compatibility implementation only where maintainer compatibility or legal attribution actually requires it.

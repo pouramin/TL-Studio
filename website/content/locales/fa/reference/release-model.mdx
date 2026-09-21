@@ -1,34 +1,57 @@
 ---
-title: Release و Bundled Engine
-description: مدل Stable/Prerelease و Packaging نسخه Portable در TL Studio.
+title: Release
+description: مدل Stable Release، npm Distribution، Development Build خصوصی و Packaging در TL Studio.
 icon: PackageCheck
 ---
 
-**v0.2.1 نسخه Stable فعلی TL Studio است.**
+نسخه Stable فعلی:
 
-## Stable و Development Line
+```text
+v0.3.0
+```
 
-- `main` خط Stable Production است؛
-- `dev` خط Development نسخه بعدی است؛
-کاربر Stable می‌تواند از npm Launcher استفاده کند:
+## خط Stable
+
+Branch `main` فقط برای Production Stable است.
+
+اجرای Stable:
 
 ```bash
 npx --yes tl-studio
 ```
 
-npm فقط خط Stable را دنبال می‌کند.
+پکیج npm یک Launcher سبک Pin‌شده به GitHub Release پایدار متناظر است. Platform/Architecture را تشخیص می‌دهد، Archive رسمی را دانلود می‌کند، SHA-256 را Verify می‌کند، Local Cache می‌سازد و TL Studio را اجرا می‌کند.
 
-نسخه Development فعلی **v0.3.0-alpha.7** روی `dev` است. Alphaها عمداً روی npm Publish نمی‌شوند و GitHub Prerelease عمومی هم ندارند. فقط به‌صورت **Preview Build** داخل GitHub Actions برای تست پروژه ساخته می‌شوند. Workflow فعلی Preview نسخه Windows x64 می‌سازد و Artifact را 14 روز نگه می‌دارد.
+Publish روی npm فقط از `main` پایدار انجام می‌شود و مسیر `latest` را دنبال می‌کند.
 
 ## Portable Release
 
-Archiveهای Portable شامل این‌ها هستند:
+Build پایدار برای این Platformها منتشر می‌شود:
 
-- فایل اجرایی TL Studio؛
-- Agent Engine سازگار همراه برنامه؛
-- Licenseهای TL Studio؛
-- Third-party Notice/Licenseهای لازم.
+- Windows x64؛
+- Linux x64؛
+- Linux ARM64؛
+- macOS Intel x64؛
+- macOS Apple Silicon ARM64.
 
-User لازم نیست Agent Engine را جدا نصب یا مدیریت کند.
+Archive شامل فایل اجرایی TL Studio، Compatibility Engine تست‌شده، Assetهای Local Monaco، Licenseهای TL Studio و Third-party Notice/Licenseهای لازم است.
 
-Stable Promotion فقط بعد از Checkهای خودکار و Validation دستی Release Candidate انجام می‌شود و Development آزمایشی بدون تغییر خط Stable ادامه پیدا می‌کند.
+## خط Development فعلی
+
+Branch خصوصی نسخه بعدی:
+
+```text
+dev → v0.4.0-alpha.1
+```
+
+فاز 3 هنوز شروع نشده است. بعد از Promotion موفق فاز 2، Branch از Baseline پایدار v0.3.0 برای نسخه بعدی دوباره باز شده است.
+
+Alphaهای Development روی npm Publish نمی‌شوند و GitHub Prerelease عمومی ندارند.
+
+وقتی Development فاز بعدی شروع شود، Workflow مربوط به **Preview Build** همچنان مسیر Artifact خصوصی است. Workflow فعلی ZIP مربوط به Windows x64 می‌سازد و Artifact را 14 روز نگه می‌دارد.
+
+## Stable Promotion
+
+Release پایدار فقط بعد از Automated Gate و Validation دستی Promotion می‌شود.
+
+برای v0.3، Browser Build، Go Test/Vet، Runtime Boundary، Cross-compile Platformهای پشتیبانی‌شده، Compatibility Contract، Prompt/Write واقعی، Custom Provider Contract، npm Package و Validation واقعی Windows بررسی شدند.

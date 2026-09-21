@@ -1,31 +1,64 @@
 ---
 title: Runtime Integration
-description: مرجع Maintainer برای Replaceable Agent-engine Compatibility Boundary در TL Studio.
+description: مرجع Maintainer برای Native Execution در TL Studio v0.3 و Compatibility Engine Boundary باقی‌مانده.
 icon: Cable
 ---
 
-TL Studio جزئیات Implementation-specific مربوط به Engine را پشت Local Adapter نگه می‌دارد. Implementation همراه فعلی **Kilo Code 7.6.2** است. User معمولی لازم نیست آن Engine را جدا نصب، Configure یا مدیریت کند.
+نسخه Stable فعلی **Kilo Code 7.6.2** را به‌عنوان Compatibility Engine شخص ثالث و تست‌شده Bundle می‌کند. این Engine هویت عمومی محصول نیست و برای Custom Providerهای پشتیبانی‌شده دیگر مالک اجباری Agent Loop یا Core Coding Tool Execution نیست.
 
-## Public Local Contract
+## دو Execution Path
 
-Browser Moduleها از Routeهای متعلق به TL Studio استفاده می‌کنند:
+در Stable v0.3 مدل اجرا Hybrid است.
 
-- `/local/*` برای Project Files، Search، Process/Terminal و Preview؛
-- `/runtime/*` برای Agent/Session Execution و Conceptهای Runtime-facing محصول.
+### Native Path
 
-Launcher Prefix مربوط به Runtime را Translate می‌کند، Local Authentication را تزریق می‌کند و Project Context فعال را می‌فرستد. Browser Password مربوط به Engine را نمی‌بیند.
+Custom Provider/Model پشتیبانی‌شده می‌تواند از این مسیر اجرا شود:
 
-## Browser Adapter
+```text
+TL Studio Session Command
+→ Native Agent Runtime
+→ Direct Model Client
+→ TL Studio Tool Executor
+→ Semantic Persistence / Events
+```
 
-Runtime Callها در `cmd/launcher/ui/runtime-api.ts` و Build خروجی Browser متمرکز شده‌اند. UI Moduleهای دیگر نباید Implementation-specific Route بسازند.
+در این مسیر، Compatibility Engine برای Agent Loop یا Core Tool Execution Native استفاده نمی‌شود.
 
-CI این Boundary را بررسی می‌کند تا Product-facing JavaScript دوباره به Endpoint Name یا Account Wording مخصوص Vendor وابسته نشود.
+### Compatibility Path
 
-## Provider/Model Boundary
+Hosted Authentication/Model، Legacy Provider Resolve‌نشده و Runtime-only Capability از Compatibility Adapter عبور می‌کنند.
 
-تعریف Provider و Model حالا متعلق به TL Studio است و در Local Registry خود TL Studio ذخیره می‌شود. Launcher آن‌ها را برای Config موردنیاز Engine فعلی ترجمه می‌کند.
+## Runtime Engine Boundary
 
-Credential، Agent/Session Execution، Tool، Permission، Question و Model Inference در v0.2 هنوز به Engine همراه برنامه وابسته‌اند.
+Launcher یک Boundary عمومی به نام `runtimeEngine` دارد.
+
+این مسئولیت‌های Implementation-specific داخل Compatibility Adapter باقی می‌مانند:
+
+- Binary Discovery؛
+- Child-process Startup؛
+- Private Credential؛
+- Project Request Scoping؛
+- Private Request Decoration؛
+- Session/Question Compatibility Translation؛
+- Runtime Event Projection.
+
+کد عمومی Product نباید Route Name خصوصی یا Protocol Quirk مخصوص Engine را وارد لایه Browser/Product کند.
+
+## Contractهای Browser
+
+Browser برای Session، Question، Permission، Tool، Event، File، Search، Process و Preview از Contractهای Semantic/Local خود TL Studio استفاده می‌کند.
+
+Routeهای `/runtime/*` فقط برای Capability عمومی Compatibility که هنوز لازم است باقی می‌مانند.
+
+Browser هیچ‌وقت Backend Password مربوط به Compatibility Engine را دریافت نمی‌کند.
+
+## Provider Synchronization
+
+Provider Definition و Credential متعلق به TL Studio هستند.
+
+در Native Execution، Direct Model Client از داده خود TL Studio استفاده می‌کند.
+
+در Compatibility Execution، Launcher فقط هنگام نیاز Provider Definition را Translate و Credential را برای Engine فعال Sync می‌کند.
 
 ## Advanced Override
 
@@ -35,18 +68,19 @@ Maintainer می‌تواند Runtime Binary سازگار را مشخص کند:
 tl-studio --runtime-bin /path/to/runtime
 ```
 
-## Upgrade Rule
+User معمولی Release به این Option نیاز ندارد، چون Compatibility Engine تست‌شده داخل Package قرار دارد.
 
-قبل از تغییر Engine همراه برنامه، Compatibility Check باید Project Routing، Agent/Provider/Session Shape، Message، Permission/Question، Event، Provider Configuration و یک File-write Tool Flow واقعی را پوشش دهد.
+## Compatibility Testing
 
+قبل از تغییر Engine همراه یا Adapter باید Regression Coverage این موارد را بررسی کند:
 
-## Development Preview Ownership
+- Project Routing؛
+- Hosted Auth/Model؛
+- Session Compatibility؛
+- Permission و Question؛
+- Semantic Live-event Projection؛
+- Provider Configuration/Credential؛
+- Compatibility Tool Execution؛
+- Prompt و Write واقعی روی File.
 
-در Stable v0.2.1، Provider/Model Definition متعلق به TL Studio است اما Permission Persistence هنوز Runtime-backed است.
-
-در Preview خصوصی **v0.3.0-alpha.7** دو Boundary دیگر به TL Studio منتقل شده‌اند:
-
-- Route `GET /local/tools`، Tool Registry خود TL Studio را ارائه می‌دهد. Runtime Tool IDها به Semantic ID، Label، Category، Capability Flag، Permission Class و Presentation Hint متعلق به TL Studio Translate می‌شوند. Registry فقط توصیفی است؛ Tool Execution واقعی و Enforcement نهایی همچنان در Engine است.
-- Browser دیگر Permissionها را از Raw Runtime Route لیست یا Reply نمی‌کند. TL Studio Routeهای `/local/permissions*` را ارائه می‌دهد، Remembered Ruleهای Project-scoped را خودش ذخیره می‌کند و Decision صریح یا Remembered را برای Engine همراه برنامه Translate می‌کند.
-
-Session Execution، Tool Execution واقعی، Question Handling، Provider Credential و Model Inference هنوز در Engine باقی می‌مانند. این یک قدم دیگر به سمت Replaceability است، نه ادعای حذف کامل Execution Dependency.
+Testهای Native Agent جداگانه ثابت می‌کنند که Coding با Custom Provider پشتیبانی‌شده می‌تواند از Direct Model + Tool Executor خود TL Studio کامل شود.

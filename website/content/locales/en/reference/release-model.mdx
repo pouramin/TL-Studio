@@ -1,34 +1,51 @@
 ---
-title: Releases and bundled engine
-description: Understand TL Studio stable/prerelease channels and portable release packaging.
+title: Releases
+description: Understand TL Studio stable releases, npm distribution, private development builds, and bundled compatibility packaging.
 icon: PackageCheck
 ---
 
-**v0.2.1 is the current stable TL Studio release.**
+**v0.3.0 is the current stable TL Studio release.**
 
-## Stable and development lines
+## Stable line
 
-- `main` is the stable production line.
-- `dev` is the active next-version development line.
-Stable users can use the npm launcher:
+`main` is production-only. Stable users can launch with:
 
 ```bash
 npx --yes tl-studio
 ```
 
-The npm launcher tracks only the stable release line.
+The npm package is a lightweight launcher pinned to the matching stable GitHub Release. It detects platform/architecture, downloads the official archive, verifies SHA-256, caches it locally, and starts TL Studio.
 
-The current development version is **v0.3.0-alpha.7** on `dev`. Alpha builds are intentionally **not** published to npm and **not** published as public GitHub prereleases. They are produced only as GitHub Actions **Preview Build** artifacts for project testing. The current preview workflow builds Windows x64 artifacts and retains them for 14 days.
+Stable npm publishing happens from stable `main` only and tracks the `latest` path.
 
 ## Portable releases
 
-Portable archives include:
+Stable portable builds are published for:
 
-- the TL Studio executable;
-- the compatible bundled Agent engine;
-- TL Studio license files;
-- required third-party notices/licenses.
+- Windows x64;
+- Linux x64;
+- Linux ARM64;
+- macOS Intel x64;
+- macOS Apple Silicon ARM64.
 
-Users do not need to install or manage the Agent engine separately.
+Archives contain the TL Studio executable, the tested bundled compatibility engine, local Monaco assets, TL Studio license files, and required third-party notices/licenses.
 
-Stable promotion happens only after automated checks and hands-on validation of the release candidate. Experimental development can continue without changing the stable release line.
+## Current development line
+
+The private next-version branch is:
+
+```text
+dev → v0.4.0-alpha.1
+```
+
+Phase 3 implementation has not started yet. The version/branch was reopened from the stable v0.3.0 baseline after successful Phase 2 promotion.
+
+Development alphas are not published to npm and are not public GitHub prereleases.
+
+When dev implementation resumes, the GitHub Actions **Preview Build** workflow remains the private artifact path. The current workflow produces a Windows x64 Preview ZIP and keeps artifacts for 14 days.
+
+## Stable promotion discipline
+
+Stable releases are promoted only after automated gates and hands-on validation.
+
+The v0.3 promotion included proof for the Browser build, Go tests/vet, runtime-boundary rules, supported platform cross-compiles, compatibility contracts, prompt/write-file execution, custom Provider contracts, npm package behavior, and real Windows validation.

@@ -1,73 +1,93 @@
 ---
 title: مشارکت در پروژه
-description: مشارکت با حفظ Product Boundary، Local Security و Runtime Abstraction در TL Studio.
+description: مشارکت با حفظ Ownership، Local Security و Compatibility Boundary در TL Studio v0.3.
 icon: GitPullRequest
 ---
 
-Application و Public Documentation در TL Studio Build Path جدا دارند.
+## Product Source
 
-## Product Development
+Go Launcher و Capabilityهای Local خود TL Studio زیر این مسیر هستند:
 
-Go Launcher و Local APIهای متعلق به TL Studio زیر `cmd/launcher/` هستند.
+```text
+cmd/launcher/
+```
 
-Source اصلی Browser Application به TypeScript در این مسیر قرار دارد:
+Browser Source با Strict TypeScript زیر این مسیر است:
 
 ```text
 cmd/launcher/ui/
 ```
 
-JavaScript کامپایل‌شده در این مسیر تولید می‌شود:
+Generated Browser Output زیر این مسیر قرار می‌گیرد:
 
 ```text
 cmd/launcher/web/
 ```
 
-برای تغییر Product Behavior، Generated Fileهای `web/*.js` را Source اصلی در نظر نگیرید.
+JavaScript تولیدشده را Source اصلی تغییر Product در نظر نگیرید.
 
-قبل از Browser Change:
+## Browser Architecture
+
+Browser دیگر به Global Kernel با نام `window.KLU` وابسته نیست.
+
+- فایل `kernel.ts` هسته تایپ‌شده مشترک را Export می‌کند؛
+- Feature Moduleها از ES Import واقعی استفاده می‌کنند؛
+- فایل `browser.ts` Module Graph را مشخص می‌کند؛
+- esbuild Bundle اصلی `browser.js` را می‌سازد؛
+- TypeScript با `strict: true` بررسی می‌شود.
+
+## قبل از تغییر
 
 ```bash
-npm install
+npm install --ignore-scripts --no-audit --no-fund
 npm run check:web
 npm run build:web
 go test ./...
+go vet ./...
 ```
 
-## Architecture Ruleها
+هنگام تغییر Runtime، Provider، Session، Permission، Tool یا Release، Contract/Regression Script مربوط را هم اجرا کنید.
 
-- Project Filesystem/Search/Process/Preview باید پشت APIهای `/local/*` خود TL Studio بمانند.
-- Agent Execution Conceptها باید پشت Runtime Contract متعلق به TL Studio با `/runtime/*` بمانند.
-- Browser Feature Module نباید Implementation-specific Route بسازد.
-- Provider/Model Definition متعلق به Registry خود TL Studio است، نه Vendor Config داخل Browser.
-- Editor/Runtime Asset جدید باید Local Bundle شود، نه CDN.
-- Preview Project Code باید روی Origin جدا از Control API خود TL Studio اجرا شود.
+## Ruleهای معماری Stable
 
-## Internal Engineering Docs
+- Project Filesystem/Search/Process/Preview باید پشت Local APIهای خود TL Studio بمانند.
+- Provider/Model Definition و Credential متعلق به State خود TL Studio هستند.
+- Core Tool Execution در Native Path باید از Project Boundary، Process، Search و Permission Infrastructure موجود استفاده کند و سیستم موازی نسازد.
+- Tool Registry فقط Metadata توصیفی است و نباید Enforcement را دور بزند.
+- Featureهای Browser مربوط به Session/Question/Permission/Event باید از Contractهای Semantic خود TL Studio استفاده کنند.
+- Route، Auth، Header و Protocol Quirk مخصوص Engine فقط داخل Compatibility Adapter بماند.
+- Monaco یک Editor Engine قابل تعویض است، نه Filesystem Authority.
+- Project Code در Preview باید روی Origin جدا از Control API دارای دسترسی Privileged بماند.
+- Asset مربوط به Editor/Runtime از CDN جدید Load نشود.
 
-Engineering Noteها زیر `docs/` در Repository اصلی هستند.
+## تغییر Native Agent
 
-## Public Documentation
+هنگام تغییر Native Path این موارد حفظ شوند:
 
-سایت Fumadocs زیر `website/` قرار دارد.
-
-```bash
-cd website
-npm install
-npm run typecheck
-npm run build
-```
-
-متن User-facing باید روی **TL Studio** متمرکز بماند. اسم Agent Engine همراه برنامه فقط در Maintainer Compatibility Reference یا جایی که Attribution قانونی واقعاً لازم است بیاید.
-
+- Provider Protocol Normalization؛
+- Tool ID و Input Schema دقیق؛
+- Reject کردن Tool ناشناخته؛
+- Project Confinement و Symlink Protection؛
+- Permission Enforcement؛
+- Cancellation/Timeout؛
+- Agent/Tool Loop Guard؛
+- Semantic Session Persistence و Live Event؛
+- عدم ذخیره API Secret در Session History.
 
 ## خط Development فعلی
 
-خط خصوصی Development فعلی **v0.3.0-alpha.7** است.
+خط خصوصی بعدی:
 
-هنگام کار روی `dev` سه Boundary مهم‌اند:
+```text
+v0.4.0-alpha.1
+```
 
-- Monaco فقط یک Editor Engine کاملاً Local و Lazy-loaded است. File Ownership، Save/Conflict Logic و Project Path Authority نباید به Monaco منتقل شوند.
-- Tool Identity/Presentation Semantics متعلق به TL Studio و در `cmd/launcher/tool_registry.go` است و از `GET /local/tools` ارائه می‌شود. Registry نباید Tool اجرا کند یا Runtime Enforcement را Override کند.
-- Remembered Permission Policy متعلق به TL Studio و در `cmd/launcher/permission_engine.go` است. Request حساس باید Interactive بماند و Browser باید از `/local/permissions*` استفاده کند، نه Raw Permission Route مربوط به Engine.
+پیاده‌سازی فاز 3 هنوز شروع نشده است. Goalهای فاز 3 را به‌عنوان Feature موجود مستند نکنید.
 
-Preview Buildهای `dev` فقط Artifactهای GitHub Actions هستند. Alpha روی npm یا GitHub Prerelease عمومی منتشر نشود مگر اینکه Release Model عمداً تغییر کند.
+Alphaهای Preview فقط Artifactهای GitHub Actions هستند و npm/GitHub Release پایدار فقط بعد از Promotion آگاهانه تغییر می‌کنند.
+
+## Public Documentation
+
+سایت Fumadocs زیر `website/` و دو‌زبانه است.
+
+متن User-facing باید روی **TL Studio** متمرکز بماند. اسم Implementation مربوط به Compatibility Engine فقط جایی بیاید که Maintainer Compatibility یا Attribution قانونی واقعاً لازم است.

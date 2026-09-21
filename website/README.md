@@ -1,33 +1,43 @@
 # TL Studio documentation site
 
-This directory contains the public documentation and product site for **TL Studio**. It is intentionally isolated from the Go application and from the internal engineering notes under `../docs/`.
+This directory contains the public documentation and product site for **TL Studio**. It is intentionally isolated from the Go application and from internal engineering notes under `../docs/`.
 
-The public site treats **TL Studio as the product identity**. The bundled Agent engine is an implementation dependency behind a TL Studio-owned runtime contract, not the center of user-facing documentation.
+The public site treats **TL Studio as the product identity**. Third-party execution/runtime implementation details stay behind TL Studio-owned contracts and should not dominate user-facing documentation.
 
 ## Documentation source of truth
 
-Public docs must be reconciled with the current stable repository before a release-oriented update.
+The repository is the final source of truth. Before release-oriented documentation changes, reconcile the public site with current `main`, current `dev`, `VERSION`, the root READMEs, and `docs/ARCHITECTURE.md`.
 
-For stable v0.2.1, the public site reflects TL Studio-owned capabilities including:
+Current documented lines:
 
-- writable Project Workspace and multi-tab Editor;
-- Project Search;
-- project-scoped Terminal/process management;
-- Live Preview;
-- Provider/Model registry;
-- Agent sessions, attachments, permissions, recovery, and Changes;
-- local filesystem, process, Preview, and runtime security boundaries.
+```text
+Stable: v0.3.0 on main
+Dev:    v0.4.0-alpha.1 on dev
+```
 
-Implementation-specific engine naming should remain isolated to the maintainer Runtime Integration reference unless legal attribution or compatibility debugging genuinely requires it.
+Phase 3 implementation has not started; do not invent v0.4 features.
 
-The public site is stable-first, but repository-wide reviews must also inspect `dev`. Development-only features must be labeled clearly and must not be presented as stable. The current private dev line is `v0.3.0-alpha.7`, with locally bundled Monaco, a TL Studio-owned Tool Registry, and TL Studio-owned remembered permission policy as its major product-boundary changes.
+## Stable v0.3 areas covered
+
+- Browser IDE and locally bundled Monaco;
+- Project files, Search, Terminal, and capability-driven Preview;
+- Provider/Model registry and TL Studio credential vault;
+- Tool Registry and native core Tool Executor;
+- Project-scoped Permission policy;
+- semantic Sessions, persistence, Questions, and live events;
+- native Agent execution for supported custom Providers;
+- compatibility fallback for hosted/legacy/runtime-only capabilities;
+- local network/filesystem/process/Preview security boundaries;
+- stable npm launcher and portable release model.
+
+Implementation-specific compatibility-engine naming should remain isolated to the maintainer Runtime Integration reference unless legal attribution genuinely requires it.
 
 ## Languages
 
 - English: `/` and `/docs/...`
 - فارسی: `/fa/` and `/fa/docs/...` with RTL layout
 
-The language switcher is part of the top navigation beside the appearance controls. Persian copy uses Vazirmatn and keeps established technical terms in English where that reads more naturally.
+The language switcher is part of the top navigation beside the appearance and social controls. Persian uses Vazirmatn and keeps established technical terms in English where that reads more naturally.
 
 ## Stack
 

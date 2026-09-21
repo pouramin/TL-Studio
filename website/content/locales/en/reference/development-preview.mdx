@@ -1,71 +1,56 @@
 ---
-title: Development preview
-description: What is currently on dev, how it differs from stable, and how private Preview Builds are distributed.
+title: Development line
+description: Current dev status after stable v0.3.0 and the next Phase 3 boundary.
 icon: FlaskConical
 ---
 
-Stable users should use **v0.2.1**. The active development line is **v0.3.0-alpha.7** on `dev`.
+Stable production is **v0.3.0**.
 
-The development line is intentionally private: it is **not published to npm** and **not published as a public GitHub prerelease**. GitHub Actions produces short-lived **Preview Build** artifacts for project testing.
-
-## What is new in v0.3 preview
-
-### Locally bundled Monaco Editor
-
-The development workspace uses **Monaco Editor 0.56.0** as the enhanced editor engine.
-
-- bundled with TL Studio; no editor CDN;
-- lazy-loaded when the editor is first needed;
-- same-origin local workers;
-- multi-file models, native find/replace, and multi-cursor workflows;
-- theme follows TL Studio;
-- the original lightweight textarea editor remains the fallback.
-
-Monaco does **not** own filesystem semantics. TL Studio still owns Project paths, file buffers, saves, SHA-256 conflict checks, external-change reconciliation, and Agent handoff.
-
-### TL Studio Tool Registry
-
-The preview adds a versioned Tool Registry exposed by TL Studio at:
+The private development branch has been reopened as:
 
 ```text
-GET /local/tools
+v0.4.0-alpha.1
 ```
 
-Known runtime tool IDs are mapped to TL Studio-owned semantic descriptors: stable ID, product-facing name/description, category, permission class, read/write/execute/network capability flags, and a presentation hint. Activity cards resolve these descriptors instead of treating the runtime's raw tool ID as product metadata.
+## Current status
 
-The registry is descriptive only. It does not execute tools or grant permissions. Unknown tools fall back to a conservative `runtime.unknown` descriptor with no invented capabilities, while the original runtime ID remains available for diagnostics. Runtime enforcement stays authoritative.
+**Phase 3 implementation has not started yet.**
 
-### TL Studio permission policy engine
+The branch currently marks the next private alpha line after Phase 2 was validated and promoted to v0.3.0. There is no v0.4-only feature set to document as implemented today.
 
-Remembered permission persistence moves into TL Studio.
+## What Phase 2 completed
 
-The launcher owns:
+The stable v0.3 baseline now owns:
 
-```text
-GET    /local/permissions
-POST   /local/permissions/{requestID}/reply
-GET    /local/permissions/rules
-DELETE /local/permissions/rules/{ruleID}
-```
+- Browser IDE and local Workspace;
+- Monaco Editor;
+- file management, Project Search, Terminal, and Preview;
+- Provider/Model registry and credential vault;
+- Tool Registry and native core Tool Executor;
+- Project-scoped Permission policy;
+- semantic Session reads, commands, persistence, and execution ownership;
+- semantic Questions and live events;
+- direct model execution for supported custom Providers;
+- the native model/tool/model Agent loop;
+- cancellation and loop guards.
 
-Remembered allow rules are saved locally in `permissions.json` and scoped to the selected Project.
+## Remaining compatibility dependency
 
-TL Studio only remembers exact reusable matcher tokens supplied by the runtime. Every matcher on a future request must be covered before it can be auto-approved. Sensitive `skillShell` and `sandboxEscalation` requests are never remembered or auto-approved, and requests marked `disableAlways` remain interactive.
+A bundled third-party engine is still required for hosted authentication/models, unresolved legacy Provider configurations, runtime-only capabilities, and compatibility behavior covered by existing regression tests.
 
-The bundled Agent engine still generates permission requests at the Tool boundary and enforces the final decision. TL Studio owns the persistence and decision policy.
+It is **not** accurate to claim that the compatibility engine is fully removable yet.
+
+## Phase 3 direction
+
+The next architecture phase is to decide which remaining compatibility-only capabilities should become TL Studio-native and whether/when launcher startup can make the third-party engine optional instead of always bundled/started.
+
+Those are next-phase goals, not implemented features.
 
 ## Preview distribution
 
-The `dev` branch uses the **Preview Build** GitHub Actions workflow. The current workflow produces a Windows x64 ZIP and keeps the artifact for 14 days.
+Development work stays private:
 
-These artifacts are for testing the development branch. They do not replace:
-
-```bash
-npx --yes tl-studio
-```
-
-which continues to track the stable line.
-
-## What is still runtime-backed
-
-Even in the v0.3 preview, the bundled Agent engine still owns Session execution, Tool execution, Question handling, Provider credential persistence, and Model inference. The architecture is becoming less coupled without claiming that the execution dependency is already gone.
+- no npm alpha publishing;
+- no public GitHub prerelease;
+- GitHub Actions Preview Build artifacts for testing;
+- stable `latest` and stable GitHub Releases remain unchanged until promotion.
