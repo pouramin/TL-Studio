@@ -8,26 +8,26 @@
   let projectUsageLoading = false;
   let projectUsageTimer = null;
 
-  const partsOf = (message) => Array.isArray(message?.activities)
+  const partsOf = (message: any) => Array.isArray(message?.activities)
     ? message.activities
     : Array.isArray(message?.parts) ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const messageRole = (message) => message?.role || message?.info?.role || message?.type || "";
-  const messageTime = (message) => message?.role
+  const messageRole = (message: any) => message?.role || message?.info?.role || message?.type || "";
+  const messageTime = (message: any) => message?.role
     ? { created: message.createdAt, completed: message.completedAt, updated: message.completedAt }
     : message?.info?.time || message?.time || {};
 
-  const exactUserText = (message) => {
+  const exactUserText = (message: any) => {
     if (typeof message?.text === "string") return message.text;
     return partsOf(message)
-      .filter((part) => part?.type === "text" && !part.ignored)
-      .map((part) => typeof part.text === "string" ? part.text : "")
-      .filter((text) => text.length > 0)
+      .filter((part: any) => part?.type === "text" && !part.ignored)
+      .map((part: any) => typeof part.text === "string" ? part.text : "")
+      .filter((text: any) => text.length > 0)
       .join("\n");
   };
 
-  const isResumeMessage = (message) => messageRole(message) === "user"
+  const isResumeMessage = (message: any) => messageRole(message) === "user"
     && exactUserText(message).trim() === RESUME_PROMPT;
 
   const hideResumeMessages = () => {
@@ -76,7 +76,7 @@
     }
   };
 
-  const fallbackCopy = (text) => {
+  const fallbackCopy = (text: any) => {
     const area = document.createElement("textarea");
     area.value = text;
     area.setAttribute("readonly", "");
@@ -90,7 +90,7 @@
     if (!ok) throw new Error("Copy command failed");
   };
 
-  const copyText = async (text, button) => {
+  const copyText = async (text: any, button: any) => {
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
       else fallbackCopy(text);
@@ -141,7 +141,7 @@
 
   const emptyTokens = () => ({ input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 });
 
-  const tokenShape = (value) => {
+  const tokenShape = (value: any) => {
     const tokens = value && typeof value === "object" ? value : {};
     const cache = tokens.cache && typeof tokens.cache === "object" ? tokens.cache : {};
     return {
@@ -153,7 +153,7 @@
     };
   };
 
-  const addTokens = (target, source) => {
+  const addTokens = (target: any, source: any) => {
     target.input += Number(source.input || 0);
     target.output += Number(source.output || 0);
     target.reasoning += Number(source.reasoning || 0);
@@ -162,9 +162,9 @@
     return target;
   };
 
-  const tokenTotal = (tokens) => tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead + tokens.cacheWrite;
+  const tokenTotal = (tokens: any) => tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead + tokens.cacheWrite;
 
-  const assistantTokens = (message) => {
+  const assistantTokens = (message: any) => {
     const direct = tokenShape(message?.usage || message?.info?.tokens || message?.tokens);
     if (tokenTotal(direct) > 0) return direct;
 
@@ -176,20 +176,20 @@
     return total;
   };
 
-  const partTimestamp = (part) => {
+  const partTimestamp = (part: any) => {
     if (part?.kind) return Number(part.endAt || part.startAt || 0);
     const time = part?.time || {};
     return Number(time.end || time.completed || time.start || 0);
   };
 
-  const endTimestamp = (message) => {
+  const endTimestamp = (message: any) => {
     const time = messageTime(message);
     let end = Number(time.completed || time.updated || time.created || 0);
     for (const part of partsOf(message)) end = Math.max(end, partTimestamp(part));
     return end;
   };
 
-  const activeWorkMs = (messages, { running = false } = {}) => {
+  const activeWorkMs = (messages: any, { running = false } = {}) => {
     let total = 0;
     for (let index = 0; index < messages.length; index++) {
       if (messageRole(messages[index]) !== "user") continue;
@@ -210,7 +210,7 @@
     return total;
   };
 
-  const usageForMessages = (messages, { running = false } = {}) => {
+  const usageForMessages = (messages: any, { running = false } = {}) => {
     const totals = emptyTokens();
     let requests = 0;
     for (const message of messages) {
@@ -226,14 +226,14 @@
     };
   };
 
-  const compactNumber = (value) => {
+  const compactNumber = (value: any) => {
     const number = Number(value || 0);
     if (number < 1000) return String(Math.round(number));
     if (number < 1_000_000) return `${(number / 1000).toFixed(number < 10_000 ? 1 : 0)}K`;
     return `${(number / 1_000_000).toFixed(number < 10_000_000 ? 1 : 0)}M`;
   };
 
-  const formatDuration = (milliseconds) => {
+  const formatDuration = (milliseconds: any) => {
     const seconds = Math.max(0, Math.round(Number(milliseconds || 0) / 1000));
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
@@ -243,7 +243,7 @@
     return `${hours}h ${minutes % 60}m`;
   };
 
-  const usageTitle = (breakdown) => `Input ${compactNumber(breakdown.input)} · Output ${compactNumber(breakdown.output)} · Reasoning ${compactNumber(breakdown.reasoning)} · Cache read ${compactNumber(breakdown.cacheRead)} · Cache write ${compactNumber(breakdown.cacheWrite)}`;
+  const usageTitle = (breakdown: any) => `Input ${compactNumber(breakdown.input)} · Output ${compactNumber(breakdown.output)} · Reasoning ${compactNumber(breakdown.reasoning)} · Cache read ${compactNumber(breakdown.cacheRead)} · Cache write ${compactNumber(breakdown.cacheWrite)}`;
 
   const turnGroups = () => {
     const turns = [];
@@ -265,7 +265,7 @@
     return turns;
   };
 
-  const turnUsageLine = (stats) => {
+  const turnUsageLine = (stats: any) => {
     const line = document.createElement("div");
     line.className = "turn-usage";
     line.title = usageTitle(stats.breakdown);
@@ -295,15 +295,15 @@
     });
   };
 
-  const routedModelSteps = (message) => partsOf(message)
-    .filter((part) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
-    .map((part) => ({
+  const routedModelSteps = (message: any) => partsOf(message)
+    .filter((part: any) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
+    .map((part: any) => ({
       providerID: String(part.model?.providerID || ""),
       modelID: String(part.model?.id || part.model?.modelID || ""),
       elapsed: Number(part?.elapsed || part?.time?.elapsed || 0),
     }));
 
-  const modelLabel = (model) => {
+  const modelLabel = (model: any) => {
     const modelID = String(model?.modelID || "").trim();
     const providerID = String(model?.providerID || "").trim();
     if (!modelID) return "";
@@ -311,7 +311,7 @@
     return `${providerID}/${modelID}`;
   };
 
-  const modelRouteSummary = (message) => {
+  const modelRouteSummary = (message: any) => {
     const steps = routedModelSteps(message);
     const groups = [];
     for (const step of steps) {
@@ -324,7 +324,7 @@
     return groups.map((item) => item.count > 1 ? `${item.label} ×${item.count}` : item.label).join(" → ");
   };
 
-  const attemptNumberAt = (targetIndex) => {
+  const attemptNumberAt = (targetIndex: any) => {
     let attempt = 1;
     let seenTurn = false;
     for (let index = 0; index <= targetIndex && index < K.state.messages.length; index++) {
@@ -341,7 +341,7 @@
     return attempt;
   };
 
-  const lastRecordedModelBefore = (targetIndex) => {
+  const lastRecordedModelBefore = (targetIndex: any) => {
     for (let index = Math.min(targetIndex, K.state.messages.length - 1); index >= 0; index--) {
       const steps = routedModelSteps(K.state.messages[index]);
       if (!steps.length) continue;
@@ -376,17 +376,17 @@
     });
   };
 
-  const sessionStamp = (session) => String(session?.updatedAt || session?.createdAt || session?.time?.updated || session?.time?.created || "");
+  const sessionStamp = (session: any) => String(session?.updatedAt || session?.createdAt || session?.time?.updated || session?.time?.created || "");
 
-  const normalizePath = (value) => {
+  const normalizePath = (value: any) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
     if (K.state.local?.platform === "windows") path = path.toLowerCase();
     return path;
   };
 
-  const samePath = (a, b) => normalizePath(a) === normalizePath(b);
-  const sessionDirectory = (session) => session?.directory || session?.path || "";
-  const usageCacheKey = (session) => `${normalizePath(sessionDirectory(session) || K.state.local?.project || "")}\n${session?.id || ""}`;
+  const samePath = (a: any, b: any) => normalizePath(a) === normalizePath(b);
+  const sessionDirectory = (session: any) => session?.directory || session?.path || "";
+  const usageCacheKey = (session: any) => `${normalizePath(sessionDirectory(session) || K.state.local?.project || "")}\n${session?.id || ""}`;
 
   const activeProjectSessions = () => {
     const sessions = Array.isArray(K.state.sessions) ? K.state.sessions : [];
@@ -400,7 +400,7 @@
     });
   };
 
-  const mergeUsage = (target, source) => {
+  const mergeUsage = (target: any, source: any) => {
     target.tokens += Number(source.tokens || 0);
     target.requests += Number(source.requests || 0);
     target.duration += Number(source.duration || 0);
@@ -501,7 +501,7 @@
     }, 120);
   };
 
-  const timeoutKind = (text) => {
+  const timeoutKind = (text: any) => {
     const value = String(text || "");
     if (/upstream idle timeout exceeded/i.test(value)) return "idle";
     if (/upstream provider timed out while sending the response/i.test(value)) return "provider";
