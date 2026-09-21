@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
 
   const safeJSON = (value: any) => {
     try { return JSON.stringify(value, null, 2); }
