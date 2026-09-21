@@ -1,9 +1,9 @@
 .preview-floating-window {
-  min-width: 420px;
+  min-width: 340px;
   min-height: 300px;
   max-width: calc(100vw - 16px);
   max-height: calc(100vh - 16px);
-  resize: both;
+  resize: none;
   overflow: hidden;
   z-index: 90;
   box-shadow: 0 24px 70px rgba(0,0,0,.38);
@@ -16,3 +16,79 @@
 .preview-floating-window.preview-dragging .preview-head { cursor: grabbing; }
 .preview-floating-window .preview-actions { cursor: default; }
 .preview-floating-window .preview-frame { width: 100%; height: 100%; }
+
+
+.preview-resize-handle {
+  position: absolute;
+  z-index: 95;
+  touch-action: none;
+}
+
+.preview-resize-n,
+.preview-resize-s {
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  cursor: ns-resize;
+}
+.preview-resize-n { top: -4px; }
+.preview-resize-s { bottom: -4px; }
+
+.preview-resize-e,
+.preview-resize-w {
+  top: 12px;
+  bottom: 12px;
+  width: 8px;
+  cursor: ew-resize;
+}
+.preview-resize-e { right: -4px; }
+.preview-resize-w { left: -4px; }
+
+.preview-resize-ne,
+.preview-resize-nw,
+.preview-resize-se,
+.preview-resize-sw {
+  width: 14px;
+  height: 14px;
+}
+.preview-resize-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.preview-resize-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.preview-resize-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.preview-resize-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+
+.preview-resize-handle::after {
+  content: "";
+  position: absolute;
+  background: transparent;
+  border-radius: 2px;
+  transition: background .12s ease;
+}
+
+.preview-resize-w::after,
+.preview-resize-e::after {
+  top: 50%;
+  width: 2px;
+  height: 56px;
+  transform: translateY(-50%);
+}
+.preview-resize-w::after { left: 3px; }
+.preview-resize-e::after { right: 3px; }
+
+.preview-resize-n::after,
+.preview-resize-s::after {
+  left: 50%;
+  width: 56px;
+  height: 2px;
+  transform: translateX(-50%);
+}
+.preview-resize-n::after { top: 3px; }
+.preview-resize-s::after { bottom: 3px; }
+
+.preview-floating-window:hover .preview-resize-handle::after,
+.preview-floating-window.preview-resizing .preview-resize-handle::after {
+  background: var(--accent, #b8ff4a);
+}
+
+.preview-floating-window.preview-resizing {
+  user-select: none;
+}

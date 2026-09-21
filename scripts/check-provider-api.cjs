@@ -1,12 +1,10 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
+const { loadBrowserModule } = require("./browser-source-harness.cjs");
 
-const repoRoot = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "runtime-api.js"), "utf8");
+const source = loadBrowserModule("runtime-api.ts");
 const calls = [];
 const K = {
   state: { local: { project: "C:\\Projects\\demo" } },
@@ -38,7 +36,8 @@ const K = {
 };
 
 const context = vm.createContext({
-  window: { KLU: K },
+  K,
+  window: {},
   console,
   URLSearchParams,
   JSON,
@@ -46,7 +45,7 @@ const context = vm.createContext({
   encodeURIComponent,
   EventSource: class {},
 });
-vm.runInContext(source, context, { filename: "runtime-api.js" });
+vm.runInContext(source, context, { filename: "runtime-api.ts" });
 
 async function main() {
   assert.ok(K.api?.providers?.config);
@@ -98,7 +97,7 @@ async function main() {
     'providerID: "kilo"',
     "@ai-sdk/",
   ]) {
-    assert.equal(source.includes(forbidden), false, `runtime-api.js leaked implementation detail: ${forbidden}`);
+    assert.equal(source.includes(forbidden), false, `runtime-api.ts leaked implementation detail: ${forbidden}`);
   }
 
   console.log("provider API adapter regressions: ok");

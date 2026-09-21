@@ -10,7 +10,7 @@ Current engine:
 - pinned version: `v7.6.2`
 - pinned version file: `/KILO_VERSION`
 - browser runtime adapter source: `cmd/launcher/ui/runtime-api.ts`
-- generated browser adapter: `cmd/launcher/web/runtime-api.js`
+- bundled Browser output: `cmd/launcher/web/browser.js`
 - launcher provider/hosted translation: `cmd/launcher/runtime_providers.go`
 
 TL Studio owns the browser-facing runtime namespace, provider/model registry, workspace APIs, release packaging, and product identity. Kilo-specific routes, environment variables, authentication, and provider implementation details stay behind that boundary.
@@ -19,7 +19,7 @@ TL Studio owns the browser-facing runtime namespace, provider/model registry, wo
 
 The browser talks to TL Studio through:
 
-- `/local/*` for TL Studio-owned workspace/files/search/process/preview capabilities;
+- `/local/*` for TL Studio-owned workspace/files/search/process/preview/tool-registry/permission-policy capabilities;
 - `/runtime/*` for agent-runtime capabilities.
 
 The browser must not construct Kilo-specific route prefixes or depend on Kilo-specific authentication details.
@@ -53,33 +53,79 @@ The current engine's product layer exposes the visible `code` agent rather than 
 
 ### Sessions and messages
 
-- `GET /runtime/session?directory=...`
-- `POST /runtime/session?directory=...`
-- `GET /runtime/session/status?directory=...`
-- `GET /runtime/session/:sessionID?directory=...`
-- `GET /runtime/session/:sessionID/message?directory=...`
-- `POST /runtime/session/:sessionID/prompt_async?directory=...`
-- `POST /runtime/session/:sessionID/abort?directory=...`
-- `GET /runtime/session/:sessionID/diff?directory=...`
+The current engine implementation still provides these private session routes behind the launcher adapter:
 
-The pinned engine returns product messages in its current `info + parts` envelope. The browser adapter normalizes and presents that data through TL Studio UI concepts.
+- `GET /session?directory=...`
+- `POST /session?directory=...`
+- `GET /session/status?directory=...`
+- `GET /session/:sessionID?directory=...`
+- `PATCH /session/:sessionID?directory=...`
+- `DELETE /session/:sessionID?directory=...`
+- `GET /session/:sessionID/message?directory=...`
+- `POST /session/:sessionID/prompt_async?directory=...`
+- `POST /session/:sessionID/abort?directory=...`
+- `GET /session/:sessionID/diff?directory=...`
+
+The Browser no longer uses the mutation/execution routes above directly. TL Studio's launcher-owned session command contract exposes create, update, delete, run, and abort through `/local/sessions*`, while `runtime_kilo_sessions.go` owns translation to these Kilo-specific routes.
+
+The pinned engine returns product messages in its current `info + parts` envelope. That envelope is implementation-only for current sessions: the launcher projects it into TL Studio's `/local/sessions*` semantic read contract before the browser consumes it.
+
+### TL Studio session read projection
+
+Normal Browser reads no longer consume the engine's session/message shapes directly. The launcher maps the implementation routes above into:
+
+- `GET /local/sessions`
+- `GET /local/sessions/status`
+- `GET /local/sessions/{sessionID}`
+- `GET /local/sessions/{sessionID}/messages`
+- `GET /local/sessions/{sessionID}/changes`
+
+The projection owns cross-project aggregation, flat session timestamps, semantic message roles/text, activity classification, usage, normalized status, and Changes fallback. Runtime-specific `info`, `parts`, `busy`, and `retry` shapes therefore stay on this compatibility side of the boundary.
+
+TL Studio owns the Browser-facing mutation/run/abort semantics and persists its own semantic session snapshots. For supported custom-provider runs, TL Studio now executes the model/tool/model loop and core coding tools directly; persisted native semantic state is authoritative for those runs. Kilo still maintains execution-side state for the compatibility path, including hosted Kilo models/authentication and capabilities that have not moved into the native executor. Launcher reads continue to project compatibility sessions without exposing Kilo's raw envelope.
 
 ### Events
 
+Implementation compatibility still consumes:
+
 - `GET /runtime/global/event?directory=...` (SSE)
 
-TL Studio uses events for responsive updates and projected runtime state, while persisted/current session messages remain the reconnect-safe rendering source of truth.
+The Browser no longer consumes this engine-specific stream directly. The launcher projects it to:
+
+- `GET /local/events` (SSE)
+
+Current runtime event names and nested `properties` envelopes are therefore implementation details. TL Studio maps relevant runtime events into `stream.ready`, `session.changed`, `message.changed`, `attention.changed`, and `workspace.changed`. Persisted/current semantic session reads remain the reconnect-safe rendering source of truth.
 
 ### Permissions
+
+The current engine still exposes and enforces:
 
 - `GET /runtime/permission?directory=...`
 - `POST /runtime/permission/:requestID/reply?directory=...`
 
+Those routes are now an implementation compatibility surface. Normal browser permission UI uses TL Studio's launcher-owned `/local/permissions*` contract. The launcher reads current engine requests, applies TL Studio's project-scoped policy, and translates explicit or remembered decisions back to the engine as one-time replies.
+
+### Tool Registry
+
+Tool identity and product-facing metadata are no longer inferred directly in the browser. The launcher exposes `GET /local/tools`, which maps known Kilo 7.6.2 runtime IDs such as `read`, `write`, `edit`, `apply_patch`, `bash`, `webfetch`, and `websearch` to TL Studio semantic descriptors.
+
+For the TL Studio native path, the registry now feeds executable TL Studio tool definitions and the native dispatcher. Core file/search/terminal tools execute without Kilo's Agent tool executor. On the Kilo compatibility path, runtime tool parts are still normalized through this registry for presentation. Unknown native tool IDs are rejected rather than silently executed.
+
 ### Questions
 
-- `GET /runtime/question?directory=...`
-- `POST /runtime/question/:requestID/reply?directory=...`
-- `POST /runtime/question/:requestID/reject?directory=...`
+The current engine implementation still provides these private compatibility routes:
+
+- `GET /question?directory=...`
+- `POST /question/:requestID/reply?directory=...`
+- `POST /question/:requestID/reject?directory=...`
+
+Normal Browser code no longer calls those routes through `/runtime/*`. TL Studio exposes semantic question operations through:
+
+- `GET /local/questions?sessionID=...`
+- `POST /local/questions/:requestID/reply`
+- `POST /local/questions/:requestID/reject`
+
+The Kilo-specific route mapping is isolated in `runtime_kilo_questions.go`.
 
 ## Provider and model ownership
 
@@ -104,7 +150,7 @@ The browser uses TL Studio semantic routes:
 
 The launcher translates those definitions to the currently bundled engine internally. Current engine package identifiers such as `@ai-sdk/*`, overlay config shapes, and auth routes are not part of the browser contract.
 
-Credentials are intentionally excluded from `providers.json` and browser storage. Credential ownership is still delegated to the current engine's local credential store and can move later as a separate security milestone.
+Credentials remain intentionally excluded from `providers.json` and browser storage. Custom-provider API keys are now owned by TL Studio's credential vault and synchronized into Kilo's auth store only as an execution copy. Kilo's existing pre-migration secrets are not reverse-readable, so a legacy provider keeps working through the runtime store until the user saves a credential through TL Studio. Hosted Kilo OAuth remains an engine-specific account integration behind the hosted-provider adapter rather than part of the custom-provider API-key vault.
 
 ## Hosted provider mapping
 
@@ -127,11 +173,11 @@ Authored browser runtime code lives in:
 
 `cmd/launcher/ui/runtime-api.ts`
 
-Generated browser JavaScript lives in:
+The Browser module graph is bundled into:
 
-`cmd/launcher/web/runtime-api.js`
+`cmd/launcher/web/browser.js`
 
-UI modules must use this TL Studio adapter and must not construct engine-specific routes directly.
+UI modules must use TL Studio-owned semantic contracts and must not construct engine-specific session mutation routes directly.
 
 The adapter owns browser-side runtime concerns such as:
 
@@ -140,8 +186,11 @@ The adapter owns browser-side runtime concerns such as:
 - response normalization
 - session/message access
 - model selection representation
-- permission/question access
-- live-event handling
+- semantic question access through launcher-owned `/local/questions*` routes
+
+Permission policy is intentionally not a browser-to-engine adapter concern anymore; it is owned by the launcher-side TL Studio permission engine.
+- tool presentation resolves through the launcher-owned `/local/tools` semantic registry rather than raw runtime labels
+- raw live-event compatibility and launcher-side semantic projection
 
 Engine-specific provider/config/auth translation belongs in the launcher, not in browser modules.
 
@@ -174,6 +223,7 @@ TL Studio launcher
 → product agent/session flow
 → local test provider
 → real write tool
+→ TL Studio /local/permissions policy boundary
 → edit permission
 → hello.txt inside the selected project
 → final assistant response
@@ -219,3 +269,17 @@ The current release bundle includes Kilo Code under its MIT license. Required at
 - `third_party/KILO_LICENSE.txt`
 
 Reducing product coupling does not remove or weaken required third-party attribution.
+
+
+## Native execution vs Kilo compatibility
+
+Kilo is no longer the mandatory owner of Agent orchestration or core tool execution for supported custom providers.
+
+The split is:
+
+- TL Studio native execution: custom providers using supported protocols, direct model requests, native Agent loop, native core coding tools, TL Studio permission enforcement, semantic persistence/events.
+- Kilo compatibility execution: hosted Kilo authentication/models and runtime-only capabilities that are not yet represented by TL Studio-native handlers.
+
+Kilo-private details such as `x-kilo-directory`, `prompt_async`, raw Kilo session envelopes, private auth routes, and Kilo question routes must remain in compatibility adapter files and must not enter the generic native Agent/model/tool implementation.
+
+The native proof test uses a deterministic fake model client that requests a real filesystem write, receives the TL Studio tool result on the next model turn, returns a final answer, and verifies semantic session persistence. Kilo does not execute the Agent loop or the tool in that test.

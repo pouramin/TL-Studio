@@ -164,6 +164,15 @@ def main() -> int:
         merged_ids = session_ids(original_sessions) | session_ids(alt_sessions)
         require(sid in merged_ids and alt_sid in merged_ids, "merged project histories did not contain both sessions")
 
+        semantic_sessions = request(base, "/local/sessions?limit=150")
+        require(isinstance(semantic_sessions, list), "TL Studio semantic session list must be an array")
+        semantic_ids = session_ids(semantic_sessions)
+        require(sid in semantic_ids and alt_sid in semantic_ids,
+                f"TL Studio semantic session aggregation missing project sessions: {semantic_ids!r}")
+        for semantic in semantic_sessions:
+            require("time" not in semantic and "createdAt" in semantic and "updatedAt" in semantic,
+                    f"semantic session leaked runtime time envelope: {semantic!r}")
+
         alt_record = next((s for s in alt_sessions if isinstance(s, dict) and s.get("id") == alt_sid), None)
         require(isinstance(alt_record, dict) and alt_record.get("directory") == alt_project,
                 f"session must expose its own directory: {alt_record!r}")
@@ -179,6 +188,14 @@ def main() -> int:
         require(isinstance(item, dict) and isinstance(item.get("info"), dict) and isinstance(item.get("parts"), list),
                 f"production message must be {{info, parts}}: {item!r}")
 
+    semantic_messages = request(base, f"/local/sessions/{sidq}/messages?limit=10")
+    require(isinstance(semantic_messages, list), "TL Studio semantic messages must be an array")
+    for item in semantic_messages:
+        require(isinstance(item, dict) and isinstance(item.get("role"), str), f"semantic message role missing: {item!r}")
+        require(isinstance(item.get("activities"), list) and isinstance(item.get("changes"), list),
+                f"semantic activity/change arrays missing: {item!r}")
+        require("info" not in item and "parts" not in item, f"runtime message envelope leaked into semantic contract: {item!r}")
+
     diffs = unwrap(request(base, f"/runtime/session/{sidq}/diff?{query}"))
     require(isinstance(diffs, list), "session.diff must be an array")
 
@@ -189,16 +206,41 @@ def main() -> int:
     require(isinstance(permissions, list), "permission list must be an array")
     questions = unwrap(request(base, f"/runtime/question?{query}"))
     require(isinstance(questions, list), "question list must be an array")
+    semantic_questions = request(base, f"/local/questions?{urllib.parse.urlencode({'sessionID': sid})}")
+    require(isinstance(semantic_questions, list), "TL Studio semantic question list must be an array")
 
     event = first_global_event(base, project)
     require(isinstance(event, dict), "global event must be an object")
     event_payload = event.get("payload", event)
     require(isinstance(event_payload, dict) and isinstance(event_payload.get("type"), str), f"global event payload mismatch: {event!r}")
 
+    # Simulate runtime-history loss independently of TL Studio. The semantic
+    # snapshot must remain readable and locally manageable.
     removed = unwrap(request(base, f"/runtime/session/{sidq}?{query}", method="DELETE"))
-    require(removed is True, f"session.delete mismatch: {removed!r}")
+    require(removed is True, f"runtime session.delete mismatch: {removed!r}")
     sessions_after = unwrap(request(base, f"/runtime/session?{directory_query(project, {'limit': 50, 'roots': 'true'})}"))
-    require(not any(isinstance(s, dict) and s.get("id") == sid for s in sessions_after), "deleted session still present")
+    require(not any(isinstance(s, dict) and s.get("id") == sid for s in sessions_after), "runtime session still present")
+
+    persisted = request(base, f"/local/sessions/{sidq}?{query}")
+    require(isinstance(persisted, dict) and persisted.get("id") == sid,
+            f"TL Studio did not preserve semantic session history after runtime deletion: {persisted!r}")
+
+    offline_title = "TL Studio persisted history"
+    offline_renamed = request(
+        base,
+        f"/local/sessions/{sidq}?{query}",
+        method="PATCH",
+        payload={"title": offline_title},
+    )
+    require(isinstance(offline_renamed, dict) and offline_renamed.get("title") == offline_title,
+            f"persisted-only session rename failed: {offline_renamed!r}")
+
+    local_removed = request(base, f"/local/sessions/{sidq}?{query}", method="DELETE")
+    require(isinstance(local_removed, dict) and local_removed.get("deleted") is True,
+            f"persisted-only semantic delete failed: {local_removed!r}")
+    semantic_after_delete = request(base, "/local/sessions?limit=150")
+    require(not any(isinstance(s, dict) and s.get("id") == sid for s in semantic_after_delete),
+            "deleted TL Studio session snapshot still present")
 
     if alt_sid:
         alt_query = directory_query(alt_project)
@@ -217,6 +259,10 @@ def main() -> int:
         "global_dispose": True,
         "kilo_auth_after": kilo_auth_after.get("authenticated"),
         "session_lifecycle": "create/update/diff/delete",
+        "semantic_session_read_contract": True,
+        "semantic_question_contract": True,
+        "session_persistence_after_runtime_loss": True,
+        "persisted_session_local_management": True,
         "recent_project_session_aggregation": True,
         "event": event_payload.get("type"),
     }, indent=2))

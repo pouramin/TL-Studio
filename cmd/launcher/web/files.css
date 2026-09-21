@@ -94,6 +94,41 @@
 }
 .file-editor-input::selection { background: color-mix(in srgb, var(--accent) 23%, transparent); }
 
+.monaco-editor-host {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--bg);
+}
+.file-editor-surface.monaco-ready {
+  display: block;
+}
+.file-editor-surface.monaco-ready .file-line-numbers,
+.file-editor-surface.monaco-ready .file-editor-input {
+  display: none;
+}
+.file-editor-surface.monaco-ready .monaco-editor-host {
+  opacity: 1;
+  pointer-events: auto;
+}
+.file-editor-surface.monaco-loading::after {
+  content: "Loading editor…";
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 4px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--muted-2);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  font-size: 8px;
+  pointer-events: none;
+}
+
 .file-editor-statusbar { flex: none; min-height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px; border-top: 1px solid var(--line-soft); color: var(--muted-2); background: color-mix(in srgb, var(--panel) 78%, var(--bg)); font: 8px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 #editorStatus.dirty { color: var(--warning); }
 #editorStatus.warning { color: var(--danger); }

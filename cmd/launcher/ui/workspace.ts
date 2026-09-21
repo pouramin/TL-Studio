@@ -1,9 +1,11 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     changesButton: $("changesButton"),
     changesCount: $("changesCount"),
     changesPanel: $("changesPanel"),
@@ -23,13 +25,13 @@
   K.state.changesLoading = false;
   K.state.sseSettling = false;
 
-  const escapeText = (value) => String(value ?? "");
-  const basename = (path) => {
+  const escapeText = (value: any) => String(value ?? "");
+  const basename = (path: any) => {
     const bits = escapeText(path).split(/[\\/]/);
     return bits[bits.length - 1] || escapeText(path) || "Unknown file";
   };
 
-  const normalizeChange = (candidate, fallbackPath = "") => {
+  const normalizeChange = (candidate: any, fallbackPath = "") => {
     if (!candidate || typeof candidate !== "object") return null;
     const file = candidate.file || candidate.filePath || candidate.path || fallbackPath;
     if (!file) return null;
@@ -41,7 +43,7 @@
     };
   };
 
-  const mergeChanges = (items) => {
+  const mergeChanges = (items: any) => {
     const merged = new Map();
     for (const raw of Array.isArray(items) ? items : []) {
       const item = normalizeChange(raw);
@@ -60,47 +62,6 @@
       });
     }
     return [...merged.values()];
-  };
-
-  const changesFromMessages = () => {
-    const messages = Array.isArray(K.state.messages) ? K.state.messages : [];
-
-    // Prefer Kilo's projected per-turn summaries when present. They already
-    // represent a file-diff shape and avoid reinterpreting tool metadata.
-    const projected = [];
-    for (const message of messages) {
-      const diffs = message?.info?.summary?.diffs;
-      if (Array.isArray(diffs)) projected.push(...diffs);
-    }
-    if (projected.length) return mergeChanges(projected);
-
-    // Fresh/non-git projects can legitimately have an empty aggregate
-    // /session/:id/diff even though write/edit tools expose authoritative diff
-    // metadata. Fall back to those completed tool parts so Changes still works.
-    const toolChanges = [];
-    for (const message of messages) {
-      const parts = Array.isArray(message?.parts) ? message.parts : [];
-      for (const part of parts) {
-        if (part?.type !== "tool") continue;
-        const state = part.state || {};
-        const metadata = state.metadata || {};
-        const input = state.input || {};
-        const output = state.output ?? state.result ?? part.output ?? part.result;
-        const fallbackPath = input.filePath || input.path || input.file || metadata.filepath || metadata.path || "";
-
-        const candidates = [
-          metadata.filediff,
-          metadata.fileDiff,
-          output?.filediff,
-          output?.fileDiff,
-          output && typeof output === "object" && ("patch" in output || "additions" in output || "deletions" in output) ? output : null,
-        ];
-        const candidate = candidates.find((value) => value && typeof value === "object");
-        const change = normalizeChange(candidate, fallbackPath);
-        if (change) toolChanges.push(change);
-      }
-    }
-    return mergeChanges(toolChanges);
   };
 
   K.refreshWorkspaceControls = () => {
@@ -166,14 +127,14 @@
     }
     K.state.changesLoading = true;
     K.renderChanges();
-    let aggregate = [];
+    let aggregate: any[] = [];
     try {
-      const payload = await K.api.sessions.diff(K.state.session.id);
-      aggregate = Array.isArray(payload?.data) ? payload.data : [];
+      const changes = await K.api.sessionView.changes(K.state.session.id);
+      aggregate = Array.isArray(changes) ? changes : [];
     } catch (error) {
-      console.warn("[TL Studio] Could not load aggregate session diff", error);
+      console.warn("[TL Studio] Could not load semantic session changes", error);
     }
-    K.state.changes = aggregate.length ? mergeChanges(aggregate) : changesFromMessages();
+    K.state.changes = mergeChanges(aggregate);
     K.state.changesLoading = false;
     K.renderChanges();
     K.refreshWorkspaceControls();
@@ -210,12 +171,12 @@
     K.showError("");
     ui.stopButton.disabled = true;
     try {
-      await K.api.sessions.abort(session.id, { scope: "session" });
+      await K.api.sessionCommands.abort(session.id, { scope: "session" });
       K.state.sending = false;
       K.stopSessionPolling?.();
       await settleSelectedSession();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       ui.stopButton.disabled = false;
       K.refreshWorkspaceControls();
@@ -235,13 +196,14 @@
     const title = ui.sessionTitleInput.value.trim();
     if (!title) return K.showError("Session title cannot be empty.");
     try {
-      const fresh = (await K.api.sessions.update(session.id, { title }))?.data;
+      await K.api.sessionCommands.update(session.id, { title });
+      const fresh = await K.api.sessionView.get(session.id).catch(() => null);
       if (fresh) K.state.session = fresh;
       if (ui.sessionDialog.open) ui.sessionDialog.close();
       await K.loadSessions();
       K.renderSessionHeader();
       K.renderSessions();
-    } catch (error) { K.showError(error.message || String(error)); }
+    } catch (error) { K.showError((error as any).message || String(error)); }
   };
 
   const deleteSession = async () => {
@@ -250,16 +212,16 @@
     if (!window.confirm(`Delete “${session.title || "Untitled session"}” permanently?`)) return;
     try {
       if (K.isSessionRunning(session.id) || K.state.sending) {
-        await K.api.sessions.abort(session.id, { scope: "tree" }).catch(() => {});
+        await K.api.sessionCommands.abort(session.id, { scope: "tree" }).catch(() => {});
       }
-      await K.api.sessions.remove(session.id);
+      await K.api.sessionCommands.remove(session.id);
       if (ui.sessionDialog.open) ui.sessionDialog.close();
       K.state.changes = [];
       K.newSession();
       await K.loadSessions();
       K.renderChanges();
       K.refreshWorkspaceControls();
-    } catch (error) { K.showError(error.message || String(error)); }
+    } catch (error) { K.showError((error as any).message || String(error)); }
   };
 
   const originalSelectSession = K.selectSession;
@@ -297,7 +259,7 @@
       window.setTimeout(() => K.loadChanges().catch(() => {}), 60);
     }
     if (sessionID && sessionID === K.state.session?.id && type === "session.idle") {
-      window.setTimeout(() => settleSelectedSession().catch((error) => K.showError(error.message || String(error))), 80);
+      window.setTimeout(() => settleSelectedSession().catch((error) => K.showError((error as any).message || String(error))), 80);
     }
   };
 
@@ -336,7 +298,7 @@
   ui.sessionCancel?.addEventListener("click", () => ui.sessionDialog.close());
   ui.sessionSave?.addEventListener("click", saveSessionTitle);
   ui.sessionDelete?.addEventListener("click", deleteSession);
-  ui.sessionTitleInput?.addEventListener("keydown", (event) => {
+  ui.sessionTitleInput?.addEventListener("keydown", (event: any) => {
     if (event.key === "Enter") { event.preventDefault(); saveSessionTitle(); }
   });
 

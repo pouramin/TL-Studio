@@ -47,7 +47,7 @@ def chat_events(body: dict):
             chat_chunk({
                 "tool_calls": [{
                     "index": 0,
-                    "id": "call_tl_studio_write",
+                    "id": "call_tl_agent_write",
                     "type": "function",
                     "function": {"name": "write", "arguments": arguments},
                 }]
@@ -76,18 +76,18 @@ def response_events(model: str):
         {
             "type": "response.created",
             "sequence_number": 1,
-            "response": {"id": "resp_tl_studio", "created_at": 0, "model": model, "service_tier": None},
+            "response": {"id": "resp_tl_agent", "created_at": 0, "model": model, "service_tier": None},
         },
         {
             "type": "response.output_item.added",
             "sequence_number": 2,
             "output_index": 0,
-            "item": {"type": "message", "id": "msg_tl_studio"},
+            "item": {"type": "message", "id": "msg_tl_agent"},
         },
         {
             "type": "response.output_text.delta",
             "sequence_number": 3,
-            "item_id": "msg_tl_studio",
+            "item_id": "msg_tl_agent",
             "delta": REPLY,
             "logprobs": None,
         },
@@ -95,7 +95,7 @@ def response_events(model: str):
             "type": "response.output_item.done",
             "sequence_number": 4,
             "output_index": 0,
-            "item": {"type": "message", "id": "msg_tl_studio"},
+            "item": {"type": "message", "id": "msg_tl_agent"},
         },
         {
             "type": "response.completed",

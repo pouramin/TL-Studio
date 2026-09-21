@@ -1,9 +1,11 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button: $("filesButton"),
     panel: $("filesPanel"),
     close: $("closeFiles"),
@@ -15,17 +17,17 @@
     changesButton: $("changesButton"),
   };
 
-  const normalizePath = (value) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
-  const basename = (value) => normalizePath(value).split("/").pop() || "";
-  const parentPath = (value) => {
+  const normalizePath = (value: any) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  const basename = (value: any) => normalizePath(value).split("/").pop() || "";
+  const parentPath = (value: any) => {
     const bits = normalizePath(value).split("/").filter(Boolean);
     bits.pop();
     return bits.join("/");
   };
-  const joinPath = (parent, name) => [normalizePath(parent), String(name || "").trim()].filter(Boolean).join("/");
-  const pathKey = (value) => normalizePath(value).toLowerCase();
+  const joinPath = (parent: any, name: any) => [normalizePath(parent), String(name || "").trim()].filter(Boolean).join("/");
+  const pathKey = (value: any) => normalizePath(value).toLowerCase();
 
-  const makeButton = (id, label, title = label) => {
+  const makeButton = (id: any, label: any, title = label) => {
     const button = document.createElement("button");
     button.id = id;
     button.type = "button";
@@ -49,6 +51,9 @@
     if (headActions && !$("newFile")) {
       headActions.insertBefore(makeButton("newFile", "+ File", "Create a file in the current folder"), ui.refresh);
       headActions.insertBefore(makeButton("newFolder", "+ Folder", "Create a folder in the current folder"), ui.refresh);
+      const reveal = makeButton("showInFolder", "Show in Folder", "Reveal the active file in the system file manager");
+      reveal.disabled = true;
+      headActions.insertBefore(reveal, ui.refresh);
     }
 
     const browserHead = ui.panel.querySelector(".files-browser-head");
@@ -84,6 +89,10 @@
             <strong>Open a project file</strong>
             <span>Edit locally, save directly to disk, and hand selected code back to the agent.</span>
           </div>
+          <div id="filePreviewOnly" class="file-editor-empty hidden">
+            <strong id="filePreviewOnlyTitle">Preview-only file</strong>
+            <span id="filePreviewOnlyHint">This file is displayed in Live Preview instead of the text editor.</span>
+          </div>
           <div id="fileEditorSurface" class="file-editor-surface hidden">
             <pre id="fileLineNumbers" class="file-line-numbers" aria-hidden="true">1</pre>
             <textarea id="fileEditor" class="file-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="File editor"></textarea>
@@ -98,6 +107,7 @@
     Object.assign(ui, {
       newFile: $("newFile"),
       newFolder: $("newFolder"),
+      showInFolder: $("showInFolder"),
       rename: $("renameFile"),
       remove: $("deleteFile"),
       tabs: $("fileTabs"),
@@ -109,6 +119,9 @@
       save: $("saveFile"),
       editorBody: $("fileEditorBody"),
       empty: $("fileEditorEmpty"),
+      previewOnly: $("filePreviewOnly"),
+      previewOnlyTitle: $("filePreviewOnlyTitle"),
+      previewOnlyHint: $("filePreviewOnlyHint"),
       surface: $("fileEditorSurface"),
       gutter: $("fileLineNumbers"),
       editor: $("fileEditor"),
@@ -127,35 +140,35 @@
   K.state.editorTabs = [];
   K.state.activeEditorPath = "";
 
-  const sizeText = (bytes) => {
+  const sizeText = (bytes: any) => {
     const value = Number(bytes) || 0;
     if (value < 1024) return `${value} B`;
     if (value < 1024 * 1024) return `${(value / 1024).toFixed(value < 10 * 1024 ? 1 : 0)} KB`;
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const extensionLabel = (path) => {
+  const extensionLabel = (path: any) => {
     const name = basename(path);
     const index = name.lastIndexOf(".");
     return index > 0 ? name.slice(index + 1).toUpperCase() : "TEXT";
   };
 
-  const languageHint = (path) => {
+  const languageHint = (path: any) => {
     const extension = extensionLabel(path).toLowerCase();
-    const aliases = { js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", py: "python", go: "go", rs: "rust", java: "java", cs: "csharp", cpp: "cpp", c: "c", h: "c", html: "html", css: "css", json: "json", md: "markdown", sh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml", xml: "xml", sql: "sql" };
+    const aliases: Record<string, string> = { js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", py: "python", go: "go", rs: "rust", java: "java", cs: "csharp", cpp: "cpp", c: "c", h: "c", html: "html", css: "css", json: "json", md: "markdown", sh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml", xml: "xml", sql: "sql" };
     return aliases[extension] || "";
   };
 
-  const byteSize = (text) => {
+  const byteSize = (text: any) => {
     try { return new TextEncoder().encode(String(text || "")).length; }
     catch (_) { return String(text || "").length; }
   };
 
-  const isDirty = (tab) => !!tab && tab.content !== tab.savedContent;
+  const isDirty = (tab: any) => !!tab && !tab.viewOnly && tab.content !== tab.savedContent;
   const activeTab = () => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(K.state.activeEditorPath)) || null;
-  const tabFor = (path) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
+  const tabFor = (path: any) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
 
-  const localRequest = async (path, options = {}) => {
+  const localRequest = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
@@ -169,15 +182,13 @@
       const detail = payload && typeof payload === "object"
         ? payload.error || payload.message || JSON.stringify(payload)
         : String(payload || `${response.status} ${response.statusText}`);
-      const error = new Error(detail);
-      error.status = response.status;
-      error.payload = payload;
+      const error = Object.assign(new Error(detail), { status: response.status, payload });
       throw error;
     }
     return payload;
   };
 
-  const setSelectedEntry = (entry) => {
+  const setSelectedEntry = (entry: any) => {
     K.state.selectedFileEntry = entry || null;
     renderFiles();
   };
@@ -288,9 +299,12 @@
       wrapper.append(open, close);
       ui.tabs.appendChild(wrapper);
     }
+    window.dispatchEvent(new CustomEvent("tl-studio:editor-tabs", {
+      detail: { paths: K.state.editorTabs.map((tab) => tab.path) },
+    }));
   };
 
-  const renderLineNumbers = (content) => {
+  const renderLineNumbers = (content: any) => {
     if (!ui.gutter) return;
     const count = Math.max(1, String(content ?? "").split("\n").length);
     ui.gutter.textContent = Array.from({ length: count }, (_, index) => String(index + 1)).join("\n");
@@ -318,22 +332,44 @@
       if (ui.save) ui.save.disabled = true;
       if (ui.reload) ui.reload.disabled = true;
       if (ui.ask) ui.ask.disabled = true;
+      if (ui.showInFolder) ui.showInFolder.disabled = true;
       return;
     }
     if (ui.title) ui.title.textContent = basename(tab.path) || tab.path;
     if (ui.path) { ui.path.textContent = tab.path; ui.path.title = tab.path; }
-    if (ui.meta) ui.meta.textContent = `${extensionLabel(tab.path)} · ${sizeText(byteSize(tab.content))}`;
-    if (ui.save) ui.save.disabled = !isDirty(tab);
+    if (ui.meta) ui.meta.textContent = `${extensionLabel(tab.path)} · ${sizeText(tab.viewOnly ? tab.size : byteSize(tab.content))}`;
+    if (ui.save) ui.save.disabled = tab.viewOnly || !isDirty(tab);
     if (ui.reload) ui.reload.disabled = false;
-    if (ui.ask) ui.ask.disabled = false;
+    if (ui.ask) ui.ask.disabled = !!tab.viewOnly;
+    if (ui.showInFolder) {
+      ui.showInFolder.disabled = !tab.path;
+      ui.showInFolder.title = tab.path ? `Show ${tab.path} in the system file manager` : "Reveal the active file in the system file manager";
+    }
     if (ui.status) {
       ui.status.classList.toggle("warning", !!tab.externalChanged);
       ui.status.classList.toggle("dirty", isDirty(tab));
-      ui.status.textContent = tab.externalChanged
-        ? "Changed on disk · reload or save to resolve"
-        : isDirty(tab) ? "Unsaved changes" : "Saved";
+      ui.status.textContent = tab.viewOnly
+        ? `${tab.previewName || "Preview"} · view only`
+        : tab.externalChanged
+          ? "Changed on disk · reload or save to resolve"
+          : isDirty(tab) ? "Unsaved changes" : "Saved";
     }
-    updateCursor();
+    if (ui.cursor && tab.viewOnly) ui.cursor.textContent = "View only";
+    else updateCursor();
+  };
+
+  const notifyEditorRender = (tab: any) => {
+    window.dispatchEvent(new CustomEvent("tl-studio:editor-render", {
+      detail: {
+        path: tab?.path || "",
+        content: tab?.content || "",
+        language: tab && !tab.viewOnly ? languageHint(tab.path) : "",
+        viewOnly: !!tab?.viewOnly,
+        previewKind: tab?.previewKind || "",
+        previewName: tab?.previewName || "",
+        mime: tab?.mime || "",
+      },
+    }));
   };
 
   const renderEditor = () => {
@@ -341,27 +377,39 @@
     renderTabs();
     if (!ui.empty || !ui.surface || !ui.editor) return;
     ui.empty.classList.toggle("hidden", !!tab);
-    ui.surface.classList.toggle("hidden", !tab);
+    ui.previewOnly?.classList.toggle("hidden", !tab?.viewOnly);
+    ui.surface.classList.toggle("hidden", !tab || !!tab.viewOnly);
     if (!tab) {
       ui.editor.value = "";
       renderLineNumbers("");
       updateEditorChrome();
+      notifyEditorRender(null);
+      return;
+    }
+    if (tab.viewOnly) {
+      ui.editor.value = "";
+      renderLineNumbers("");
+      if (ui.previewOnlyTitle) ui.previewOnlyTitle.textContent = `${tab.previewName || "Preview"} file`;
+      if (ui.previewOnlyHint) ui.previewOnlyHint.textContent = `${basename(tab.path)} is shown in Live Preview. Binary editing is intentionally disabled.`;
+      updateEditorChrome();
+      notifyEditorRender(tab);
       return;
     }
     if (ui.editor.value !== tab.content) ui.editor.value = tab.content;
     renderLineNumbers(tab.content);
     updateEditorChrome();
+    notifyEditorRender(tab);
   };
 
-  const activateTab = (path) => {
+  const activateTab = (path: any) => {
     const tab = tabFor(path);
     if (!tab) return;
     K.state.activeEditorPath = tab.path;
     renderEditor();
-    window.setTimeout(() => ui.editor?.focus(), 0);
+    if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
   };
 
-  const closeTab = (path, options = {}) => {
+  const closeTab = (path: any, options: { force?: boolean } = {}) => {
     const index = K.state.editorTabs.findIndex((tab) => pathKey(tab.path) === pathKey(path));
     if (index < 0) return true;
     const tab = K.state.editorTabs[index];
@@ -375,7 +423,7 @@
     return true;
   };
 
-  const applyPreviewToTab = (tab, preview) => {
+  const applyPreviewToTab = (tab: any, preview: any) => {
     tab.path = preview.path || tab.path;
     tab.content = preview.content || "";
     tab.savedContent = preview.content || "";
@@ -386,7 +434,7 @@
     tab.externalChanged = false;
   };
 
-  const openEditor = async (path) => {
+  const openEditor = async (path: any) => {
     if (!path) return;
     const existing = tabFor(path);
     if (existing) {
@@ -397,31 +445,52 @@
     K.showError("");
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path })}`);
-      if (preview?.binary) throw new Error(`Binary files cannot be edited yet (${preview.mime || "unknown type"}).`);
+      const viewOnly = !!preview?.viewOnly && !!preview?.previewable;
+      if (preview?.binary && !preview?.previewable) throw new Error(`Binary files without a TL Studio preview cannot be opened yet (${preview.mime || "unknown type"}).`);
       const tab = {
         path: preview.path || path,
-        content: preview.content || "",
-        savedContent: preview.content || "",
+        content: viewOnly ? "" : preview.content || "",
+        savedContent: viewOnly ? "" : preview.content || "",
         sha256: preview.sha256 || "",
         modified: preview.modified || "",
         size: preview.size || 0,
         mime: preview.mime || "text/plain",
+        viewOnly,
+        previewKind: preview.previewKind || "",
+        previewName: preview.previewName || "",
+        previewCapabilityID: preview.previewCapabilityID || "",
         externalChanged: false,
       };
       K.state.editorTabs.push(tab);
       K.state.activeEditorPath = tab.path;
       renderEditor();
-      window.setTimeout(() => ui.editor?.focus(), 0);
+      if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
-  const refreshTabFromDisk = async (tab, options = {}) => {
+  const refreshTabFromDisk = async (tab: any, options: { force?: boolean; silent?: boolean } = {}) => {
     if (!tab?.path) return;
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path: tab.path })}`);
-      if (preview?.binary) return;
+      if (preview?.viewOnly && preview?.previewable) {
+        tab.viewOnly = true;
+        tab.content = "";
+        tab.savedContent = "";
+        tab.sha256 = preview.sha256 || "";
+        tab.modified = preview.modified || "";
+        tab.size = preview.size || 0;
+        tab.mime = preview.mime || "application/octet-stream";
+        tab.previewKind = preview.previewKind || "";
+        tab.previewName = preview.previewName || "";
+        tab.previewCapabilityID = preview.previewCapabilityID || "";
+        tab.externalChanged = false;
+        if (pathKey(tab.path) === pathKey(K.state.activeEditorPath)) renderEditor();
+        else renderTabs();
+        return;
+      }
+      tab.viewOnly = false;
       if (!options.force && isDirty(tab)) {
         if (preview.sha256 && preview.sha256 !== tab.sha256) tab.externalChanged = true;
       } else {
@@ -431,13 +500,13 @@
       else renderTabs();
     } catch (error) {
       if (options.silent) return;
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
   const saveActive = async (force = false) => {
     const tab = activeTab();
-    if (!tab || !isDirty(tab)) return;
+    if (!tab || tab.viewOnly || !isDirty(tab)) return;
     K.showError("");
     if (ui.save) ui.save.disabled = true;
     try {
@@ -454,14 +523,14 @@
       renderEditor();
       await loadDirectory(K.state.filesPath || "", { preserveSelection: true });
     } catch (error) {
-      if (error.status === 409 && !force) {
+      if ((error as any).status === 409 && !force) {
         tab.externalChanged = true;
         renderEditor();
         const overwrite = window.confirm(`${basename(tab.path)} changed on disk after you opened it. Overwrite the disk version with your editor contents?`);
         if (overwrite) return saveActive(true);
         return;
       }
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       updateEditorChrome();
     }
@@ -474,9 +543,23 @@
     await refreshTabFromDisk(tab, { force: true });
   };
 
+  const showActiveInFolder = async () => {
+    const tab = activeTab();
+    if (!tab?.path) return;
+    K.showError("");
+    if (ui.showInFolder) ui.showInFolder.disabled = true;
+    try {
+      await localRequest(`/local/reveal?${new URLSearchParams({ path: tab.path })}`, { method: "POST" });
+    } catch (error) {
+      K.showError((error as any).message || String(error));
+    } finally {
+      if (ui.showInFolder) ui.showInFolder.disabled = !activeTab()?.path;
+    }
+  };
+
   const askAgentAboutSelection = () => {
     const tab = activeTab();
-    if (!tab || !ui.editor || !K.els?.prompt) return;
+    if (!tab || tab.viewOnly || !ui.editor || !K.els?.prompt) return;
     const start = ui.editor.selectionStart || 0;
     const end = ui.editor.selectionEnd || 0;
     const selected = ui.editor.value.slice(Math.min(start, end), Math.max(start, end));
@@ -490,7 +573,7 @@
     window.setTimeout(() => K.els.prompt.focus(), 0);
   };
 
-  const loadDirectory = async (path = "", options = {}) => {
+  const loadDirectory = async (path = "", options: { preserveSelection?: boolean } = {}) => {
     K.state.filesLoading = true;
     K.state.filesPath = normalizePath(path);
     renderFiles();
@@ -502,25 +585,26 @@
       K.state.filesEntries = Array.isArray(payload?.entries) ? payload.entries : [];
       if (!options.preserveSelection) K.state.selectedFileEntry = null;
       else if (K.state.selectedFileEntry) {
-        const fresh = K.state.filesEntries.find((entry) => pathKey(entry.path) === pathKey(K.state.selectedFileEntry.path));
+        const selected = K.state.selectedFileEntry;
+        const fresh = selected ? K.state.filesEntries.find((entry) => pathKey(entry.path) === pathKey(selected.path)) : undefined;
         K.state.selectedFileEntry = fresh || null;
       }
     } catch (error) {
       K.state.filesEntries = [];
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       K.state.filesLoading = false;
       renderFiles();
     }
   };
 
-  const validEntryName = (value) => {
+  const validEntryName = (value: any) => {
     const name = String(value || "").trim();
     if (!name || name === "." || name === ".." || /[\\/]/.test(name)) return "";
     return name;
   };
 
-  const createEntry = async (type) => {
+  const createEntry = async (type: any) => {
     const label = type === "directory" ? "folder" : "file";
     const input = window.prompt(`New ${label} name:`);
     if (input == null) return;
@@ -535,7 +619,7 @@
       if (fresh) setSelectedEntry(fresh);
       if (type === "file") await openEditor(entry?.path || path);
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -569,7 +653,7 @@
       renderFiles();
       renderEditor();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -590,12 +674,12 @@
         const path = normalizePath(tab.path).toLowerCase();
         return path !== deleted && !(selected.type === "directory" && path.startsWith(`${deleted}/`));
       });
-      if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs.at(-1)?.path || "";
+      if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs[K.state.editorTabs.length - 1]?.path || "";
       K.state.selectedFileEntry = null;
       await loadDirectory(K.state.filesPath || "");
       renderEditor();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -622,12 +706,12 @@
     if (tab) await refreshTabFromDisk(tab, { silent: true });
   };
 
-  const openEditorAt = async ({ path, line = 1, column = 1, match = "" } = {}) => {
+  const openEditorAt = async ({ path, line = 1, column = 1, match = "" }: { path?: string; line?: number; column?: number; match?: string } = {}) => {
     if (!path) return;
     await openFiles();
     await openEditor(path);
     const tab = tabFor(path);
-    if (!tab || !ui.editor) return;
+    if (!tab || !ui.editor || tab.viewOnly) return;
     const content = String(tab.content || "");
     const lines = content.split("\n");
     const lineIndex = Math.max(0, Math.min(lines.length - 1, Number(line || 1) - 1));
@@ -645,6 +729,9 @@
     ui.editor.scrollTop = scrollTop;
     if (ui.gutter) ui.gutter.scrollTop = scrollTop;
     updateCursor();
+    window.dispatchEvent(new CustomEvent("tl-studio:editor-reveal", {
+      detail: { path: tab.path, line: lineIndex + 1, column: runeColumn + 1, match: String(match || "") },
+    }));
   };
 
   K.openWorkspace = openFiles;
@@ -660,6 +747,7 @@
   ui.up?.addEventListener("click", () => loadDirectory(parentPath(K.state.filesPath)));
   ui.newFile?.addEventListener("click", () => createEntry("file"));
   ui.newFolder?.addEventListener("click", () => createEntry("directory"));
+  ui.showInFolder?.addEventListener("click", showActiveInFolder);
   ui.rename?.addEventListener("click", renameSelected);
   ui.remove?.addEventListener("click", deleteSelected);
   ui.save?.addEventListener("click", () => saveActive(false));
@@ -669,7 +757,7 @@
 
   ui.editor?.addEventListener("input", () => {
     const tab = activeTab();
-    if (!tab) return;
+    if (!tab || tab.viewOnly) return;
     tab.content = ui.editor.value;
     renderLineNumbers(tab.content);
     renderTabs();
@@ -679,7 +767,7 @@
     if (ui.gutter) ui.gutter.scrollTop = ui.editor.scrollTop;
   });
   for (const eventName of ["click", "keyup", "select"]) ui.editor?.addEventListener(eventName, updateCursor);
-  ui.editor?.addEventListener("keydown", (event) => {
+  ui.editor?.addEventListener("keydown", (event: any) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       saveActive(false);

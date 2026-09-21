@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,6 +35,7 @@ type managedProcess struct {
 	running   bool
 	output    []byte
 	cmd       *exec.Cmd
+	done      chan struct{}
 }
 
 type processSnapshot struct {
@@ -55,15 +57,22 @@ func (w processOutputWriter) Write(data []byte) (int, error) {
 }
 
 func newProcessManager(projectFn func() string) *processManager {
+	if projectFn == nil {
+		projectFn = func() string { return "" }
+	}
 	return &processManager{projectFn: projectFn, processes: make(map[string]*managedProcess)}
 }
 
 func (m *processManager) start(command string) (*managedProcess, error) {
+	return m.startInDirectory(command, m.projectFn())
+}
+
+func (m *processManager) startInDirectory(command, cwd string) (*managedProcess, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
 		return nil, errors.New("command is required")
 	}
-	cwd := m.projectFn()
+	cwd = strings.TrimSpace(cwd)
 	if cwd == "" {
 		return nil, errors.New("open a project before running commands")
 	}
@@ -71,7 +80,14 @@ func (m *processManager) start(command string) (*managedProcess, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := &managedProcess{id: id, command: command, cwd: cwd, startedAt: time.Now().UTC(), running: true}
+	p := &managedProcess{
+		id:        id,
+		command:   command,
+		cwd:       cwd,
+		startedAt: time.Now().UTC(),
+		running:   true,
+		done:      make(chan struct{}),
+	}
 	cmd := shellCommand(command)
 	configureManagedCommand(cmd)
 	cmd.Dir = cwd
@@ -95,6 +111,25 @@ func (m *processManager) start(command string) (*managedProcess, error) {
 		})
 	}()
 	return p, nil
+}
+
+func (m *processManager) run(ctx context.Context, command, cwd string) (processSnapshot, error) {
+	process, err := m.startInDirectory(command, cwd)
+	if err != nil {
+		return processSnapshot{}, err
+	}
+	select {
+	case <-process.done:
+		snapshot := process.snapshot()
+		if snapshot.ExitCode != nil && *snapshot.ExitCode != 0 {
+			return snapshot, fmt.Errorf("command exited with code %d", *snapshot.ExitCode)
+		}
+		return snapshot, nil
+	case <-ctx.Done():
+		_ = m.stop(process.id)
+		<-process.done
+		return process.snapshot(), ctx.Err()
+	}
 }
 
 func shellCommand(command string) *exec.Cmd {
@@ -131,6 +166,7 @@ func (p *managedProcess) wait() {
 	p.exitCode = &code
 	p.endedAt = &now
 	p.mu.Unlock()
+	close(p.done)
 }
 
 func (p *managedProcess) snapshot() processSnapshot {
@@ -164,7 +200,13 @@ func (m *processManager) stop(id string) error {
 }
 
 func registerLocalProcessRoutes(mux *http.ServeMux, state *appState) {
-	manager := newProcessManager(state.projectPath)
+	registerLocalProcessRoutesWithManager(mux, state, newProcessManager(state.projectPath))
+}
+
+func registerLocalProcessRoutesWithManager(mux *http.ServeMux, state *appState, manager *processManager) {
+	if manager == nil {
+		manager = newProcessManager(state.projectPath)
+	}
 	mux.HandleFunc("POST /local/process", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Command string `json:"command"`

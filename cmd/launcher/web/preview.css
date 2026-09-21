@@ -18,7 +18,8 @@
 .preview-panel.hidden { display: none; }
 
 .preview-head,
-.preview-url-row {
+.preview-url-row,
+.preview-entry-row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -51,6 +52,35 @@
 
 .preview-url-row {
   background: rgba(255, 255, 255, .018);
+}
+
+.preview-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, #2a2f36);
+  background: rgba(255, 255, 255, .012);
+}
+
+.preview-entry-row.hidden { display: none; }
+
+.preview-entry-row > span {
+  flex: 0 0 auto;
+  color: var(--muted, #8f98a6);
+  font-size: 12px;
+}
+
+.preview-entry-row select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border, #2a2f36);
+  border-radius: 7px;
+  background: var(--panel, #0d1014);
+  color: var(--text, #e8edf4);
 }
 
 .preview-url-row code {

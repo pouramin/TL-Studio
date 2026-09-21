@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -12,6 +14,41 @@ import (
 	"sync"
 	"testing"
 )
+
+type memoryProviderCredentialStore struct {
+	mu      sync.Mutex
+	secrets map[string]string
+}
+
+func newMemoryProviderCredentialStore() *memoryProviderCredentialStore {
+	return &memoryProviderCredentialStore{secrets: map[string]string{}}
+}
+
+func (s *memoryProviderCredentialStore) Backend() string { return "memory-test" }
+
+func (s *memoryProviderCredentialStore) Put(providerID, secret string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.secrets[providerID] = secret
+	return nil
+}
+
+func (s *memoryProviderCredentialStore) Get(providerID string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	value, ok := s.secrets[providerID]
+	if !ok {
+		return "", errCredentialNotFound
+	}
+	return value, nil
+}
+
+func (s *memoryProviderCredentialStore) Delete(providerID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.secrets, providerID)
+	return nil
+}
 
 func testProviderDefinition() tlProviderDefinition {
 	return tlProviderDefinition{
@@ -116,6 +153,8 @@ func TestRuntimeProviderRoutesTranslateTLStudioConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	credentialStore := newMemoryProviderCredentialStore()
+	manager.credentials = credentialStore
 	mux := http.NewServeMux()
 	registerRuntimeProviderRoutes(mux, manager)
 	server := httptest.NewServer(mux)
@@ -153,7 +192,10 @@ func TestRuntimeProviderRoutesTranslateTLStudioConfig(t *testing.T) {
 		t.Fatalf("runtime translation missing package: %#v", runtimeProvider)
 	}
 	if credentialBody["key"] != "top-secret" {
-		t.Fatalf("credential was not delegated to runtime store: %#v", credentialBody)
+		t.Fatalf("credential was not synchronized to the runtime execution store: %#v", credentialBody)
+	}
+	if stored, err := credentialStore.Get("example-provider"); err != nil || stored != "top-secret" {
+		t.Fatalf("TL Studio credential store did not become source of truth: value=%q err=%v", stored, err)
 	}
 
 	registryData, err := os.ReadFile(filepath.Join(stateDir, "providers.json"))
@@ -200,6 +242,70 @@ func TestRuntimeProviderRoutesTranslateTLStudioConfig(t *testing.T) {
 	}
 	if authDeleteCalls != 1 || disposeCalls < 2 {
 		t.Fatalf("delete/dispose calls unexpected: authDelete=%d dispose=%d", authDeleteCalls, disposeCalls)
+	}
+	if _, err := credentialStore.Get("example-provider"); !errors.Is(err, errCredentialNotFound) {
+		t.Fatalf("TL Studio credential was not removed with provider: %v", err)
+	}
+}
+
+func TestProviderManagerRestoresTLStudioCredentialIntoFreshRuntime(t *testing.T) {
+	project := t.TempDir()
+	stateDir := t.TempDir()
+	t.Setenv("TL_STUDIO_STATE_DIR", stateDir)
+
+	registry := newProviderRegistryStore(filepath.Join(stateDir, "providers.json"))
+	if err := registry.put(testProviderDefinition()); err != nil {
+		t.Fatal(err)
+	}
+	credentials := newMemoryProviderCredentialStore()
+	if err := credentials.Put("example-provider", "restored-secret"); err != nil {
+		t.Fatal(err)
+	}
+
+	credentialWrites := 0
+	disposeCalls := 0
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/config/overlay":
+			_, _ = io.WriteString(w, `{"effective":{"provider":{},"disabled_providers":[]}}`)
+		case r.Method == http.MethodPatch && r.URL.Path == "/config/overlay":
+			_, _ = io.WriteString(w, `{"ok":true}`)
+		case r.Method == http.MethodPut && r.URL.Path == "/auth/example-provider":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body["key"] != "restored-secret" {
+				t.Fatalf("unexpected restored credential: %#v", body)
+			}
+			credentialWrites++
+			_, _ = io.WriteString(w, `{"ok":true}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/global/dispose":
+			disposeCalls++
+			_, _ = io.WriteString(w, `{"ok":true}`)
+		default:
+			t.Fatalf("unexpected runtime request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer backend.Close()
+
+	state := &appState{project: project}
+	manager, err := newRuntimeProviderManager(state, backend.URL, "runtime", "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager.store = registry
+	manager.credentials = credentials
+
+	if err := manager.ensureBootstrapped(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if credentialWrites != 1 {
+		t.Fatalf("expected one credential restore into runtime, got %d", credentialWrites)
+	}
+	if disposeCalls < 2 {
+		t.Fatalf("expected provider sync and post-credential runtime reload, got %d dispose calls", disposeCalls)
 	}
 }
 
