@@ -100,7 +100,7 @@
     K.state.preview.poll = null;
   };
 
-  const setOpen = (open) => {
+  const setOpen = (open: any) => {
     K.state.preview.open = !!open;
     ui.panel.classList.toggle("hidden", !open);
     ui.button.classList.toggle("preview-toggle-active", !!open);
@@ -120,24 +120,24 @@
     return K.state.preview.registryPromise;
   };
 
-  const extensionOf = (value) => {
+  const extensionOf = (value: any) => {
     const name = String(value || "").trim().split(/[\\/]/).pop() || "";
     const index = name.lastIndexOf(".");
     return index > 0 ? name.slice(index).toLowerCase() : "";
   };
 
-  const previewCapabilityForPath = (value) => {
+  const previewCapabilityForPath = (value: any) => {
     const ext = extensionOf(value);
     if (!ext) return null;
     for (const capability of K.state.preview.registry?.capabilities || []) {
-      if ((capability?.extensions || []).some((candidate) => String(candidate).toLowerCase() === ext)) return capability;
+      if ((capability?.extensions || []).some((candidate: any) => String(candidate).toLowerCase() === ext)) return capability;
     }
     return null;
   };
 
-  const isPreviewablePath = (value) => !!previewCapabilityForPath(value);
+  const isPreviewablePath = (value: any) => !!previewCapabilityForPath(value);
   const activePreviewEntry = () => isPreviewablePath(K.state.activeEditorPath) ? String(K.state.activeEditorPath) : "";
-  const kindLabel = (snapshot) => snapshot?.kind === "dev-server"
+  const kindLabel = (snapshot: any) => snapshot?.kind === "dev-server"
     ? "Dev server"
     : snapshot?.entryMeta?.name || (snapshot?.kind === "file" ? "File preview" : "Web preview");
 
@@ -146,12 +146,12 @@
     return value ? `${base}?${new URLSearchParams({ entry: value })}` : base;
   };
 
-  const renderEntryChoices = (snapshot) => {
+  const renderEntryChoices = (snapshot: any) => {
     const entries = Array.isArray(snapshot?.entries)
-      ? snapshot.entries.filter((entry) => entry && typeof entry.path === "string")
+      ? snapshot.entries.filter((entry: any) => entry && typeof entry.path === "string")
       : [];
-    const paths = entries.map((entry) => entry.path);
-    const signature = entries.map((entry) => `${entry.path}:${entry.capabilityID || entry.kind || ""}`).join("\n");
+    const paths = entries.map((entry: any) => entry.path);
+    const signature = entries.map((entry: any) => `${entry.path}:${entry.capabilityID || entry.kind || ""}`).join("\n");
     const preferred = String(snapshot?.entry || activePreviewEntry() || ui.entry?.value || "");
     if (ui.entry && K.state.preview.entrySignature !== signature) {
       K.state.preview.entrySignature = signature;
@@ -169,7 +169,7 @@
     return entries;
   };
 
-  const render = (snapshot) => {
+  const render = (snapshot: any) => {
     K.state.preview.snapshot = snapshot || null;
     const available = !!snapshot?.available;
     const running = !!snapshot?.running;
@@ -240,7 +240,7 @@
     }
   };
 
-  const switchPreviewEntry = async (entry) => {
+  const switchPreviewEntry = async (entry: any) => {
     const value = String(entry || "").trim();
     if (!value) return K.state.preview.snapshot;
     const generation = ++K.state.preview.entrySwitchGeneration;
@@ -257,7 +257,7 @@
     }
   };
 
-  const followActivePreviewEntry = async (path) => {
+  const followActivePreviewEntry = async (path: any) => {
     const entry = String(path || "").trim();
     if (!entry || !K.state.preview.open) return;
     await loadPreviewRegistry().catch(() => null);
