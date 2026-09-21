@@ -142,7 +142,7 @@
       renderSnapshot(await request(`/local/process/${encodeURIComponent(id)}`));
     } catch (error) {
       stopPolling();
-      append(`\n[terminal error] ${error.message || error}\n`);
+      append(`\n[terminal error] ${(error as any).message || error}\n`);
       ui.input.disabled = false;
       ui.run.disabled = false;
       ui.stop.disabled = true;
@@ -169,7 +169,7 @@
       K.state.terminal.poll = window.setInterval(pollProcess, 250);
       await pollProcess();
     } catch (error) {
-      append(`[terminal error] ${error.message || error}\n`);
+      append(`[terminal error] ${(error as any).message || error}\n`);
       K.state.terminal.process = null;
       K.state.terminal.stoppedByUser = false;
       ui.input.disabled = false;
@@ -189,7 +189,7 @@
       append("\n[stopping process…]\n");
     } catch (error) {
       K.state.terminal.stoppedByUser = false;
-      append(`\n[stop error] ${error.message || error}\n`);
+      append(`\n[stop error] ${(error as any).message || error}\n`);
     }
   };
 
