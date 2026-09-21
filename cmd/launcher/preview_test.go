@@ -193,6 +193,51 @@ func TestDetectPreviewURLAcceptsLoopbackOnly(t *testing.T) {
 	}
 }
 
+func TestRunningPreviewSnapshotReportsActualMode(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "package.json"), []byte(`{"scripts":{"dev":"vite"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "logo.svg"), []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := &appState{project: project}
+	manager := newPreviewManager(state)
+	manager.project = project
+	manager.kind = "dev-server"
+	manager.command = "npm run dev"
+
+	snapshot := manager.snapshot("logo.svg")
+	if snapshot.Kind != "dev-server" || snapshot.Entry != "" {
+		t.Fatalf("running snapshot must describe the actual dev-server mode before switching: %#v", snapshot)
+	}
+}
+
+func TestPreviewCapabilityRoute(t *testing.T) {
+	project := t.TempDir()
+	state := &appState{project: project}
+	mux := http.NewServeMux()
+	registerLocalProcessRoutes(mux, state)
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	response, err := http.Get(server.URL + "/local/preview/capabilities")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("preview capability route status=%d", response.StatusCode)
+	}
+	var registry previewCapabilityRegistry
+	if err := json.NewDecoder(response.Body).Decode(&registry); err != nil {
+		t.Fatal(err)
+	}
+	if registry.Version != 1 || len(registry.Capabilities) < 7 {
+		t.Fatalf("unexpected preview capability registry response: %#v", registry)
+	}
+}
+
 func TestStaticPreviewRoutesAndCSP(t *testing.T) {
 	project := t.TempDir()
 	if err := os.WriteFile(filepath.Join(project, "index.html"), []byte("<!doctype html><title>Preview OK</title>"), 0o600); err != nil {
