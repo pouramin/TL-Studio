@@ -74,7 +74,7 @@
 
   const toolDetails = (item: any) => {
     if (item?.kind === "tool") {
-      const blocks = [];
+      const blocks: Array<[string, string]> = [];
       if (item.input && typeof item.input === "object" && Object.keys(item.input).length) blocks.push(["Input", safeJSON(item.input)]);
       if (item.output !== undefined && item.output !== "") blocks.push(["Output", typeof item.output === "string" ? item.output : safeJSON(item.output)]);
       if (item.error) blocks.push(["Error", errorText(item.error)]);
@@ -82,7 +82,7 @@
       return blocks;
     }
     const state = item?.state || {};
-    const blocks = [];
+    const blocks: Array<[string, string]> = [];
     if (state.input && Object.keys(state.input).length) blocks.push(["Input", safeJSON(state.input)]);
     const output = state.output ?? state.result ?? item.output ?? item.result;
     if (output !== undefined && output !== "") blocks.push(["Output", typeof output === "string" ? output : safeJSON(output)]);
@@ -165,7 +165,7 @@
   const renderMarkdown = (container: any, input: any) => {
     const lines = String(input || "").replace(/\r\n?/g, "\n").split("\n");
     let index = 0;
-    const paragraph = [];
+    const paragraph: string[] = [];
 
     const flushParagraph = () => {
       if (!paragraph.length) return;
@@ -187,7 +187,7 @@
       if (fence) {
         flushParagraph();
         const language = fence[1].trim();
-        const body = [];
+        const body: string[] = [];
         index++;
         while (index < lines.length && !/^\s*```\s*$/.test(lines[index])) body.push(lines[index++]);
         if (index < lines.length) index++;
@@ -235,7 +235,7 @@
       if (quote) {
         flushParagraph();
         const blockquote = document.createElement("blockquote");
-        const values = [];
+        const values: string[] = [];
         while (index < lines.length) {
           const match = lines[index].match(/^\s*>\s?(.*)$/);
           if (!match) break;
@@ -253,7 +253,7 @@
     flushParagraph();
   };
 
-  const messageNode = (kind: any, author: any, text: any, time: any, error: any) => {
+  const messageNode = (kind: any, author: any, text: any, time: any, error: any = "") => {
     const row = document.createElement("article");
     row.className = `message ${kind}${error ? " error" : ""}`;
 
@@ -284,7 +284,7 @@
     return row;
   };
 
-  const activityCard = ({ title, status, meta = "", blocks = [], reasoning = false }) => {
+  const activityCard = ({ title, status, meta = "", blocks = [], reasoning = false }: { title: string; status: any; meta?: string; blocks?: Array<[string, string]>; reasoning?: boolean }) => {
     const details = document.createElement("details");
     const normalized = normalizeStatus(status);
     details.className = `activity-card${reasoning ? " reasoning-card" : ""}`;
@@ -480,7 +480,7 @@
         view.appendChild(node);
       } else if (message?.type === "shell") {
         const node = messageNode("assistant", "Shell", "", message.time?.created);
-        node.querySelector(".message-content").appendChild(activityCard({
+        node.querySelector<HTMLElement>(".message-content")!.appendChild(activityCard({
           title: message.command || "Command",
           status: message.time?.completed ? "completed" : "running",
           blocks: [["Output", message.output || ""]],
@@ -501,7 +501,7 @@
       typing.className = "typing";
       typing.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
       working.appendChild(typing);
-      row.querySelector(".message-content").appendChild(working);
+      row.querySelector<HTMLElement>(".message-content")!.appendChild(working);
       view.appendChild(row);
     }
 
