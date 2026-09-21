@@ -1,9 +1,9 @@
 (() => {
   "use strict";
   const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button: $("filesButton"),
     panel: $("filesPanel"),
     close: $("closeFiles"),
@@ -166,7 +166,7 @@
   const activeTab = () => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(K.state.activeEditorPath)) || null;
   const tabFor = (path) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
 
-  const localRequest = async (path, options = {}) => {
+  const localRequest = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
