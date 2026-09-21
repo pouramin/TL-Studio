@@ -22,6 +22,7 @@ func testSessionContract(t *testing.T, handler http.HandlerFunc) (*sessionReadCo
 	}
 	contract.history = newProjectHistoryStoreForTest(filepath.Join(t.TempDir(), "projects.json"))
 	contract.history.remember(current)
+	contract.store = newSessionPersistenceStore(filepath.Join(t.TempDir(), "sessions"), "test-runtime")
 	return contract, state, server
 }
 
