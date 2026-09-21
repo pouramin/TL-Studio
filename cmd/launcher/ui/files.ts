@@ -153,7 +153,7 @@
 
   const languageHint = (path: any) => {
     const extension = extensionLabel(path).toLowerCase();
-    const aliases = { js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", py: "python", go: "go", rs: "rust", java: "java", cs: "csharp", cpp: "cpp", c: "c", h: "c", html: "html", css: "css", json: "json", md: "markdown", sh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml", xml: "xml", sql: "sql" };
+    const aliases: Record<string, string> = { js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", py: "python", go: "go", rs: "rust", java: "java", cs: "csharp", cpp: "cpp", c: "c", h: "c", html: "html", css: "css", json: "json", md: "markdown", sh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml", xml: "xml", sql: "sql" };
     return aliases[extension] || "";
   };
 
@@ -180,9 +180,7 @@
       const detail = payload && typeof payload === "object"
         ? payload.error || payload.message || JSON.stringify(payload)
         : String(payload || `${response.status} ${response.statusText}`);
-      const error = new Error(detail);
-      error.status = response.status;
-      error.payload = payload;
+      const error = Object.assign(new Error(detail), { status: response.status, payload });
       throw error;
     }
     return payload;
@@ -409,7 +407,7 @@
     if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
   };
 
-  const closeTab = (path: any, options = {}) => {
+  const closeTab = (path: any, options: { force?: boolean } = {}) => {
     const index = K.state.editorTabs.findIndex((tab) => pathKey(tab.path) === pathKey(path));
     if (index < 0) return true;
     const tab = K.state.editorTabs[index];
@@ -466,11 +464,11 @@
       renderEditor();
       if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
-  const refreshTabFromDisk = async (tab: any, options = {}) => {
+  const refreshTabFromDisk = async (tab: any, options: { force?: boolean; silent?: boolean } = {}) => {
     if (!tab?.path) return;
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path: tab.path })}`);
@@ -500,7 +498,7 @@
       else renderTabs();
     } catch (error) {
       if (options.silent) return;
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -523,14 +521,14 @@
       renderEditor();
       await loadDirectory(K.state.filesPath || "", { preserveSelection: true });
     } catch (error) {
-      if (error.status === 409 && !force) {
+      if ((error as any).status === 409 && !force) {
         tab.externalChanged = true;
         renderEditor();
         const overwrite = window.confirm(`${basename(tab.path)} changed on disk after you opened it. Overwrite the disk version with your editor contents?`);
         if (overwrite) return saveActive(true);
         return;
       }
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       updateEditorChrome();
     }
@@ -551,7 +549,7 @@
     try {
       await localRequest(`/local/reveal?${new URLSearchParams({ path: tab.path })}`, { method: "POST" });
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       if (ui.showInFolder) ui.showInFolder.disabled = !activeTab()?.path;
     }
@@ -573,7 +571,7 @@
     window.setTimeout(() => K.els.prompt.focus(), 0);
   };
 
-  const loadDirectory = async (path = "", options = {}) => {
+  const loadDirectory = async (path = "", options: { preserveSelection?: boolean } = {}) => {
     K.state.filesLoading = true;
     K.state.filesPath = normalizePath(path);
     renderFiles();
@@ -585,12 +583,13 @@
       K.state.filesEntries = Array.isArray(payload?.entries) ? payload.entries : [];
       if (!options.preserveSelection) K.state.selectedFileEntry = null;
       else if (K.state.selectedFileEntry) {
-        const fresh = K.state.filesEntries.find((entry) => pathKey(entry.path) === pathKey(K.state.selectedFileEntry.path));
+        const selected = K.state.selectedFileEntry;
+        const fresh = selected ? K.state.filesEntries.find((entry) => pathKey(entry.path) === pathKey(selected.path)) : undefined;
         K.state.selectedFileEntry = fresh || null;
       }
     } catch (error) {
       K.state.filesEntries = [];
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       K.state.filesLoading = false;
       renderFiles();
@@ -618,7 +617,7 @@
       if (fresh) setSelectedEntry(fresh);
       if (type === "file") await openEditor(entry?.path || path);
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -652,7 +651,7 @@
       renderFiles();
       renderEditor();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -673,12 +672,12 @@
         const path = normalizePath(tab.path).toLowerCase();
         return path !== deleted && !(selected.type === "directory" && path.startsWith(`${deleted}/`));
       });
-      if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs.at(-1)?.path || "";
+      if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs[K.state.editorTabs.length - 1]?.path || "";
       K.state.selectedFileEntry = null;
       await loadDirectory(K.state.filesPath || "");
       renderEditor();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -705,7 +704,7 @@
     if (tab) await refreshTabFromDisk(tab, { silent: true });
   };
 
-  const openEditorAt = async ({ path, line = 1, column = 1, match = "" } = {}) => {
+  const openEditorAt = async ({ path, line = 1, column = 1, match = "" }: { path?: string; line?: number; column?: number; match?: string } = {}) => {
     if (!path) return;
     await openFiles();
     await openEditor(path);
