@@ -123,6 +123,14 @@ func (c *sessionCommandContract) update(ctx context.Context, directory, sessionI
 	}
 	input.Title = &title
 	if err := adapter.UpdateSession(ctx, c.backend, directory, sessionID, input); err != nil {
+		var runtimeErr *sessionRuntimeError
+		if errors.As(err, &runtimeErr) && runtimeErr.Status == http.StatusNotFound && c.read != nil && c.read.store != nil {
+			if persisted, ok, storeErr := c.read.store.updateTitle(sessionID, title); storeErr != nil {
+				return sessionView{}, storeErr
+			} else if ok {
+				return persisted, nil
+			}
+		}
 		return sessionView{}, err
 	}
 	return c.read.getSession(ctx, sessionID, directory)
@@ -137,8 +145,20 @@ func (c *sessionCommandContract) remove(ctx context.Context, directory, sessionI
 	if sessionID == "" {
 		return errors.New("session id is required")
 	}
-	if err := adapter.DeleteSession(ctx, c.backend, directory, sessionID); err != nil {
-		return err
+	runtimeDeleteErr := adapter.DeleteSession(ctx, c.backend, directory, sessionID)
+	if runtimeDeleteErr != nil {
+		var runtimeErr *sessionRuntimeError
+		if !errors.As(runtimeDeleteErr, &runtimeErr) || runtimeErr.Status != http.StatusNotFound {
+			return runtimeDeleteErr
+		}
+		if c.read == nil || c.read.store == nil {
+			return runtimeDeleteErr
+		}
+		if _, ok, storeErr := c.read.store.getSession(sessionID); storeErr != nil {
+			return storeErr
+		} else if !ok {
+			return runtimeDeleteErr
+		}
 	}
 	if c.read != nil && c.read.store != nil {
 		if err := c.read.store.remove(sessionID); err != nil {
