@@ -4,15 +4,15 @@
   if (!K || K.__ideFoundationInstalled) return;
   K.__ideFoundationInstalled = true;
 
-  const normalizePath = (value) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
-  const pathKey = (value) => {
+  const normalizePath = (value: any) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  const pathKey = (value: any) => {
     const normalized = normalizePath(value);
     return K.state.local?.platform === "windows" ? normalized.toLowerCase() : normalized;
   };
-  const isDirty = (tab) => !!tab && tab.content !== tab.savedContent;
+  const isDirty = (tab: any) => !!tab && tab.content !== tab.savedContent;
   const hasDirtyTabs = () => Array.isArray(K.state.editorTabs) && K.state.editorTabs.some(isDirty);
 
-  const localRequest = async (path) => {
+  const localRequest = async (path: any) => {
     const response = await fetch(path, { cache: "no-store" });
     const type = response.headers.get("content-type") || "";
     const payload = type.includes("application/json") ? await response.json().catch(() => null) : await response.text().catch(() => "");
@@ -24,7 +24,7 @@
     return payload;
   };
 
-  const applyPreview = (tab, preview) => {
+  const applyPreview = (tab: any, preview: any) => {
     tab.path = preview.path || tab.path;
     tab.content = preview.content || "";
     tab.savedContent = preview.content || "";
