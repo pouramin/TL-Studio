@@ -164,7 +164,7 @@
   let resizeTimer: number | null = null;
   if ("ResizeObserver" in window) {
     new ResizeObserver(() => {
-      clearTimeout(resizeTimer);
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(write, 100);
     }).observe(panel);
   }
