@@ -235,7 +235,7 @@
       await K.sendPrompt?.();
       return true;
     } catch (error) {
-      K.showError?.(`Recovery failed: ${error.message || String(error)}`);
+      K.showError?.(`Recovery failed: ${(error as any).message || String(error)}`);
       return false;
     } finally {
       recovering = false;
@@ -253,11 +253,11 @@
   const correctTimeoutModelMetadata = () => {
     const view = K.els.conversation;
     if (!view) return;
-    const rows = [...view.querySelectorAll(".message.assistant:not(.working-message)")];
+    const rows = [...view.querySelectorAll<HTMLElement>(".message.assistant:not(.working-message)")];
     const entries = timeoutEntries();
     rows.forEach((row, rowIndex) => {
       if (!row.classList.contains("error")) return;
-      const meta = row.querySelector(".timeout-recovery-meta");
+      const meta = row.querySelector<HTMLElement>(".timeout-recovery-meta");
       if (!meta) return;
       const entry = entries[rowIndex];
       if (!entry) return;
@@ -275,7 +275,7 @@
   const decorateWorkingStatus = () => {
     const view = K.els.conversation;
     if (!view) return;
-    const row = view.querySelector(".working-message");
+    const row = view.querySelector<HTMLElement>(".working-message");
     if (!row) return;
     const content = row.querySelector(".message-content");
     const body = row.querySelector(".message-text");
