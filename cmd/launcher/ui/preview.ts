@@ -88,9 +88,7 @@
       : type.includes("application/json") ? await response.json().catch(() => null) : await response.text().catch(() => "");
     if (!response.ok) {
       const detail = payload && typeof payload === "object" ? payload.error || payload.reason || payload.message : String(payload || `${response.status} ${response.statusText}`);
-      const error = new Error(detail || "Preview request failed");
-      error.payload = payload;
-      throw error;
+      throw Object.assign(new Error(detail || "Preview request failed"), { payload });
     }
     return payload;
   };
@@ -236,7 +234,7 @@
         K.state.preview.poll = window.setInterval(() => refreshStatus().catch(() => {}), 500);
       }
     } catch (error) {
-      render(error.payload || { available: false, error: error.message || String(error) });
+      render((error as any).payload || { available: false, error: (error as any).message || String(error) });
     }
   };
 
@@ -251,7 +249,7 @@
       return snapshot;
     } catch (error) {
       if (generation === K.state.preview.entrySwitchGeneration) {
-        render(error.payload || { available: false, error: error.message || String(error) });
+        render((error as any).payload || { available: false, error: (error as any).message || String(error) });
       }
       return null;
     }
@@ -284,7 +282,7 @@
     try {
       await request("/local/preview", { method: "DELETE" });
     } catch (error) {
-      if (!silent) K.showError?.(error.message || String(error));
+      if (!silent) K.showError?.((error as any).message || String(error));
     }
     render(await request("/local/preview").catch(() => ({ available: false })));
   };
@@ -349,9 +347,10 @@
   window.fetch = async (input, init = {}) => {
     const response = await nativeFetch(input, init);
     try {
-      const raw = typeof input === "string" ? input : input?.url || "";
+      const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       const parsed = new URL(raw, window.location.href);
-      const method = String(init?.method || (typeof input !== "string" ? input?.method : "") || "GET").toUpperCase();
+      const requestMethod = input instanceof Request ? input.method : "";
+      const method = String(init?.method || requestMethod || "GET").toUpperCase();
       const workspaceMutation = response.ok
         && parsed.origin === window.location.origin
         && (parsed.pathname === "/local/file" || parsed.pathname === "/local/entry")
@@ -361,7 +360,7 @@
     return response;
   };
   window.addEventListener("tl-studio:project-file-changed", scheduleFileReload);
-  window.addEventListener("tl-studio:editor-render", (event) => followActivePreviewEntry(event.detail?.path));
+  window.addEventListener("tl-studio:editor-render", (event) => followActivePreviewEntry((event as CustomEvent<any>).detail?.path));
 
   const baseHandleRuntimeEvent = K.handleRuntimeEvent;
   if (typeof baseHandleRuntimeEvent === "function") {
