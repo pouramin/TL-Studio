@@ -75,7 +75,7 @@
       await K.sendPrompt();
       return true;
     } catch (error) {
-      K.showError?.(`Resume failed: ${error.message || String(error)}`);
+      K.showError?.(`Resume failed: ${(error as any).message || String(error)}`);
       return false;
     } finally {
       if (button?.isConnected) {
