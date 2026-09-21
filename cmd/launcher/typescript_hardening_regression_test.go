@@ -135,6 +135,7 @@ func TestTypeScriptHardeningPhase2ModuleBuildContract(t *testing.T) {
 		`bundle: true`,
 		`format: "esm"`,
 		`"browser.js"`,
+		`name.endsWith(".js")`,
 	} {
 		if !strings.Contains(build, required) {
 			t.Fatalf("Browser build missing %q", required)
