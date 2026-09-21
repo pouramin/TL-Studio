@@ -51,8 +51,8 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 	if strings.Contains(text, "cdn.") || strings.Contains(text, "unpkg") || strings.Contains(text, "jsdelivr") {
 		t.Fatal("preview UI must not depend on external CDN assets")
 	}
-	if !strings.Contains(string(css), ".preview-panel") || !strings.Contains(string(css), ".preview-frame") {
-		t.Fatal("preview.css missing preview panel/frame styles")
+	if !strings.Contains(string(css), ".preview-panel") || !strings.Contains(string(css), ".preview-frame") || !strings.Contains(string(css), ".preview-entry-row") {
+		t.Fatal("preview.css missing preview panel/frame/entry selector styles")
 	}
 	if !strings.Contains(string(app), `"/preview.js"`) {
 		t.Fatal("app.js does not load preview.js")
