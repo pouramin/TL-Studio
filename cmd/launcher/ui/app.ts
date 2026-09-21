@@ -66,7 +66,7 @@
     const script = document.createElement("script");
     script.src = src;
     script.async = false;
-    script.onload = resolve;
+    script.onload = () => resolve();
     script.onerror = () => {
       console.warn(warning);
       resolve();
