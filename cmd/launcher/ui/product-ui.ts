@@ -24,24 +24,24 @@
   const systemTheme = window.matchMedia?.("(prefers-color-scheme: light)");
   const hostedConnected = () => K.state.hostedAuth?.authenticated ?? K.state.connectedProviders.has(K.api.hosted.providerID);
 
-  const readSetting = (key, fallback) => {
+  const readSetting = (key: any, fallback: any) => {
     try { return window.localStorage.getItem(key) || fallback; }
     catch { return fallback; }
   };
-  const writeSetting = (key, value) => {
+  const writeSetting = (key: any, value: any) => {
     try { window.localStorage.setItem(key, value); }
     catch {}
   };
 
-  const normalizePath = (value) => {
+  const normalizePath = (value: any) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
     if (K.state.local?.platform === "windows") path = path.toLowerCase();
     return path;
   };
-  const samePath = (a, b) => normalizePath(a) === normalizePath(b);
-  const sessionDirectory = (session) => session?.directory || session?.path || "";
+  const samePath = (a: any, b: any) => normalizePath(a) === normalizePath(b);
+  const sessionDirectory = (session: any) => session?.directory || session?.path || "";
 
-  const applyAppearance = (value) => {
+  const applyAppearance = (value: any) => {
     const preference = ["system", "dark", "light"].includes(value) ? value : "system";
     const resolved = preference === "system" ? (systemTheme?.matches ? "light" : "dark") : preference;
     document.documentElement.dataset.theme = preference;
@@ -50,7 +50,7 @@
     if (ui.appearanceSelect) ui.appearanceSelect.value = preference;
   };
 
-  const applyFontSize = (value) => {
+  const applyFontSize = (value: any) => {
     const size = ["small", "default", "large"].includes(value) ? value : "default";
     document.documentElement.dataset.fontSize = size;
     if (ui.fontSizeSelect) ui.fontSizeSelect.value = size;
