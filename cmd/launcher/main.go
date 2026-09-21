@@ -12,7 +12,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -71,11 +70,11 @@ func main() {
 	var projectArg string
 	var noBrowser bool
 	var listenAddr string
-	var kiloOverride string
+	var runtimeOverride string
 	flag.StringVar(&projectArg, "project", "", "project directory to open")
 	flag.BoolVar(&noBrowser, "no-browser", false, "do not open the browser automatically")
 	flag.StringVar(&listenAddr, "listen", "127.0.0.1", "frontend listen address")
-	flag.StringVar(&kiloOverride, "runtime-bin", "", "override path to the bundled agent runtime (advanced)")
+	flag.StringVar(&runtimeOverride, "runtime-bin", "", "override path to the bundled agent runtime (advanced)")
 	flag.Parse()
 	if !isLoopbackHost(listenAddr) {
 		log.Fatalf("listen: %q is not a loopback address; this UI intentionally binds only to localhost", listenAddr)
@@ -89,7 +88,8 @@ func main() {
 		log.Fatalf("project: %v", err)
 	}
 
-	kiloPath, err := findKiloBinary(kiloOverride)
+	engine := defaultRuntimeEngine()
+	runtimePath, err := engine.FindBinary(runtimeOverride)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,11 +103,12 @@ func main() {
 		log.Fatalf("find frontend port: %v", err)
 	}
 
-	username := "runtime"
+	credentials := runtimeCredentials{Username: "runtime"}
 	password, err := randomSecret(24)
 	if err != nil {
 		log.Fatalf("create server password: %v", err)
 	}
+	credentials.Password = password
 
 	backendURL := fmt.Sprintf("http://127.0.0.1:%d", backendPort)
 	frontendURL := "http://" + net.JoinHostPort(listenAddr, fmt.Sprint(frontendPort))
@@ -120,20 +121,20 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	kiloCmd, err := startKilo(ctx, kiloPath, backendPort, username, password)
+	runtimeCmd, err := startRuntime(ctx, engine, runtimePath, backendPort, credentials)
 	if err != nil {
 		log.Fatalf("start bundled runtime: %v", err)
 	}
-	defer stopProcess(kiloCmd)
+	defer stopProcess(runtimeCmd)
 
 	if err := waitForPort(ctx, "127.0.0.1", backendPort, 12*time.Second); err != nil {
-		stopProcess(kiloCmd)
+		stopProcess(runtimeCmd)
 		log.Fatalf("bundled runtime did not start: %v", err)
 	}
 
-	server, err := newServer(state, backendURL, username, password)
+	server, err := newServerWithRuntime(state, backendURL, credentials, engine)
 	if err != nil {
-		stopProcess(kiloCmd)
+		stopProcess(runtimeCmd)
 		log.Fatalf("create local server: %v", err)
 	}
 
@@ -171,30 +172,22 @@ func main() {
 }
 
 func newServer(state *appState, backendURL, username, password string) (http.Handler, error) {
-	target, err := url.Parse(backendURL)
+	return newServerWithRuntime(
+		state,
+		backendURL,
+		runtimeCredentials{Username: username, Password: password},
+		defaultRuntimeEngine(),
+	)
+}
+
+func newServerWithRuntime(state *appState, backendURL string, credentials runtimeCredentials, engine runtimeEngine) (http.Handler, error) {
+	backend, err := newRuntimeBackend(state, backendURL, credentials, engine)
 	if err != nil {
 		return nil, err
 	}
+	proxy := backend.reverseProxy()
 
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		req.URL.Path = strings.TrimPrefix(req.URL.Path, "/runtime")
-		if req.URL.Path == "" {
-			req.URL.Path = "/"
-		}
-		req.Host = target.Host
-		req.SetBasicAuth(username, password)
-		if project := state.projectPath(); project != "" {
-			req.Header.Set("x-kilo-directory", strings.ReplaceAll(url.QueryEscape(project), "+", "%20"))
-		}
-	}
-	proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
-		writeJSON(w, http.StatusBadGateway, jsonError{Error: "Runtime backend unavailable: " + err.Error()})
-	}
-
-	providerManager, err := newRuntimeProviderManager(state, backendURL, username, password)
+	providerManager, err := newRuntimeProviderManager(state, backendURL, credentials.Username, credentials.Password)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime provider manager: %w", err)
 	}
@@ -353,59 +346,6 @@ func normalizeProject(input string) (string, error) {
 		return "", fmt.Errorf("%s is not a directory", abs)
 	}
 	return filepath.Clean(abs), nil
-}
-
-func findKiloBinary(override string) (string, error) {
-	candidates := []string{}
-	if strings.TrimSpace(override) != "" {
-		candidates = append(candidates, override)
-	}
-	if env := strings.TrimSpace(os.Getenv("TL_STUDIO_RUNTIME_BIN")); env != "" {
-		candidates = append(candidates, env)
-	} else if legacyEnv := strings.TrimSpace(os.Getenv("KILO_BIN")); legacyEnv != "" {
-		candidates = append(candidates, legacyEnv)
-	}
-	if exe, err := os.Executable(); err == nil {
-		base := filepath.Dir(exe)
-		name := "kilo"
-		if runtime.GOOS == "windows" {
-			name = "kilo.exe"
-		}
-		candidates = append(candidates, filepath.Join(base, "bin", name), filepath.Join(base, name))
-	}
-	if path, err := exec.LookPath("kilo"); err == nil {
-		candidates = append(candidates, path)
-	}
-	for _, candidate := range candidates {
-		if candidate == "" {
-			continue
-		}
-		abs, err := filepath.Abs(candidate)
-		if err != nil {
-			continue
-		}
-		if info, err := os.Stat(abs); err == nil && !info.IsDir() {
-			return abs, nil
-		}
-	}
-	return "", errors.New("bundled agent runtime not found; reinstall TL Studio or use --runtime-bin for an advanced local override")
-}
-
-func startKilo(ctx context.Context, kiloPath string, port int, username, password string) (*exec.Cmd, error) {
-	cmd := exec.CommandContext(ctx, kiloPath, "serve", "--hostname", "127.0.0.1", "--port", fmt.Sprint(port))
-	cmd.Env = append(os.Environ(),
-		"KILO_SERVER_USERNAME="+username,
-		"KILO_SERVER_PASSWORD="+password,
-	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = windowsHideProcess()
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return cmd, nil
 }
 
 func stopProcess(cmd *exec.Cmd) {
