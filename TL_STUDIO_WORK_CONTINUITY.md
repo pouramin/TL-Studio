@@ -53,5 +53,6 @@ The long-term direction is:
 
 1. Product semantics owned by TL Studio.
 2. Replaceable runtime/engine adapters.
-3. Session, run, question, credential, and tool-execution ownership progressively moved inward.
-4. Eventually a TL Studio-owned agent runtime, with third-party runtimes optional adapters rather than product dependencies.
+3. Session read/commands/persistence, interactive questions, custom-provider credentials, provider/model definitions, permission policy, and tool semantics are now TL Studio-owned.
+4. The two remaining heavy Phase 2 milestones are tool-execution ownership and the Agent execution loop.
+5. Eventually third-party runtimes become optional adapters rather than product dependencies.
