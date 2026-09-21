@@ -125,7 +125,7 @@
     }
     K.state.changesLoading = true;
     K.renderChanges();
-    let aggregate = [];
+    let aggregate: any[] = [];
     try {
       const changes = await K.api.sessionView.changes(K.state.session.id);
       aggregate = Array.isArray(changes) ? changes : [];
@@ -174,7 +174,7 @@
       K.stopSessionPolling?.();
       await settleSelectedSession();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       ui.stopButton.disabled = false;
       K.refreshWorkspaceControls();
@@ -201,7 +201,7 @@
       await K.loadSessions();
       K.renderSessionHeader();
       K.renderSessions();
-    } catch (error) { K.showError(error.message || String(error)); }
+    } catch (error) { K.showError((error as any).message || String(error)); }
   };
 
   const deleteSession = async () => {
@@ -219,7 +219,7 @@
       await K.loadSessions();
       K.renderChanges();
       K.refreshWorkspaceControls();
-    } catch (error) { K.showError(error.message || String(error)); }
+    } catch (error) { K.showError((error as any).message || String(error)); }
   };
 
   const originalSelectSession = K.selectSession;
@@ -257,7 +257,7 @@
       window.setTimeout(() => K.loadChanges().catch(() => {}), 60);
     }
     if (sessionID && sessionID === K.state.session?.id && type === "session.idle") {
-      window.setTimeout(() => settleSelectedSession().catch((error) => K.showError(error.message || String(error))), 80);
+      window.setTimeout(() => settleSelectedSession().catch((error) => K.showError((error as any).message || String(error))), 80);
     }
   };
 
