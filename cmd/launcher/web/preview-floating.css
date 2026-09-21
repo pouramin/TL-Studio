@@ -1,5 +1,5 @@
 .preview-floating-window {
-  min-width: 420px;
+  min-width: 340px;
   min-height: 300px;
   max-width: calc(100vw - 16px);
   max-height: calc(100vh - 16px);
@@ -16,3 +16,37 @@
 .preview-floating-window.preview-dragging .preview-head { cursor: grabbing; }
 .preview-floating-window .preview-actions { cursor: default; }
 .preview-floating-window .preview-frame { width: 100%; height: 100%; }
+
+
+.preview-resize-left {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 10px;
+  z-index: 95;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.preview-resize-left::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 2px;
+  height: 56px;
+  border-radius: 2px;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: background .12s ease;
+}
+
+.preview-floating-window:hover .preview-resize-left::after,
+.preview-floating-window.preview-resizing .preview-resize-left::after {
+  background: var(--accent, #b8ff4a);
+}
+
+.preview-floating-window.preview-resizing {
+  user-select: none;
+}
