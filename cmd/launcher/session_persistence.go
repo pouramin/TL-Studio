@@ -361,6 +361,82 @@ func (s *sessionPersistenceStore) getChanges(sessionID string) ([]sessionChangeV
 	return append([]sessionChangeView(nil), snapshot.Changes...), true, nil
 }
 
+func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string, input sessionRunInput) error {
+	sessionID = strings.TrimSpace(sessionID)
+	directory = strings.TrimSpace(directory)
+	if sessionID == "" || directory == "" {
+		return nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return err
+	}
+
+	session := s.sessions[sessionID]
+	if session.ID == "" {
+		session = sessionView{ID: sessionID, Directory: directory}
+	}
+	now := time.Now().UnixMilli()
+	if session.CreatedAt == 0 {
+		session.CreatedAt = now
+	}
+	session.UpdatedAt = now
+	if input.Agent != "" {
+		session.Agent = input.Agent
+	}
+	if input.Model != nil {
+		model := *input.Model
+		session.Model = &model
+	}
+	s.sessions[sessionID] = session
+
+	snapshot, err := s.loadSnapshotLocked(sessionID)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	snapshot.Session = session
+
+	text := strings.TrimSpace(input.Text)
+	attachments := []sessionAttachmentView{}
+	for _, part := range input.Parts {
+		partType := sessionString(part["type"])
+		if partType == "text" && text == "" {
+			if value := sessionString(part["text"]); value != "" {
+				if text != "" {
+					text += "\n"
+				}
+				text += value
+			}
+		}
+		if partType == "file" {
+			attachments = append(attachments, sessionAttachmentView{
+				Name: firstSessionString(part["filename"], part["name"]),
+				MIME: sessionString(part["mime"]),
+			})
+		}
+	}
+
+	snapshot.Messages = append(snapshot.Messages, sessionMessageView{
+		ID:          input.MessageID,
+		SessionID:   sessionID,
+		Role:        "user",
+		Agent:       input.Agent,
+		Model:       input.Model,
+		CreatedAt:   now,
+		Text:        text,
+		Activities:  []sessionActivityView{},
+		Attachments: attachments,
+		Usage:       sessionUsage{},
+		Changes:     []sessionChangeView{},
+	})
+	if err := s.saveSnapshotLocked(snapshot); err != nil {
+		return err
+	}
+	return s.persistIndexLocked()
+}
+
 func (s *sessionPersistenceStore) remove(sessionID string) error {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
