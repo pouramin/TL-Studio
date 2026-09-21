@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"time"
 )
@@ -63,15 +64,10 @@ func (s *sessionPersistenceStore) putNativeMessage(sessionID, directory string, 
 	s.sessions[sessionID] = session
 
 	snapshot, err := s.loadSnapshotLocked(sessionID)
-	if err != nil && !errors.Is(err, errors.New("")) && !errors.Is(err, errors.New("file does not exist")) {
-		// os.ErrNotExist is handled by the empty snapshot path below. The
-		// concrete check is repeated through the standard helper behavior.
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
-	if err != nil {
-		// loadSnapshotLocked returns os.ErrNotExist for a new session snapshot.
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
+	if errors.Is(err, os.ErrNotExist) {
 		snapshot = persistedSessionSnapshot{}
 	}
 	snapshot.Session = session
