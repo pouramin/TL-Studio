@@ -171,7 +171,7 @@ import { K } from "./kernel";
     K.showError("");
     ui.stopButton.disabled = true;
     try {
-      await K.api.sessions.abort(session.id, { scope: "session" });
+      await K.api.sessionCommands.abort(session.id, { scope: "session" });
       K.state.sending = false;
       K.stopSessionPolling?.();
       await settleSelectedSession();
@@ -196,7 +196,7 @@ import { K } from "./kernel";
     const title = ui.sessionTitleInput.value.trim();
     if (!title) return K.showError("Session title cannot be empty.");
     try {
-      await K.api.sessions.update(session.id, { title });
+      await K.api.sessionCommands.update(session.id, { title });
       const fresh = await K.api.sessionView.get(session.id).catch(() => null);
       if (fresh) K.state.session = fresh;
       if (ui.sessionDialog.open) ui.sessionDialog.close();
@@ -212,9 +212,9 @@ import { K } from "./kernel";
     if (!window.confirm(`Delete “${session.title || "Untitled session"}” permanently?`)) return;
     try {
       if (K.isSessionRunning(session.id) || K.state.sending) {
-        await K.api.sessions.abort(session.id, { scope: "tree" }).catch(() => {});
+        await K.api.sessionCommands.abort(session.id, { scope: "tree" }).catch(() => {});
       }
-      await K.api.sessions.remove(session.id);
+      await K.api.sessionCommands.remove(session.id);
       if (ui.sessionDialog.open) ui.sessionDialog.close();
       K.state.changes = [];
       K.newSession();
