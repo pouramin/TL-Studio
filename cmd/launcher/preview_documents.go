@@ -2,6 +2,7 @@ package main
 
 import (
 	stdhtml "html"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -87,16 +88,27 @@ func servePDFPreview(w http.ResponseWriter, r *http.Request, project string) boo
 		http.NotFound(w, r)
 		return true
 	}
-	source := previewEscapedPath(descriptor.Path)
-	title := stdhtml.EscapeString(filepath.Base(descriptor.Path))
-	body := "<object data=\"" + source + "#toolbar=1&navpanes=0\" type=\"application/pdf\" width=\"100%\" height=\"100%\" style=\"position:fixed;inset:0;border:0;width:100%;height:100%\">" +
-		"<embed src=\"" + source + "#toolbar=1&navpanes=0\" type=\"application/pdf\" style=\"position:fixed;inset:0;border:0;width:100%;height:100%\">" +
-		"<div style=\"padding:24px\">PDF preview is unavailable in this browser. <a href=\"" + source + "\" target=\"_blank\" rel=\"noreferrer\">Open " + title + "</a></div>" +
-		"</object>"
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	target, _, err := resolveProjectEntry(project, descriptor.Path)
+	if err != nil {
+		http.NotFound(w, r)
+		return true
+	}
+	file, err := os.Open(target)
+	if err != nil {
+		http.NotFound(w, r)
+		return true
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		http.NotFound(w, r)
+		return true
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filepath.Base(descriptor.Path)}))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; object-src 'self'; frame-src 'self'; style-src 'unsafe-inline';")
-	_, _ = w.Write([]byte(previewDocumentShell(filepath.Base(descriptor.Path), body)))
+	http.ServeContent(w, r, filepath.Base(descriptor.Path), info.ModTime(), file)
 	return true
 }
