@@ -11,17 +11,19 @@ import (
 	"path/filepath"
 	pathpkg "path"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
 type previewCapability struct {
-	Available bool   `json:"available"`
-	Kind      string `json:"kind,omitempty"`
-	Command   string `json:"command,omitempty"`
-	Entry     string `json:"entry,omitempty"`
-	Reason    string `json:"reason,omitempty"`
+	Available bool     `json:"available"`
+	Kind      string   `json:"kind,omitempty"`
+	Command   string   `json:"command,omitempty"`
+	Entry     string   `json:"entry,omitempty"`
+	Entries   []string `json:"entries,omitempty"`
+	Reason    string   `json:"reason,omitempty"`
 }
 
 type previewSnapshot struct {
@@ -40,6 +42,7 @@ type previewManager struct {
 	project    string
 	kind       string
 	command    string
+	entry      string
 	processID  string
 	previewURL string
 	server     *http.Server
@@ -52,7 +55,73 @@ func newPreviewManager(state *appState) *previewManager {
 	return &previewManager{state: state, processes: newProcessManager(state.projectPath)}
 }
 
-func detectPreviewCapability(project string) previewCapability {
+func isHTMLPreviewEntry(value string) bool {
+	switch strings.ToLower(filepath.Ext(strings.TrimSpace(value))) {
+	case ".html", ".htm":
+		return true
+	default:
+		return false
+	}
+}
+
+func validStaticPreviewEntry(project, requested string) (string, bool) {
+	if !isHTMLPreviewEntry(requested) {
+		return "", false
+	}
+	target, rel, err := resolveProjectEntry(project, requested)
+	if err != nil {
+		return "", false
+	}
+	info, err := os.Stat(target)
+	if err != nil || !info.Mode().IsRegular() {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
+}
+
+func previewHTMLCandidates(project string) []string {
+	root, err := canonicalProjectRoot(project)
+	if err != nil {
+		return nil
+	}
+	candidates := make([]string, 0, 8)
+	_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if entry != nil && entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if path == root {
+			return nil
+		}
+		if entry.IsDir() {
+			name := strings.ToLower(entry.Name())
+			if name == ".git" || name == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if entry.Type()&os.ModeSymlink != 0 || !isHTMLPreviewEntry(entry.Name()) {
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return nil
+		}
+		candidates = append(candidates, filepath.ToSlash(rel))
+		if len(candidates) >= 64 {
+			return fs.SkipAll
+		}
+		return nil
+	})
+	sort.Slice(candidates, func(i, j int) bool {
+		return strings.ToLower(candidates[i]) < strings.ToLower(candidates[j])
+	})
+	return candidates
+}
+
+func detectPreviewCapability(project, preferredEntry string) previewCapability {
 	project = strings.TrimSpace(project)
 	if project == "" {
 		return previewCapability{Reason: "Open a project before starting Preview."}
@@ -75,7 +144,24 @@ func detectPreviewCapability(project string) previewCapability {
 		return previewCapability{Available: true, Kind: "static", Entry: "index.html"}
 	}
 
-	return previewCapability{Reason: "Preview currently supports projects with a package.json dev script or a root index.html."}
+	if entry, ok := validStaticPreviewEntry(project, preferredEntry); ok {
+		return previewCapability{Available: true, Kind: "static", Entry: entry}
+	}
+
+	candidates := previewHTMLCandidates(project)
+	switch len(candidates) {
+	case 0:
+		return previewCapability{Reason: "Preview supports projects with a package.json dev script or an HTML file."}
+	case 1:
+		return previewCapability{Available: true, Kind: "static", Entry: candidates[0]}
+	default:
+		return previewCapability{
+			Available: true,
+			Kind:      "static",
+			Entries:   candidates,
+			Reason:    "Choose an HTML file to preview.",
+		}
+	}
 }
 
 func normalizePreviewURL(raw string) string {
@@ -124,6 +210,7 @@ func (m *previewManager) stopLocked() {
 	m.project = ""
 	m.kind = ""
 	m.command = ""
+	m.entry = ""
 	m.processID = ""
 	m.previewURL = ""
 	m.server = nil
@@ -143,7 +230,18 @@ func (m *previewManager) syncProjectLocked() {
 	}
 }
 
-func (m *previewManager) startStatic(project string) error {
+func previewEntryURL(baseURL, entry string) string {
+	if strings.EqualFold(filepath.ToSlash(entry), "index.html") || strings.TrimSpace(entry) == "" {
+		return baseURL
+	}
+	parts := strings.Split(filepath.ToSlash(entry), "/")
+	for index, part := range parts {
+		parts[index] = url.PathEscape(part)
+	}
+	return strings.TrimRight(baseURL, "/") + "/" + strings.Join(parts, "/")
+}
+
+func (m *previewManager) startStatic(project, entry string) error {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return err
@@ -154,30 +252,35 @@ func (m *previewManager) startStatic(project string) error {
 	}
 	m.listener = listener
 	m.server = server
-	m.previewURL = "http://" + listener.Addr().String() + "/"
+	m.previewURL = previewEntryURL("http://"+listener.Addr().String()+"/", entry)
 	go func() {
 		_ = server.Serve(listener)
 	}()
 	return nil
 }
 
-func (m *previewManager) start() (previewSnapshot, error) {
+func (m *previewManager) start(preferredEntry string) (previewSnapshot, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
 	m.stopLocked()
 
 	project := m.state.projectPath()
-	capability := detectPreviewCapability(project)
+	capability := detectPreviewCapability(project, preferredEntry)
 	if !capability.Available {
+		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
+	}
+
+	if capability.Kind == "static" && capability.Entry == "" {
 		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
 	}
 
 	m.project = project
 	m.kind = capability.Kind
 	m.command = capability.Command
+	m.entry = capability.Entry
 	if capability.Kind == "static" {
-		if err := m.startStatic(project); err != nil {
+		if err := m.startStatic(project, capability.Entry); err != nil {
 			m.stopLocked()
 			return previewSnapshot{}, err
 		}
@@ -222,12 +325,15 @@ func (m *previewManager) snapshotLocked(capability previewCapability) previewSna
 	return snapshot
 }
 
-func (m *previewManager) snapshot() previewSnapshot {
+func (m *previewManager) snapshot(preferredEntry string) previewSnapshot {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
 	project := m.state.projectPath()
-	capability := detectPreviewCapability(project)
+	if m.project != "" && m.kind == "static" && m.entry != "" {
+		preferredEntry = m.entry
+	}
+	capability := detectPreviewCapability(project, preferredEntry)
 	if m.project == "" {
 		return previewSnapshot{previewCapability: capability, Project: project}
 	}
@@ -289,11 +395,11 @@ func registerLivePreviewRoutes(mux *http.ServeMux, state *appState) {
 		_, _ = w.Write(indexHTML)
 	})
 
-	mux.HandleFunc("GET /local/preview", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, manager.snapshot())
+	mux.HandleFunc("GET /local/preview", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, manager.snapshot(r.URL.Query().Get("entry")))
 	})
-	mux.HandleFunc("POST /local/preview", func(w http.ResponseWriter, _ *http.Request) {
-		snapshot, err := manager.start()
+	mux.HandleFunc("POST /local/preview", func(w http.ResponseWriter, r *http.Request) {
+		snapshot, err := manager.start(r.URL.Query().Get("entry"))
 		if err != nil {
 			if snapshot.Project == "" {
 				snapshot.Project = state.projectPath()

@@ -31,6 +31,12 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"previewFrame",
 		"previewReload",
 		"previewExternal",
+		"previewEntry",
+		"K.state.activeEditorPath",
+		"snapshot?.entries",
+		"new URLSearchParams({ entry: value })",
+		"Choose an HTML file to preview.",
+		"Ready to preview",
 		"tl-studio:project-file-changed",
 		"startsWith(\"file.\")",
 		"keepalive: true",
@@ -39,11 +45,14 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 			t.Fatalf("preview.js missing %q", required)
 		}
 	}
+	if strings.Contains(text, "TL Studio can preview a root index.html") {
+		t.Fatal("preview UI still advertises root index.html as the only static HTML path")
+	}
 	if strings.Contains(text, "cdn.") || strings.Contains(text, "unpkg") || strings.Contains(text, "jsdelivr") {
 		t.Fatal("preview UI must not depend on external CDN assets")
 	}
-	if !strings.Contains(string(css), ".preview-panel") || !strings.Contains(string(css), ".preview-frame") {
-		t.Fatal("preview.css missing preview panel/frame styles")
+	if !strings.Contains(string(css), ".preview-panel") || !strings.Contains(string(css), ".preview-frame") || !strings.Contains(string(css), ".preview-entry-row") {
+		t.Fatal("preview.css missing preview panel/frame/entry selector styles")
 	}
 	if !strings.Contains(string(app), `"/preview.js"`) {
 		t.Fatal("app.js does not load preview.js")
