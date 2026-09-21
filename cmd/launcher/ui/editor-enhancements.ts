@@ -11,7 +11,7 @@
 
   const esc = (s: any) => String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const lang = (path: any) => {
-    const ext = String(path || "").toLowerCase().split(".").pop();
+    const ext = String(path || "").toLowerCase().split(".").pop() || "";
     if (["html","htm","xml","svg","vue","svelte"].includes(ext)) return "markup";
     if (["css","scss","sass","less"].includes(ext)) return "css";
     if (["js","jsx","mjs","cjs"].includes(ext)) return "js";
@@ -22,7 +22,7 @@
     return "generic";
   };
 
-  const words = {
+  const words: Record<string, string[]> = {
     js: "as async await break case catch class const continue default delete do else export extends false finally for from function get if import in instanceof let new null of return set static super switch this throw true try typeof undefined var void while yield".split(" "),
     ts: "abstract any as async await bigint boolean break case catch class const constructor continue declare default delete do else enum export extends false finally for from function get if implements import in interface keyof let namespace never new null number object of private protected public readonly return set static string super switch symbol this throw true try type typeof undefined unknown var void while yield".split(" "),
     py: "and as assert async await break class continue def del elif else except False finally for from global if import in is lambda None nonlocal not or pass raise return True try while with yield".split(" "),
@@ -32,7 +32,7 @@
 
   const highlight = (source: any, language: any) => {
     let text = esc(source);
-    const stash = [];
+    const stash: string[] = [];
     const protect = (html: any, cls: any) => {
       const id = stash.length;
       stash.push(`<span class="tok-${cls}">${html}</span>`);
@@ -60,8 +60,8 @@
   };
 
   const install = () => {
-    const editor = document.getElementById("fileEditor");
-    const surface = document.getElementById("fileEditorSurface");
+    const editor = document.getElementById("fileEditor") as HTMLTextAreaElement | null;
+    const surface = document.getElementById("fileEditorSurface") as HTMLElement | null;
     if (!editor || !surface || surface.querySelector(".file-editor-highlight")) return false;
     const layer = document.createElement("pre");
     layer.className = "file-editor-highlight";
