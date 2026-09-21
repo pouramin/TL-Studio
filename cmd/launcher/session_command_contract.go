@@ -47,6 +47,10 @@ type runtimeSessionCommandProvider interface {
 	SessionCommands() runtimeSessionCommandAdapter
 }
 
+type sessionRunPersistenceOwner interface {
+	ownsRunPersistence(input sessionRunInput) bool
+}
+
 type sessionCommandContract struct {
 	state   *appState
 	backend *runtimeBackend
@@ -194,7 +198,11 @@ func (c *sessionCommandContract) run(ctx context.Context, directory, sessionID s
 	if err := adapter.RunSession(ctx, c.backend, directory, sessionID, input); err != nil {
 		return err
 	}
-	if c.read != nil && c.read.store != nil {
+	ownsPersistence := false
+	if owner, ok := adapter.(sessionRunPersistenceOwner); ok {
+		ownsPersistence = owner.ownsRunPersistence(input)
+	}
+	if !ownsPersistence && c.read != nil && c.read.store != nil {
 		if err := c.read.store.recordAcceptedRun(sessionID, directory, input); err != nil {
 			return err
 		}
