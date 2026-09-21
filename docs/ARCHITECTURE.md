@@ -54,8 +54,10 @@ This process layer is also reused by higher-level features such as Live Preview 
 
 Live Preview has two supported paths:
 
-1. static projects with a root `index.html` are served by a TL Studio-owned loopback-only static preview server;
+1. static HTML is served by a TL Studio-owned loopback-only preview server. A root `index.html` remains the default. Without one, TL Studio can use the active HTML file from the Editor, automatically select the only discovered `.html`/`.htm` file, or expose a Browser-side selector when multiple HTML entries exist;
 2. supported Node projects with a `package.json` `dev` script run that dev server through the process manager and TL Studio discovers its reported loopback URL.
+
+Static entry discovery stays project-scoped, does not follow symlink entries, and skips `.git` and `node_modules`. The static server still serves the project root so relative assets keep working, while the iframe URL points at the selected HTML entry.
 
 Preview content intentionally runs on a **separate loopback origin** from the TL Studio control origin. Project JavaScript must not share an origin with TL Studio's `/local/*` control APIs.
 
