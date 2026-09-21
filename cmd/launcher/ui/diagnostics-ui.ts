@@ -7,37 +7,37 @@
   const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
-  const partsOf = (message) => Array.isArray(message?.activities)
+  const partsOf = (message: any) => Array.isArray(message?.activities)
     ? message.activities
     : Array.isArray(message?.parts) ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const messageRole = (message) => message?.role || message?.info?.role || message?.type || "";
-  const messageTime = (message) => message?.role
+  const messageRole = (message: any) => message?.role || message?.info?.role || message?.type || "";
+  const messageTime = (message: any) => message?.role
     ? { created: message.createdAt, completed: message.completedAt, updated: message.completedAt }
     : message?.info?.time || message?.time || {};
 
-  const exactUserText = (message) => {
+  const exactUserText = (message: any) => {
     if (typeof message?.text === "string") return message.text;
     return partsOf(message)
-      .filter((part) => part?.type === "text" && !part.ignored)
-      .map((part) => typeof part.text === "string" ? part.text : "")
+      .filter((part: any) => part?.type === "text" && !part.ignored)
+      .map((part: any) => typeof part.text === "string" ? part.text : "")
       .filter(Boolean)
       .join("\n");
   };
 
-  const isResumeMessage = (message) => messageRole(message) === "user"
+  const isResumeMessage = (message: any) => messageRole(message) === "user"
     && exactUserText(message).trim() === RESUME_PROMPT;
 
-  const routedModelSteps = (message) => partsOf(message)
-    .filter((part) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
-    .map((part) => ({
+  const routedModelSteps = (message: any) => partsOf(message)
+    .filter((part: any) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
+    .map((part: any) => ({
       providerID: String(part.model?.providerID || ""),
       modelID: String(part.model?.id || part.model?.modelID || ""),
       elapsed: Number(part?.elapsed || part?.time?.elapsed || 0),
     }));
 
-  const modelLabel = (model) => {
+  const modelLabel = (model: any) => {
     const modelID = String(model?.modelID || "").trim();
     const providerID = String(model?.providerID || "").trim();
     if (!modelID) return "";
@@ -45,7 +45,7 @@
     return `${providerID}/${modelID}`;
   };
 
-  const attemptNumberAt = (targetIndex, messages = K.state.messages) => {
+  const attemptNumberAt = (targetIndex: any, messages = K.state.messages) => {
     let attempt = 1;
     let seenTurn = false;
     for (let index = 0; index <= targetIndex && index < messages.length; index++) {
@@ -62,14 +62,14 @@
     return attempt;
   };
 
-  const attemptStartIndex = (targetIndex, messages = K.state.messages) => {
+  const attemptStartIndex = (targetIndex: any, messages = K.state.messages) => {
     for (let index = Math.min(targetIndex, messages.length - 1); index >= 0; index--) {
       if (messageRole(messages[index]) === "user") return index;
     }
     return 0;
   };
 
-  const lastRecordedModelInAttempt = (targetIndex, messages = K.state.messages) => {
+  const lastRecordedModelInAttempt = (targetIndex: any, messages = K.state.messages) => {
     const start = attemptStartIndex(targetIndex, messages);
     for (let index = Math.min(targetIndex, messages.length - 1); index > start; index--) {
       const steps = routedModelSteps(messages[index]);
@@ -81,7 +81,7 @@
     return null;
   };
 
-  const timestampOf = (value) => {
+  const timestampOf = (value: any) => {
     const number = Number(value || 0);
     return Number.isFinite(number) ? number : 0;
   };
@@ -112,7 +112,7 @@
     return latest;
   };
 
-  const shortDuration = (milliseconds) => {
+  const shortDuration = (milliseconds: any) => {
     const seconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
@@ -121,7 +121,7 @@
     return `${hours}h ${minutes % 60}m`;
   };
 
-  const retryMessage = (input) => {
+  const retryMessage = (input: any) => {
     const raw = String(input || "").trim();
     if (!raw) return "";
     let value = raw;
@@ -191,7 +191,7 @@
 
   let recovering = false;
 
-  const waitForSessionIdle = async (sessionID, timeoutMs = 7000) => {
+  const waitForSessionIdle = async (sessionID: any, timeoutMs = 7000) => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       try { await K.loadActiveSessions?.(); } catch {}
@@ -202,7 +202,7 @@
     return !K.isSessionRunning?.(sessionID);
   };
 
-  const recoverStalledSession = async (button) => {
+  const recoverStalledSession = async (button: any) => {
     const session = K.state.session;
     const snapshot = workingStatusSnapshot();
     if (!session || recovering || snapshot.type !== "busy" || !snapshot.stale) return false;
