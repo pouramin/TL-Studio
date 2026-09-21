@@ -1,9 +1,8 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
+const { loadBrowserModule } = require("./browser-source-harness.cjs");
 
 class FakeElement {
   constructor(tag = "div") {
@@ -21,8 +20,7 @@ class FakeElement {
   addEventListener() {}
 }
 
-const repoRoot = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "diagnostics-ui.js"), "utf8");
+const source = loadBrowserModule("diagnostics-ui.ts");
 const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
 const originalUser = (created = 1000) => ({
@@ -77,7 +75,8 @@ const document = {
 };
 
 const context = vm.createContext({
-  window: { KLU: K, setTimeout },
+  K,
+  window: { setTimeout },
   document,
   console,
   Date,
@@ -85,7 +84,7 @@ const context = vm.createContext({
   Promise,
   setTimeout,
 });
-vm.runInContext(source, context, { filename: "diagnostics-ui.js" });
+vm.runInContext(source, context, { filename: "diagnostics-ui.ts" });
 
 const hooks = K.__statusDiagnostics;
 assert.ok(hooks, "diagnostics hooks should be installed");
@@ -172,8 +171,8 @@ async function testRecovery() {
 
   const recovered = await hooks.recoverStalledSession();
   assert.equal(recovered, true);
-  assert.equal(abortCalls, 1, "recovery should interrupt the stuck Kilo session exactly once");
-  assert.equal(sendCalls, 1, "recovery should resume the task exactly once after Kilo becomes idle");
+  assert.equal(abortCalls, 1, "recovery should interrupt the stuck runtime session exactly once");
+  assert.equal(sendCalls, 1, "recovery should resume the task exactly once after the runtime becomes idle");
   assert.equal(errorMessage, "");
 }
 
