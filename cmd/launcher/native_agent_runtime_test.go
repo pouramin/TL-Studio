@@ -52,7 +52,7 @@ func (m *nativeLoopFakeModel) Complete(_ context.Context, request nativeModelReq
 		found := false
 		for _, message := range request.Messages {
 			if message.Role == "tool" && message.ToolCallID == "call-1" &&
-				strings.Contains(message.Text, "TL_STUDIO_NATIVE_OK") &&
+				strings.Contains(message.Text, `"path":"hello.txt"`) &&
 				strings.Contains(message.Text, `"ok":true`) {
 				found = true
 				break
