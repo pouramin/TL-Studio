@@ -60,7 +60,7 @@
     } catch (err) { K.showError(err.message || String(err)); }
   };
 
-  const loadScript = (src, ready, warning) => new Promise((resolve) => {
+  const loadScript = (src: any, ready: any, warning: any) => new Promise((resolve) => {
     if (ready?.()) return resolve();
     const script = document.createElement("script");
     script.src = src;
