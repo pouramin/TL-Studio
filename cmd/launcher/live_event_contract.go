@@ -322,11 +322,6 @@ func registerLiveEventRoutes(mux *http.ServeMux, contract *liveEventContract) {
 			close(runtimeDone)
 		}()
 
-		_ = writeLiveEvent(w, liveEventView{Version: liveEventContractVersion, Type: "stream.ready"})
-		if flusher != nil {
-			flusher.Flush()
-		}
-
 		keepalive := time.NewTicker(20 * time.Second)
 		defer keepalive.Stop()
 		for {
