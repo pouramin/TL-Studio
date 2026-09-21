@@ -7,7 +7,8 @@
     try {
       await Promise.all([K.checkBackend(), K.loadLocalStatus(), K.loadToolRegistry?.(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
       if (K.state.session) {
-        const fresh = K.state.sessions.find((item) => item.id === K.state.session.id);
+        const currentSessionID = K.state.session.id;
+        const fresh = K.state.sessions.find((item) => item.id === currentSessionID);
         if (fresh) K.state.session = fresh;
         await Promise.all([K.loadMessages(), K.loadAttention()]);
         K.renderMessages();
@@ -15,7 +16,7 @@
         K.syncSelectors();
       }
       K.renderSessions();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
   const wire = () => {
@@ -57,10 +58,10 @@
       await Promise.all([K.loadToolRegistry?.(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
       K.renderSessions();
       K.startEvents();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
-  const loadScript = (src: any, ready: any, warning: any) => new Promise((resolve) => {
+  const loadScript = (src: any, ready: any, warning: any) => new Promise<void>((resolve) => {
     if (ready?.()) return resolve();
     const script = document.createElement("script");
     script.src = src;
