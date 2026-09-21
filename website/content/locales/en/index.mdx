@@ -1,73 +1,64 @@
 ---
 title: TL Studio
-description: Learn what TL Studio is and how its local development workspace is structured.
+description: Learn what TL Studio v0.3 is and how its local development workspace and native Agent path fit together.
 icon: House
 ---
 
-TL Studio is a **local development workspace with its own browser IDE and AI built in**. It brings project files, a multi-tab editor, Project Search, command execution, Live Preview, sessions, providers, permissions, attachments, changes, and Agent workflows into one fast local product.
+TL Studio is a **local development workspace with its own browser IDE and AI built in**. Stable v0.3 combines a writable Monaco workspace, Project Search, Terminal, capability-driven Preview, semantic sessions, Provider/Model management, a local credential vault, permissions, live events, and a TL Studio-native Agent path for supported custom providers.
 
 ## Product identity
 
-The product you install and operate is **TL Studio**. The workspace, editor, project tools, provider/model definitions, recovery behavior, security boundary, packaging, and browser experience all belong to TL Studio.
+The product you install and operate is **TL Studio**. The Browser workspace and product-facing contracts are owned by TL Studio rather than by the bundled compatibility engine.
 
 ```text
 You
   ↓
 TL Studio
-  ├─ Browser IDE + Agent workspace
-  ├─ Files / Editor / Search
-  ├─ Terminal / Live Preview
-  ├─ Sessions / Attachments / Changes
-  ├─ Provider + Model registry
-  └─ Local security + packaging
-       ↓
-Runtime contract + adapter
-       ↓
-Bundled agent engine
-       ↓
-Models / providers / agent tools
+  ├─ Browser IDE / Monaco
+  ├─ Files / Search / Terminal / Preview
+  ├─ Provider registry + credential vault
+  ├─ Sessions / Questions / Permissions / Events
+  ├─ Tool Registry + Tool Executor
+  └─ Native Agent runtime
+        ├─ supported custom providers → direct model APIs
+        └─ compatibility adapter → bundled engine for hosted/legacy capabilities
 ```
 
-The bundled engine is an execution dependency behind a TL Studio-owned contract, not the public identity of the product.
+## What v0.3 can do
 
-## What you can do
-
-- open a local project with the operating-system Folder Picker;
-- browse, edit, create, rename, delete, and save project files;
-- work across multiple editor tabs with unsaved-state and conflict protection;
-- search the project and jump directly to a matching line;
-- run project-scoped commands and stop long-running processes;
-- preview static sites and supported Node development servers locally;
-- create and manage Agent sessions;
-- choose an Agent and Model;
-- attach images, PDFs, and text/code files to prompts;
-- manage compatible custom Provider and Model definitions from Settings;
-- follow live Reasoning, Tool, and file activity;
-- approve or reject Permission requests and answer interactive Questions;
-- inspect per-session Changes and local usage summaries;
-- recover from retryable provider failures without discarding completed file work;
-- customize UI, Code, and Terminal fonts plus editor syntax theme.
+- open a local Project with the operating-system Folder Picker;
+- browse, create, rename, delete, edit, and save Project files;
+- use locally bundled Monaco with multi-tab editing, Find/Replace, multi-cursor, conflict protection, and a lightweight fallback;
+- search the Project and jump directly to a match;
+- run Project-scoped commands and stop long-running process trees;
+- preview HTML, SVG/images, PDF, video, audio, rendered Markdown, rendered text, and supported development servers;
+- reveal the active file in the native file manager with **Show in Folder**;
+- create, rename, delete, resume, run, and abort Sessions through TL Studio semantic contracts;
+- keep semantic Session metadata, transcripts, usage/activity history, and Changes in TL Studio local state;
+- connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible custom Providers;
+- keep custom-provider API keys in the TL Studio credential vault rather than in `providers.json` or browser storage;
+- run supported custom-provider coding tasks through TL Studio's own model/tool/model Agent loop;
+- execute the native core coding tools through TL Studio-owned handlers;
+- approve, reject, and remember safe Project-scoped Permission rules;
+- answer interactive Questions through TL Studio-owned local routes;
+- follow semantic live events and Agent activity without exposing raw engine event envelopes to the Browser.
 
 ## Current stable release
 
-**v0.2.1 is the current stable TL Studio release.**
-
-Quick launch:
+**v0.3.0 is the current stable TL Studio release.**
 
 ```bash
 npx --yes tl-studio
 ```
 
-Or [download the stable portable release from GitHub Releases](https://github.com/pouramin/TL-Studio/releases/tag/v0.2.1).
+Or download a portable build from GitHub Releases. Stable production lives on `main`.
 
-Stable production lives on `main`. Experimental development continues separately on `dev`.
+## Development line
 
-## Development preview
+The next private development line is **v0.4.0-alpha.1** on `dev`. Phase 3 implementation has not started yet, so the public docs do not claim any v0.4-only product behavior.
 
-The current private development line is **v0.3.0-alpha.7**. It adds a locally bundled, lazy-loaded Monaco editor, a TL Studio-owned Tool Registry for tool identity/presentation semantics, and moves remembered non-sensitive permission policy into TL Studio itself. These features are **not part of stable v0.2.1 yet**.
-
-See [Development preview](./reference/development-preview) for the exact stable/dev boundary and how preview builds are distributed.
+See [Development line](./reference/development-preview) for the branch/release discipline.
 
 ## Start here
 
-Start with [Installation](./getting-started/installation) and [First run](./getting-started/first-run), then continue with [Workspace and editor](./guides/workspace-editor), [Project Search](./guides/project-search), [Terminal](./guides/terminal), and [Live Preview](./guides/live-preview).
+Start with [Installation](./getting-started/installation) and [First run](./getting-started/first-run). Then continue with [Workspace and editor](./guides/workspace-editor), [Native Agent and tools](./guides/native-agent-and-tools), [Projects and sessions](./guides/projects-and-sessions), and [Live Preview](./guides/live-preview).

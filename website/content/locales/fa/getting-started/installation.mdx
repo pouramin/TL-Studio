@@ -1,18 +1,18 @@
 ---
 title: نصب
-description: نصب TL Studio با npm یا نسخه Portable پایدار.
+description: نصب نسخه Stable v0.3 با npm یا Release قابل‌حمل.
 icon: Download
 ---
 
 ## اجرا با یک دستور
 
-اگر Node.js و npm نصب هستند، داخل فولدر Project این دستور را اجرا کنید:
+اگر Node.js و npm نصب هستند، داخل Folder پروژه این دستور را اجرا کنید:
 
 ```bash
 npx --yes tl-studio
 ```
 
-پکیج npm یک Launcher سبک است که به نسخه Stable فعلی TL Studio روی GitHub Release متصل می‌شود؛ Platform را تشخیص می‌دهد، Archive رسمی را دانلود می‌کند، SHA-256 را Verify می‌کند، Local Cache می‌سازد و TL Studio را اجرا می‌کند.
+پکیج npm یک Launcher سبک است که به Release پایدار متناظر TL Studio متصل می‌شود. سیستم‌عامل و Architecture را تشخیص می‌دهد، Archive رسمی را دانلود می‌کند، SHA-256 را Verify می‌کند، Local Cache می‌سازد و TL Studio را با Folder فعلی به‌عنوان Project اجرا می‌کند.
 
 برای جلوگیری از بازشدن خودکار Browser:
 
@@ -22,7 +22,7 @@ npx --yes tl-studio --no-browser
 
 ## نسخه Portable
 
-برای استفاده از نسخه Portable نیازی به Node.js نیست. فایل مناسب سیستم‌عامل را از GitHub Releases بگیرید، Extract کنید و اجرا کنید:
+Archive مناسب سیستم را از GitHub Releases بگیرید، Extract کنید و اجرا کنید:
 
 ```text
 Windows:  tl-studio.exe
@@ -30,9 +30,9 @@ Linux:    ./tl-studio
 macOS:    ./tl-studio
 ```
 
-Releaseهای TL Studio، Agent Runtime سازگار را داخل خودشان دارند؛ بنابراین نصب جداگانه Runtime لازم نیست.
+Release قابل‌حمل شامل Compatibility Engine تست‌شده، Assetهای Monaco، Licenseهای TL Studio و Third-party Noticeهای لازم است.
 
-## نسخه‌های پشتیبانی‌شده
+## Buildهای پشتیبانی‌شده
 
 - Windows x64
 - Linux x64
@@ -40,9 +40,22 @@ Releaseهای TL Studio، Agent Runtime سازگار را داخل خودشان 
 - macOS Intel x64
 - macOS Apple Silicon ARM64
 
+## بررسی فایل دانلودی
 
-## Development Preview
+هر Release پایدار فایل زیر را هم منتشر می‌کند:
 
-Buildهای آزمایشی v0.3 روی npm یا GitHub Releases منتشر نمی‌شوند. این نسخه‌ها فقط به‌صورت **Preview Build** از Branch `dev` داخل GitHub Actions ساخته می‌شوند. Preview فعلی Windows x64 است و برای تست Development در نظر گرفته شده، نه مسیر نصب Stable.
+```text
+SHA256SUMS.txt
+```
 
-جزئیات را در [Development Preview](../reference/development-preview) ببینید.
+در صورت نیاز می‌توانید Hash فایل دانلودی را با مقدار منتشرشده مقایسه کنید.
+
+## Buildهای Development
+
+خط خصوصی بعدی روی `dev` با این نسخه باز شده است:
+
+```text
+v0.4.0-alpha.1
+```
+
+Alphaهای Development روی npm یا GitHub Prerelease عمومی منتشر نمی‌شوند. وقتی پیاده‌سازی فاز بعدی شروع شود، Preview Buildهای GitHub Actions همچنان مسیر تست خصوصی خواهند بود.

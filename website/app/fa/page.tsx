@@ -6,35 +6,36 @@ import { site } from '@/lib/site';
 
 const features = [
   {
-    title: 'کاملاً Local',
-    description: 'TL Studio روی کامپیوتر خودتان اجرا می‌شود و مستقیم با Project Local کار می‌کند؛ بدون Cloud Backend یا Database متعلق به TL Studio.',
+    title: 'توسعه کاملاً Local',
+    description: 'TL Studio روی سیستم خودتان اجرا می‌شود و مستقیم با Project Local کار می‌کند؛ بدون Cloud Backend یا Database متعلق به TL Studio.',
     icon: ServerOff,
   },
   {
     title: 'Browser IDE مستقل',
-    description: 'Fileها را Edit کنید، داخل Project جست‌وجو کنید، Command اجرا کنید، Changes را ببینید و Live Preview بگیرید؛ بدون وابستگی به VS Code، JetBrains یا Cursor.',
+    description: 'از Monaco، Project Search، Terminal، Changes و Preview استفاده کنید؛ بدون اینکه به VS Code، JetBrains یا Cursor وابسته باشید.',
     icon: SquareTerminal,
   },
   {
-    title: 'Project-aware Agent Workflow',
-    description: 'Session، File، Attachment، Changes، Permission و Context مربوط به Agent در Scope همان Project بازشده باقی می‌ماند.',
+    title: 'اجرای Native Agent',
+    description: 'Custom Providerهای پشتیبانی‌شده می‌توانند از Agent Loop و Core Tool Executor متعلق به خود TL Studio استفاده کنند.',
     icon: FolderCode,
   },
   {
-    title: 'Provider و Model Control',
-    description: 'تعریف Custom Provider و Model داخل TL Studio مدیریت می‌شود و Credentialها داخل Browser Storage ذخیره نمی‌شوند.',
+    title: 'مالکیت Local روی Provider',
+    description: 'تعریف Provider/Model، Credential، Permission Policy، Session و Tool Semantics در لایه محصول خود TL Studio مدیریت می‌شوند.',
     icon: LockKeyhole,
   },
 ];
 
 const capabilities = [
-  'Multi-tab Editor',
+  'Monaco Editor',
+  'Native Agent',
+  'Tool Executor',
   'Project Search',
   'Terminal',
   'Live Preview',
-  'File Attachments',
-  'Custom Providers',
-  'Local Security',
+  'Session Persistence',
+  'Credential Vault',
 ];
 
 export default function PersianHomePage() {
@@ -47,13 +48,13 @@ export default function PersianHomePage() {
             <img src={site.logoUrl} alt="TL Studio" />
           </div>
           <div className="mb-6 rounded-full border bg-fd-card/70 px-4 py-1.5 text-sm text-fd-muted-foreground">
-            Stable v0.2.1 · Local-first · Open Source
+            Stable v0.3.0 · Local-first · Open Source
           </div>
           <h1 className="max-w-4xl text-balance text-5xl font-bold tracking-tight md:text-7xl">
             محیط توسعه‌ی سریع و Local با AI داخلی.
           </h1>
           <p className="mt-7 max-w-2xl text-balance text-lg leading-8 text-fd-muted-foreground md:text-xl">
-            TL Studio یک Browser IDE مستقل و Local است که Editor، Search، Terminal، Live Preview، Providerها و Agent را داخل یک محیط سریع کنار هم می‌آورد.
+            TL Studio یک Browser IDE مستقل است که Editor، Search، Terminal، Preview، Providerها و Agent را داخل یک Workspace Local کنار هم می‌آورد.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link href="/fa/docs" className="inline-flex items-center gap-2 rounded-lg bg-fd-primary px-5 py-3 font-medium text-fd-primary-foreground">
@@ -63,7 +64,7 @@ export default function PersianHomePage() {
               <Download className="size-4" /> Releases
             </a>
           </div>
-          <div className="mt-6 flex max-w-4xl flex-wrap justify-center gap-2" dir="ltr">
+          <div className="mt-6 flex max-w-5xl flex-wrap justify-center gap-2" dir="ltr">
             {capabilities.map((item) => (
               <span key={item} className="tl-capability-chip rounded-full px-3 py-1 text-sm text-fd-muted-foreground">
                 {item}
@@ -71,10 +72,10 @@ export default function PersianHomePage() {
             ))}
           </div>
 
-          <div className="mt-16 w-full max-w-4xl rounded-2xl border bg-fd-card/80 p-5 shadow-sm md:p-8">
-            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">TL Studio چطور کار می‌کند؟</div>
+          <div className="mt-16 w-full max-w-5xl rounded-2xl border bg-fd-card/80 p-5 shadow-sm md:p-8">
+            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">معماری Stable v0.3</div>
             <div className="grid gap-3 md:grid-cols-4" dir="ltr">
-              {['Browser IDE', 'TL Studio Local Core', 'Agent Engine Adapter', 'Models + Tools'].map((label, index) => (
+              {['Browser Workspace', 'TL Studio Local Core', 'Native + Compatibility Execution', 'Models + Tools'].map((label, index) => (
                 <div key={label} className="relative">
                   <div className="arch-line rounded-xl px-4 py-5 text-center font-medium">{label}</div>
                   {index < 3 ? <div className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-fd-muted-foreground md:block">→</div> : null}
@@ -96,23 +97,23 @@ export default function PersianHomePage() {
 
         <section className="border-t bg-fd-card/20">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className="text-sm font-medium text-fd-muted-foreground">Development Preview · v0.3.0-alpha.7</p>
-            <h2 className="mt-2 text-3xl font-semibold">خط Development دارد بخش بیشتری از Workspace را به خود TL Studio منتقل می‌کند.</h2>
+            <p className="text-sm font-medium text-fd-muted-foreground">خط خصوصی بعدی · v0.4.0-alpha.1</p>
+            <h2 className="mt-2 text-3xl font-semibold">فاز 2 وارد Stable شده و فاز 3 هنوز شروع نشده است.</h2>
             <p className="mt-4 max-w-3xl leading-8 text-fd-muted-foreground">
-              Preview خصوصی dev شامل Monaco Editor کاملاً Local، Tool Registry خود TL Studio و Permission Policy Engine Project-scoped است. نسخه Stable همچنان v0.2.1 است.
+              Branch توسعه از Baseline نسخه v0.3.0 دوباره باز شده است. تا وقتی قابلیت جدیدی واقعاً پیاده‌سازی و Validate نشود، چیزی از v0.4 به‌عنوان Feature موجود معرفی نمی‌شود.
             </p>
             <Link href="/fa/docs/reference/development-preview" className="mt-5 inline-flex items-center gap-2 font-medium text-fd-primary">
-              جزئیات Development Preview <ArrowLeft className="size-4" />
+              وضعیت خط Development <ArrowLeft className="size-4" />
             </Link>
           </div>
         </section>
 
         <section className="border-t bg-fd-card/35">
           <div className="mx-auto max-w-6xl px-6 py-16">
-            <p className="text-sm font-medium text-fd-muted-foreground">Independent Product · Replaceable Engine</p>
-            <h2 className="mt-2 text-3xl font-semibold">TL Studio همون محصولیه که کاربر می‌بینه و استفاده می‌کنه.</h2>
+            <p className="text-sm font-medium text-fd-muted-foreground">Independent Product · Compatibility Engine پشت Boundary</p>
+            <h2 className="mt-2 text-3xl font-semibold">هسته‌ی Workflow کدنویسی برای Custom Providerهای پشتیبانی‌شده حالا متعلق به TL Studio است.</h2>
             <p className="mt-4 max-w-3xl leading-8 text-fd-muted-foreground">
-              Editor، Project Files، Search، Terminal، Live Preview، Provider/Model Registry، Recovery، Local Security، Packaging و Releaseها متعلق به TL Studio هستند. Agent Execution پشت یک Runtime Contract عمومی و Local قرار دارد.
+              Workspace، Editor، Providerها، Credential Vault، Sessionهای Semantic، Tool Model، Permissionها، Live Eventها، Native Agent Loop، Core Tool Executor، Preview، Security Boundary، Packaging و Releaseها همگی بخشی از خود TL Studio هستند. Engine شخص ثالث فقط برای مسیرهای Hosted و Compatibility که هنوز Native نشده‌اند باقی مانده است.
             </p>
           </div>
         </section>

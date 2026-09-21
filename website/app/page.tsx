@@ -6,35 +6,36 @@ import { site } from '@/lib/site';
 
 const features = [
   {
-    title: 'Local-first by design',
+    title: 'Local-first development',
     description: 'TL Studio runs on your computer, works directly with your local project, and does not require a TL Studio cloud backend or database.',
     icon: ServerOff,
   },
   {
     title: 'A browser IDE of its own',
-    description: 'Edit files, search the project, run commands, inspect changes, and open a live preview without living inside VS Code, JetBrains, Cursor, or another IDE.',
+    description: 'Use Monaco, Project Search, Terminal, Changes, and capability-driven Preview without depending on VS Code, JetBrains, Cursor, or another IDE.',
     icon: SquareTerminal,
   },
   {
-    title: 'Project-aware agent workflow',
-    description: 'Keep sessions, files, attachments, changes, permissions, and Agent context scoped to the project you actually opened.',
+    title: 'Native AI execution',
+    description: 'Supported custom providers can run through TL Studio’s own model/tool/model Agent loop and core coding Tool Executor.',
     icon: FolderCode,
   },
   {
-    title: 'Provider and model control',
-    description: 'Manage compatible custom provider/model definitions in TL Studio while credentials stay out of browser storage.',
+    title: 'Local provider ownership',
+    description: 'Provider/model definitions, credentials, permission policy, sessions, and product-facing tool semantics are owned locally by TL Studio.',
     icon: LockKeyhole,
   },
 ];
 
 const capabilities = [
-  'Multi-tab editor',
+  'Monaco Editor',
+  'Native Agent',
+  'Tool Executor',
   'Project Search',
   'Terminal',
   'Live Preview',
-  'File attachments',
-  'Custom providers',
-  'Local security',
+  'Session persistence',
+  'Credential vault',
 ];
 
 export default function HomePage() {
@@ -47,10 +48,10 @@ export default function HomePage() {
             <img src={site.logoUrl} alt="TL Studio" />
           </div>
           <div className="mb-6 rounded-full border bg-fd-card/70 px-4 py-1.5 text-sm text-fd-muted-foreground">
-            Stable v0.2.1 · Local-first · Open source
+            Stable v0.3.0 · Local-first · Open source
           </div>
           <h1 className="max-w-4xl text-balance text-5xl font-bold tracking-tight md:text-7xl">
-            Your fast local development workspace.
+            Your fast local development workspace with AI built in.
           </h1>
           <p className="mt-7 max-w-2xl text-balance text-lg leading-8 text-fd-muted-foreground md:text-xl">
             {site.description}
@@ -63,7 +64,7 @@ export default function HomePage() {
               <Download className="size-4" /> Download releases
             </a>
           </div>
-          <div className="mt-6 flex max-w-4xl flex-wrap justify-center gap-2">
+          <div className="mt-6 flex max-w-5xl flex-wrap justify-center gap-2">
             {capabilities.map((item) => (
               <span key={item} className="tl-capability-chip rounded-full px-3 py-1 text-sm text-fd-muted-foreground">
                 {item}
@@ -71,10 +72,10 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div className="mt-16 w-full max-w-4xl rounded-2xl border bg-fd-card/80 p-5 text-left shadow-sm md:p-8">
-            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">How TL Studio works</div>
+          <div className="mt-16 w-full max-w-5xl rounded-2xl border bg-fd-card/80 p-5 text-left shadow-sm md:p-8">
+            <div className="mb-5 text-sm font-medium text-fd-muted-foreground">Stable v0.3 architecture</div>
             <div className="grid gap-3 md:grid-cols-4">
-              {['Browser IDE', 'TL Studio local core', 'Agent engine adapter', 'Models + tools'].map((label, index) => (
+              {['Browser workspace', 'TL Studio local core', 'Native + compatibility execution', 'Models + tools'].map((label, index) => (
                 <div key={label} className="relative">
                   <div className="arch-line rounded-xl px-4 py-5 text-center font-medium">{label}</div>
                   {index < 3 ? <div className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-fd-muted-foreground md:block">→</div> : null}
@@ -96,23 +97,23 @@ export default function HomePage() {
 
         <section className="border-t bg-fd-card/20">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className="text-sm font-medium text-fd-muted-foreground">Development preview · v0.3.0-alpha.7</p>
-            <h2 className="mt-2 text-3xl font-semibold">The next development line moves more of the workspace into TL Studio.</h2>
+            <p className="text-sm font-medium text-fd-muted-foreground">Next private line · v0.4.0-alpha.1</p>
+            <h2 className="mt-2 text-3xl font-semibold">Phase 2 is stable. Phase 3 has not started yet.</h2>
             <p className="mt-4 max-w-3xl leading-7 text-fd-muted-foreground">
-              The private dev preview adds a locally bundled Monaco editor, a TL Studio-owned Tool Registry, and a project-scoped permission policy engine. Stable users remain on v0.2.1.
+              The dev branch has reopened from the v0.3.0 baseline for the next phase. No v0.4-only product capability is documented as stable until implementation and validation actually land.
             </p>
             <Link href="/docs/reference/development-preview" className="mt-5 inline-flex items-center gap-2 font-medium text-fd-primary">
-              Development preview details <ArrowRight className="size-4" />
+              Development line details <ArrowRight className="size-4" />
             </Link>
           </div>
         </section>
 
         <section className="border-t bg-fd-card/35">
           <div className="mx-auto max-w-6xl px-6 py-16">
-            <p className="text-sm font-medium text-fd-muted-foreground">Independent product · Replaceable engine</p>
-            <h2 className="mt-2 text-3xl font-semibold">TL Studio owns the product experience end to end.</h2>
+            <p className="text-sm font-medium text-fd-muted-foreground">Independent product · Compatibility engine behind the boundary</p>
+            <h2 className="mt-2 text-3xl font-semibold">TL Studio now owns the core coding workflow for supported custom providers.</h2>
             <p className="mt-4 max-w-3xl leading-7 text-fd-muted-foreground">
-              The editor, project filesystem, Search, Terminal, Live Preview, provider/model registry, recovery, local security, packaging, and releases belong to TL Studio. Agent execution sits behind a generic local runtime contract.
+              The workspace, editor, providers, credential vault, semantic sessions, tool model, permissions, live events, native Agent loop, core Tool Executor, preview system, security boundary, packaging, and releases are TL Studio product capabilities. A bundled third-party engine remains only for hosted and compatibility paths that are not native yet.
             </p>
           </div>
         </section>

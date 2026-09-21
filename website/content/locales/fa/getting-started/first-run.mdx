@@ -1,24 +1,24 @@
 ---
 title: اولین اجرا
-description: اجرای TL Studio، بازکردن Project Local و آشنایی با Workspace.
+description: اجرای TL Studio، بازکردن Project Local و شناخت مسیرهای اجرای Stable v0.3.
 icon: Play
 ---
 
 ## اجرای TL Studio
 
-نسخه Portable مناسب سیستم‌عامل را اجرا کنید، یا داخل فولدر Project این دستور را بزنید:
+نسخه Portable مناسب سیستم را اجرا کنید یا داخل Folder پروژه این دستور را بزنید:
 
 ```bash
 npx --yes tl-studio
 ```
 
-TL Studio سرویس‌های Local خودش را روی loopback بالا می‌آورد و Workspace را در Browser باز می‌کند.
+TL Studio سطح کنترل Local خودش را روی Loopback اجرا می‌کند و Workspace را در Browser باز می‌کند.
 
 ## انتخاب Project
 
-روش معمول گرافیکی است: داخل TL Studio از Folder Picker استفاده کنید و Directory پروژه را انتخاب کنید. اگر `npx --yes tl-studio` را داخل فولدر Project اجرا کرده باشید، همان Directory به‌صورت خودکار انتخاب می‌شود.
+روش معمول گرافیکی است. با Folder Picker سیستم‌عامل، Directory پروژه را انتخاب کنید. اگر دستور بالا را داخل Folder پروژه اجرا کرده باشید، همان Directory به‌صورت خودکار انتخاب می‌شود.
 
-برای Preselect کردن Project از CLI هم می‌توانید این دستور را بزنید:
+برای مشخص‌کردن Project از CLI:
 
 ```bash
 tl-studio --project /path/to/project
@@ -34,17 +34,21 @@ tl-studio.exe --project "C:\Users\you\Projects\my-project"
 
 بعد از بازکردن Project:
 
-1. از **Files** برای بازکردن و Edit کردن Fileها استفاده کنید؛
-2. از **Search** یا `Ctrl/Cmd+Shift+F` برای Project-wide Search استفاده کنید؛
-3. Commandهای Project را در **Terminal** اجرا کنید؛
-4. اگر Project پشتیبانی می‌شود، از **Preview** برای Static Site یا Node dev server استفاده کنید؛
-5. Prompt، Attachment و Agent/Model را از Composer مدیریت کنید؛
-6. تغییرات خودتان و Agent را در **Changes** ببینید.
+1. از بخش **Files** و Monaco Workspace برای Browse و Edit استفاده کنید؛
+2. برای Project-wide Search از **Search** یا `Ctrl/Cmd+Shift+F` استفاده کنید؛
+3. Commandهای Project را از **Terminal** اجرا کنید؛
+4. File قابل Preview یا Project دارای Dev Server پشتیبانی‌شده را در **Preview** باز کنید؛
+5. Agent، Provider/Model و Attachmentها را از Composer انتخاب کنید؛
+6. هنگام Run، بخش **Changes** و Live Agent Activity را بررسی کنید.
 
-هنگام Project Switch، Unsaved Bufferها محافظت می‌شوند و Save معمولی قبل از نوشتن Revision فایل را بررسی می‌کند تا تغییرات خارجی بی‌صدا Overwrite نشوند.
+## انتخاب مسیر Agent Execution
 
-## پشت صحنه چه اجرا می‌شود؟
+اگر Custom Provider و Model پشتیبانی‌شده داخل Provider Registry و Credential Vault خود TL Studio قابل Resolve باشد، Task می‌تواند با Native Agent Loop و Core Tool Executor خود TL Studio اجرا شود.
 
-TL Studio یک Local Control Server و Agent Engine همراه برنامه را روی loopback اجرا می‌کند. Browser فقط با TL Studio حرف می‌زند و Agent Execution از Runtime Contract عمومی TL Studio عبور می‌کند.
+Modelهای Hosted و Capabilityهایی که هنوز Native نشده‌اند از Compatibility Engine همراه برنامه و پشت Adapter خود TL Studio عبور می‌کنند.
 
-با بستن TL Studio، Child Process مربوط به Engine هم متوقف می‌شود.
+Browser در هر دو حالت فقط با Contractهای Semantic خود TL Studio کار می‌کند و مستقیم به Compatibility Engine وصل نمی‌شود.
+
+## Lifecycle محلی
+
+Local Control Server و Compatibility Process همراه برنامه فقط روی Loopback اجرا می‌شوند. با بستن TL Studio، Child Process همراه هم متوقف می‌شود. Requestهای Native مربوط به Custom Provider مستقیماً از TL Studio به Endpoint همان Provider می‌روند.

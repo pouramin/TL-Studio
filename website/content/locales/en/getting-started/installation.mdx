@@ -1,18 +1,18 @@
 ---
 title: Installation
-description: Install TL Studio with npm or a portable release build.
+description: Install stable TL Studio v0.3 with npm or a portable release.
 icon: Download
 ---
 
 ## One-command launch
 
-If Node.js/npm is installed, run this inside the project directory you want to work on:
+If Node.js/npm is installed, run this inside the Project directory you want to work on:
 
 ```bash
 npx --yes tl-studio
 ```
 
-The npm package is a lightweight launcher pinned to the current stable TL Studio GitHub Release. It detects the platform, downloads the official archive, verifies its SHA-256 checksum, caches it locally, and starts TL Studio.
+The npm package is a lightweight launcher pinned to the matching stable TL Studio GitHub Release. It detects the operating system and architecture, downloads the official archive, verifies its SHA-256 checksum, caches it locally, and starts TL Studio with the current directory selected.
 
 To start without opening the browser automatically:
 
@@ -30,7 +30,7 @@ Linux:    ./tl-studio
 macOS:    ./tl-studio
 ```
 
-Release archives already include the compatible agent runtime, so no separate runtime installation is required.
+Portable releases include the tested compatibility engine, Monaco assets, TL Studio license files, and required third-party notices.
 
 ## Supported builds
 
@@ -42,11 +42,8 @@ Release archives already include the compatible agent runtime, so no separate ru
 
 ## Verify a download
 
-Each release includes `SHA256SUMS.txt`. You can compare the archive checksum with the published value before running it.
+Each stable release includes `SHA256SUMS.txt`. Compare the archive checksum with the published value before running it if you want to verify the download.
 
+## Development builds
 
-## Development preview
-
-Experimental v0.3 builds are not published to npm or GitHub Releases. They are private-to-project **Preview Build** artifacts produced from the `dev` branch in GitHub Actions. The current preview artifact is Windows x64 and is intended for testing, not as the stable installation path.
-
-See [Development preview](../reference/development-preview).
+The next private line is `v0.4.0-alpha.1` on `dev`. Development alphas are not published to npm and are not public GitHub prereleases. When implementation work resumes, GitHub Actions Preview Build artifacts remain the private testing path.
