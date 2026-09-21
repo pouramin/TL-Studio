@@ -8,7 +8,7 @@
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.22</strong> · نسخه Stable همچنان v0.2.1 است.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.23</strong> · نسخه Stable همچنان v0.2.1 است.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -42,7 +42,9 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **انتخاب Agent و Model** — تغییر Agent و مدل‌های Providerها از داخل Composer.
 - **Custom Provider** — اتصال Endpointهای سازگار با OpenAI، OpenAI Responses و Anthropic با Credential خود کاربر.
 - **File attachment** — ارسال تصویر، PDF و فایل‌های متنی/کد؛ همراه با Multi-select، Drag & Drop و Paste از Clipboard.
-- **Tool Registry خود TL Studio** — Toolهای شناخته‌شده‌ی Runtime به نام، Category، Capability، Permission class و Presentation metadata متعلق به TL Studio نگاشت می‌شوند.
+- **اجرای Native Agent متعلق به TL Studio** — برای Custom Providerهای پشتیبانی‌شده، حلقه‌ی Model/Tool/Model، توقف، Loop guard، Session persistence و Live Event مستقیماً توسط TL Studio اجرا می‌شود؛ مسیر Hosted Kilo همچنان از Adapter سازگاری استفاده می‌کند.
+- **Tool Executor خود TL Studio** — Toolهای اصلی کدنویسی شامل Read/List/Write/Edit فایل، Project Search و Terminal Command با Handlerهای خود TL Studio، محدودیت Project، Validation، Cancellation و Permission اجرا می‌شوند.
+- **Tool Registry خود TL Studio** — Toolها نام، Category، Capability، Permission class، Schema و Presentation metadata متعلق به TL Studio دارند.
 - **نمایش زنده‌ی فعالیت Agent** — نمایش Reasoning و Toolها همراه با وضعیت Run و semantic metadata خود TL Studio.
 - **Permission Policy و Question متعلق به TL Studio** — Allow یک‌باره، ذخیره‌ی Ruleهای غیرحساس به‌صورت Project-scoped، Reject و پاسخ به سؤال‌های تعاملی؛ Questionها از قرارداد `/local/questions*` خود TL Studio عبور می‌کنند و UI به Route خام Runtime وابسته نیست.
 - **Stop و Recovery** — توقف Run فعال و بازیابی Sessionهای گیرکرده یا خطاهای Retryable.

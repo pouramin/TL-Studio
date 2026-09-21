@@ -190,9 +190,16 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	providerManager := newRuntimeProviderManagerWithBackend(state, backend)
 	permissionEngine := newPermissionEngineWithBackend(state, backend)
 	sessionRead := newSessionReadContractWithBackend(state, backend)
-	sessionCommands := newSessionCommandContract(state, backend, sessionRead)
 	questions := newQuestionContract(state, backend)
 	liveEvents := newLiveEventContractWithBackend(state, backend)
+
+	processes := newProcessManager(state.projectPath)
+	permissionEngine.setEventBus(liveEvents.bus)
+	nativeTools := newNativeToolExecutor(processes, permissionEngine)
+	nativeAgent := newNativeAgentRuntime(providerManager, newNativeModelClient(), nativeTools, sessionRead.store, liveEvents.bus)
+	sessionRead.setNativeStatusProvider(nativeAgent)
+	sessionCommands := newSessionCommandContract(state, backend, sessionRead)
+	sessionCommands.adapter = newHybridSessionCommandAdapter(sessionCommands.adapter, nativeAgent)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", func(w http.ResponseWriter, _ *http.Request) {
@@ -234,7 +241,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	})
 	registerLocalFileRoutes(mux, state)
 	registerProjectSearchRoutes(mux, state)
-	registerLocalProcessRoutes(mux, state)
+	registerLocalProcessRoutesWithManager(mux, state, processes)
 	registerRuntimeProviderRoutes(mux, providerManager)
 	registerToolRegistryRoutes(mux)
 	registerSessionReadRoutes(mux, sessionRead)

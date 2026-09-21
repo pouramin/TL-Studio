@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const liveEventContractVersion = 1
@@ -26,6 +27,7 @@ type liveEventView struct {
 type liveEventContract struct {
 	state   *appState
 	backend *runtimeBackend
+	bus     *liveEventBus
 }
 
 func newLiveEventContract(state *appState, backendURL, username, password string) (*liveEventContract, error) {
@@ -42,7 +44,13 @@ func newLiveEventContract(state *appState, backendURL, username, password string
 }
 
 func newLiveEventContractWithBackend(state *appState, backend *runtimeBackend) *liveEventContract {
-	return &liveEventContract{state: state, backend: backend}
+	return &liveEventContract{state: state, backend: backend, bus: newLiveEventBus()}
+}
+
+func (c *liveEventContract) setBus(bus *liveEventBus) {
+	if bus != nil {
+		c.bus = bus
+	}
 }
 
 func eventMap(value any) map[string]any {
@@ -251,6 +259,39 @@ func projectSSEStream(w http.ResponseWriter, response *http.Response) error {
 	return scanner.Err()
 }
 
+func projectedRuntimeEvents(response *http.Response, output chan<- liveEventView) error {
+	scanner := bufio.NewScanner(response.Body)
+	scanner.Buffer(make([]byte, 64*1024), 8<<20)
+	dataLines := make([]string, 0, 2)
+	flushData := func() {
+		if len(dataLines) == 0 {
+			return
+		}
+		payload := strings.Join(dataLines, "\n")
+		dataLines = dataLines[:0]
+		var decoded map[string]any
+		if json.Unmarshal([]byte(payload), &decoded) != nil {
+			return
+		}
+		event, ok := projectRuntimeEvent(decoded)
+		if ok {
+			output <- event
+		}
+	}
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			flushData()
+			continue
+		}
+		if strings.HasPrefix(line, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+		}
+	}
+	flushData()
+	return scanner.Err()
+}
+
 func registerLiveEventRoutes(mux *http.ServeMux, contract *liveEventContract) {
 	mux.HandleFunc("GET /local/events", func(w http.ResponseWriter, r *http.Request) {
 		directory := contract.state.projectPath()
@@ -265,9 +306,56 @@ func registerLiveEventRoutes(mux *http.ServeMux, contract *liveEventContract) {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		if flusher, ok := w.(http.Flusher); ok {
-			flusher.Flush()
+		flusher, _ := w.(http.Flusher)
+
+		var localEvents <-chan liveEventView
+		var subscriptionID uint64
+		if contract.bus != nil {
+			subscriptionID, localEvents = contract.bus.subscribe()
+			defer contract.bus.unsubscribe(subscriptionID)
 		}
-		_ = projectSSEStream(w, response)
+
+		runtimeEvents := make(chan liveEventView, 32)
+		runtimeDone := make(chan struct{})
+		go func() {
+			_ = projectedRuntimeEvents(response, runtimeEvents)
+			close(runtimeDone)
+		}()
+
+		keepalive := time.NewTicker(20 * time.Second)
+		defer keepalive.Stop()
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case event := <-localEvents:
+				if event.Type == "" {
+					continue
+				}
+				if err := writeLiveEvent(w, event); err != nil {
+					return
+				}
+				if flusher != nil {
+					flusher.Flush()
+				}
+			case event := <-runtimeEvents:
+				if event.Type == "" {
+					continue
+				}
+				if err := writeLiveEvent(w, event); err != nil {
+					return
+				}
+				if flusher != nil {
+					flusher.Flush()
+				}
+			case <-runtimeDone:
+				runtimeDone = nil
+			case <-keepalive.C:
+				_, _ = io.WriteString(w, ": keepalive\n\n")
+				if flusher != nil {
+					flusher.Flush()
+				}
+			}
+		}
 	})
 }

@@ -305,9 +305,12 @@ func (e *runtimePermissionError) Error() string {
 }
 
 type permissionEngine struct {
-	state   *appState
-	backend *runtimeBackend
-	store   *permissionPolicyStore
+	state         *appState
+	backend       *runtimeBackend
+	store         *permissionPolicyStore
+	nativeMu      sync.Mutex
+	nativePending map[string]*nativePermissionWaiter
+	events        *liveEventBus
 }
 
 func newPermissionEngine(state *appState, backendURL, username, password string) (*permissionEngine, error) {
@@ -325,9 +328,10 @@ func newPermissionEngine(state *appState, backendURL, username, password string)
 
 func newPermissionEngineWithBackend(state *appState, backend *runtimeBackend) *permissionEngine {
 	return &permissionEngine{
-		state:   state,
-		backend: backend,
-		store:   newPermissionPolicyStore(permissionPolicyPath()),
+		state:         state,
+		backend:       backend,
+		store:         newPermissionPolicyStore(permissionPolicyPath()),
+		nativePending: map[string]*nativePermissionWaiter{},
 	}
 }
 
@@ -473,11 +477,14 @@ func (e *permissionEngine) shouldAutoAllow(item map[string]any) (bool, error) {
 }
 
 func (e *permissionEngine) listPending(ctx context.Context, sessionID string) ([]map[string]any, error) {
+	visible := e.nativePendingSnapshot(sessionID)
 	pending, err := e.rawPending(ctx)
 	if err != nil {
+		if len(visible) > 0 {
+			return visible, nil
+		}
 		return nil, err
 	}
-	visible := make([]map[string]any, 0, len(pending))
 	for _, item := range pending {
 		if sessionID != "" && permissionSessionID(item) != sessionID {
 			continue
@@ -517,6 +524,9 @@ func (e *permissionEngine) findPending(ctx context.Context, requestID, sessionID
 }
 
 func (e *permissionEngine) reply(ctx context.Context, requestID, sessionID, reply, message string) (map[string]any, error) {
+	if result, handled, err := e.replyNativePermission(requestID, sessionID, reply); handled {
+		return result, err
+	}
 	item, err := e.findPending(ctx, requestID, sessionID)
 	if err != nil {
 		return nil, err

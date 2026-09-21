@@ -8,7 +8,7 @@
   A fast local development workspace with AI built in.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.22</strong> · Stable release remains v0.2.1.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.23</strong> · Stable release remains v0.2.1.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -42,7 +42,9 @@ The release already includes the pinned local agent runtime.
 - **Agent & model selection** — switch agents and available provider models from the composer.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
-- **TL Studio Tool Registry** — known runtime tools are mapped to TL Studio-owned names, categories, capability metadata, permission classes, and presentation hints.
+- **TL Studio-native Agent execution** — supported custom providers now run through a TL Studio-owned model/tool/model loop with cancellation, loop guards, semantic persistence, and live events; hosted Kilo remains available through the compatibility adapter.
+- **TL Studio Tool Executor** — core coding tools for project file read/list/write/edit, project search, and terminal commands execute through TL Studio-owned handlers with project confinement, validation, cancellation, and permission enforcement.
+- **TL Studio Tool Registry** — product tools use TL Studio-owned names, categories, capability metadata, permission classes, schemas, and presentation hints.
 - **Live agent activity** — compact Reasoning and Tool cards with live status updates using TL Studio tool semantics.
 - **TL Studio permission policies & questions** — approve one-time actions, remember project-scoped non-sensitive rules in TL Studio, forget saved rules from Settings, reject actions, and answer interactive questions through launcher-owned `/local/questions*` semantics rather than raw runtime question routes.
 - **Stop & recovery** — interrupt active work and recover from stalled or retryable upstream failures.
@@ -70,22 +72,19 @@ Browser workspace
     ▼
 TL Studio launcher (Go)
     │
-    ├─ TL Studio provider/model registry
-    ├─ TL Studio tool registry
-    ├─ TL Studio semantic session read model
-    ├─ TL Studio semantic live event projection
-    ├─ TL Studio permission policy engine
+    ├─ TL Studio provider/model registry + credential vault
+    ├─ TL Studio native Agent loop
+    ├─ TL Studio Tool Executor + permission policy
+    ├─ semantic sessions / persistence / live events
     ├─ project files / search / terminal / preview
     │
-    └─ authenticated runtime adapter
-            ▼
-        Local agent runtime
-            ├─ agents / sessions / tool execution
-            ├─ permission enforcement / questions / live events
-            └─ provider execution / model inference
+    ├─ supported custom providers → direct model APIs
+    │
+    └─ compatibility adapter → bundled Kilo engine
+                              → hosted Kilo / compatibility capabilities
 ```
 
-TL Studio owns the workspace, product UI, local launcher, provider/model definitions, custom-provider credentials, tool semantics/metadata, semantic session persistence/read/command models, semantic question handling, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions and semantic session history are persisted in TL Studio's local state and translated/synchronized to the active runtime as needed. The runtime remains a replaceable execution infrastructure layer behind that product boundary.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, custom-provider credentials, tool semantics/metadata, semantic session persistence/read/command models, semantic question handling, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions and semantic session history are persisted in TL Studio's local state and translated/synchronized to the active runtime as needed. For supported custom-provider coding, TL Studio now owns the Agent loop and core tool execution directly. Kilo remains bundled as the currently tested compatibility engine for hosted Kilo authentication/models and capabilities not yet provided by the native path.
 
 The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
@@ -93,7 +92,7 @@ The selected project stays on the user's computer, and TL Studio does not proxy 
 
 TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Current session reads, persistence, and session commands use launcher-owned `/local/sessions*` semantics; interactive questions use `/local/questions*`; permissions use `/local/permissions*`; and live Browser updates use `/local/events` semantic SSE. Custom-provider credentials are stored by TL Studio and synchronized into the active runtime only for execution. Remaining generic runtime capabilities stay behind the local `/runtime/*` adapter.
 
-The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. The launcher now selects it through a TL Studio-owned `runtimeEngine` boundary: binary discovery, process startup, credentials, project request scoping, and engine-specific request decoration live in the Kilo adapter instead of generic launcher/session/provider/permission/event code. That engine remains an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party compatibility engine. The launcher now selects it through a TL Studio-owned `runtimeEngine` boundary: binary discovery, process startup, credentials, project request scoping, and engine-specific request decoration live in the Kilo adapter instead of generic launcher/session/provider/permission/event code. That engine remains an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
 CI validates the pinned engine through TL Studio's public runtime boundary for project routing, agent/provider/session APIs, async prompts, live events, permissions, provider configuration, tool execution, and real file writes.
 

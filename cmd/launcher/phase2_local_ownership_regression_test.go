@@ -49,6 +49,9 @@ func TestPhase2LocalOwnershipFilesExist(t *testing.T) {
 		"cmd/launcher/runtime_kilo_questions.go",
 		"cmd/launcher/credential_store.go",
 		"cmd/launcher/session_persistence.go",
+		"cmd/launcher/native_tool_executor.go",
+		"cmd/launcher/native_agent_runtime.go",
+		"cmd/launcher/native_model.go",
 	} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(relative))); err != nil {
 			t.Fatalf("missing Phase 2 ownership file %s: %v", relative, err)
@@ -89,4 +92,26 @@ func readRepoText(t *testing.T, relative string) string {
 		t.Fatal(err)
 	}
 	return string(data)
+}
+
+func TestNativeAgentRuntimeContainsNoKiloPrivateProtocolDetails(t *testing.T) {
+	for _, relative := range []string{
+		"cmd/launcher/native_agent_runtime.go",
+		"cmd/launcher/native_tool_executor.go",
+		"cmd/launcher/native_model.go",
+	} {
+		source := readRepoText(t, relative)
+		for _, forbidden := range []string{
+			"x-kilo-directory",
+			"prompt_async",
+			"/question",
+			"/permission",
+			"/auth/",
+			"/config/overlay",
+		} {
+			if strings.Contains(source, forbidden) {
+				t.Fatalf("%s leaked compatibility detail %q", relative, forbidden)
+			}
+		}
+	}
 }

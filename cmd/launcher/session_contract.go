@@ -29,6 +29,7 @@ type sessionView struct {
 	ParentID  string           `json:"parentID,omitempty"`
 	Agent     string           `json:"agent,omitempty"`
 	Model     *sessionModelRef `json:"model,omitempty"`
+	Execution string           `json:"execution,omitempty"`
 	CreatedAt int64            `json:"createdAt,omitempty"`
 	UpdatedAt int64            `json:"updatedAt,omitempty"`
 }
@@ -110,11 +111,16 @@ type sessionStatusView struct {
 	Message string `json:"message,omitempty"`
 }
 
+type nativeSessionStatusProvider interface {
+	NativeStatuses(directory string) map[string]sessionStatusView
+}
+
 type sessionReadContract struct {
-	state   *appState
-	backend *runtimeBackend
-	history *projectHistoryStore
-	store   *sessionPersistenceStore
+	state        *appState
+	backend      *runtimeBackend
+	history      *projectHistoryStore
+	store        *sessionPersistenceStore
+	nativeStatus nativeSessionStatusProvider
 }
 
 type sessionRuntimeError struct {
@@ -149,6 +155,14 @@ func newSessionReadContractWithBackend(state *appState, backend *runtimeBackend)
 		history: recentProjects,
 		store:   newSessionPersistenceStore(sessionPersistenceRoot(), backend.engine.ID()),
 	}
+}
+
+func (c *sessionReadContract) setNativeStatusProvider(provider nativeSessionStatusProvider) {
+	c.nativeStatus = provider
+}
+
+func sessionUsesNativeExecution(session sessionView) bool {
+	return strings.TrimSpace(session.Execution) == "native"
 }
 
 func (c *sessionReadContract) runtimeGet(ctx context.Context, route, directory string, query url.Values) (json.RawMessage, error) {
@@ -801,6 +815,11 @@ func (c *sessionReadContract) listSessions(ctx context.Context, limit int) ([]se
 }
 
 func (c *sessionReadContract) getSession(ctx context.Context, sessionID, directory string) (sessionView, error) {
+	if c.store != nil {
+		if persisted, ok, storeErr := c.store.getSession(sessionID); storeErr == nil && ok && sessionUsesNativeExecution(persisted) {
+			return persisted, nil
+		}
+	}
 	raw, err := c.runtimeGet(ctx, "/session/"+url.PathEscape(sessionID), directory, nil)
 	if err != nil {
 		if c.store != nil {
@@ -827,6 +846,16 @@ func (c *sessionReadContract) getSession(ctx context.Context, sessionID, directo
 func (c *sessionReadContract) getMessages(ctx context.Context, sessionID, directory string, limit int) ([]sessionMessageView, error) {
 	if limit <= 0 || limit > 2000 {
 		limit = 200
+	}
+	if c.store != nil {
+		if persistedSession, ok, storeErr := c.store.getSession(sessionID); storeErr == nil && ok && sessionUsesNativeExecution(persistedSession) {
+			if persisted, messagesOK, messagesErr := c.store.getMessages(sessionID); messagesErr == nil && messagesOK {
+				if len(persisted) > limit {
+					persisted = persisted[len(persisted)-limit:]
+				}
+				return persisted, nil
+			}
+		}
 	}
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(limit))
@@ -866,6 +895,12 @@ func (c *sessionReadContract) getMessages(ctx context.Context, sessionID, direct
 func (c *sessionReadContract) getStatuses(ctx context.Context, directory string) (map[string]sessionStatusView, error) {
 	raw, err := c.runtimeGet(ctx, "/session/status", directory, nil)
 	if err != nil {
+		if c.nativeStatus != nil {
+			native := c.nativeStatus.NativeStatuses(directory)
+			if len(native) > 0 {
+				return native, nil
+			}
+		}
 		return nil, err
 	}
 	var rows map[string]map[string]any
@@ -876,10 +911,22 @@ func (c *sessionReadContract) getStatuses(ctx context.Context, directory string)
 	for sessionID, row := range rows {
 		result[sessionID] = normalizeSessionStatus(row)
 	}
+	if c.nativeStatus != nil {
+		for sessionID, status := range c.nativeStatus.NativeStatuses(directory) {
+			result[sessionID] = status
+		}
+	}
 	return result, nil
 }
 
 func (c *sessionReadContract) getChanges(ctx context.Context, sessionID, directory string) ([]sessionChangeView, error) {
+	if c.store != nil {
+		if persistedSession, ok, storeErr := c.store.getSession(sessionID); storeErr == nil && ok && sessionUsesNativeExecution(persistedSession) {
+			if persisted, changesOK, changesErr := c.store.getChanges(sessionID); changesErr == nil && changesOK {
+				return persisted, nil
+			}
+		}
+	}
 	raw, err := c.runtimeGet(ctx, "/session/"+url.PathEscape(sessionID)+"/diff", directory, nil)
 	if err == nil {
 		var rows []map[string]any
