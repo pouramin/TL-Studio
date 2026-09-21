@@ -4,7 +4,7 @@
   const K = window.KLU;
   if (!K) return;
 
-  const state = {
+  const state: TLStudioDynamicRecord = {
     loading: null,
     editor: null,
     monaco: null,
