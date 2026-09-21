@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   const $ = (id: string) => document.getElementById(id);
 
   const ui: TLStudioDynamicRecord = {
