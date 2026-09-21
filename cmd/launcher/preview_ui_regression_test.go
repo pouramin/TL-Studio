@@ -39,9 +39,9 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"entrySwitchGeneration",
 		"activeEntry !== entry",
 		"Preview file",
-		"capability?.kind === "html"",
+		`capability?.kind === "html"`,
 		"tl-studio:project-file-changed",
-		"startsWith("file.")",
+		`startsWith("file.")`,
 		"keepalive: true",
 	} {
 		if !strings.Contains(text, required) {
