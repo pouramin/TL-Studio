@@ -52,39 +52,85 @@
   panel.classList.add("preview-floating-window");
   head.classList.add("preview-drag-handle");
 
-  const resizeLeft = document.createElement("div");
-  resizeLeft.className = "preview-resize-left";
-  resizeLeft.title = "Drag to resize preview width";
-  resizeLeft.setAttribute("aria-hidden", "true");
-  panel.appendChild(resizeLeft);
+  const resizeDirections = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+  const resizeHandles = resizeDirections.map((direction) => {
+    const handle = document.createElement("div");
+    handle.className = `preview-resize-handle preview-resize-${direction}`;
+    handle.dataset.direction = direction;
+    handle.title = `Drag to resize preview from ${direction.toUpperCase()}`;
+    handle.setAttribute("aria-hidden", "true");
+    panel.appendChild(handle);
+    return handle;
+  });
 
   apply();
 
   let edgeResize = null;
-  resizeLeft.addEventListener("pointerdown", (event) => {
+  const startResize = (event) => {
     if (event.button !== 0) return;
-    const r = panel.getBoundingClientRect();
-    edgeResize = { id: event.pointerId, right: r.right };
-    resizeLeft.setPointerCapture?.(event.pointerId);
+    const handle = event.currentTarget;
+    const direction = String(handle?.dataset?.direction || "");
+    if (!direction) return;
+    const rect = panel.getBoundingClientRect();
+    edgeResize = {
+      id: event.pointerId,
+      direction,
+      startX: event.clientX,
+      startY: event.clientY,
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+    };
+    handle.setPointerCapture?.(event.pointerId);
     panel.classList.add("preview-resizing");
     event.preventDefault();
     event.stopPropagation();
-  });
-  resizeLeft.addEventListener("pointermove", (event) => {
+  };
+
+  const moveResize = (event) => {
     if (!edgeResize || edgeResize.id !== event.pointerId) return;
-    const right = Math.min(edgeResize.right, window.innerWidth - 8);
-    const left = clamp(event.clientX, 8, Math.max(8, right - MIN_WIDTH));
+    const vp = viewport();
+    const dx = event.clientX - edgeResize.startX;
+    const dy = event.clientY - edgeResize.startY;
+    let left = edgeResize.left;
+    let right = edgeResize.right;
+    let top = edgeResize.top;
+    let bottom = edgeResize.bottom;
+    const direction = edgeResize.direction;
+
+    if (direction.includes("w")) {
+      left = clamp(edgeResize.left + dx, 8, edgeResize.right - MIN_WIDTH);
+    }
+    if (direction.includes("e")) {
+      right = clamp(edgeResize.right + dx, edgeResize.left + MIN_WIDTH, vp.width - 8);
+    }
+    if (direction.includes("n")) {
+      top = clamp(edgeResize.top + dy, 8, edgeResize.bottom - MIN_HEIGHT);
+    }
+    if (direction.includes("s")) {
+      bottom = clamp(edgeResize.bottom + dy, edgeResize.top + MIN_HEIGHT, vp.height - 8);
+    }
+
     panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
     panel.style.width = `${Math.max(MIN_WIDTH, right - left)}px`;
-  });
+    panel.style.height = `${Math.max(MIN_HEIGHT, bottom - top)}px`;
+  };
+
   const endEdgeResize = (event) => {
     if (!edgeResize || edgeResize.id !== event.pointerId) return;
     edgeResize = null;
     panel.classList.remove("preview-resizing");
     write();
   };
-  resizeLeft.addEventListener("pointerup", endEdgeResize);
-  resizeLeft.addEventListener("pointercancel", endEdgeResize);
+
+  for (const handle of resizeHandles) {
+    handle.addEventListener("pointerdown", startResize);
+    handle.addEventListener("pointermove", moveResize);
+    handle.addEventListener("pointerup", endEdgeResize);
+    handle.addEventListener("pointercancel", endEdgeResize);
+  }
 
   let drag = null;
   head.addEventListener("pointerdown", (event) => {
