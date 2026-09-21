@@ -53,7 +53,7 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **Project Workspace داخلی** — File Explorer قابل‌نوشتن و Monaco Editor لوکال و Lazy-loaded با ویرایش چندتب، Find/Replace، Multi-cursor، Save/Create/Rename/Delete و هماهنگی با تغییرات خارجی فایل.
 - **Project Search** — جست‌وجوی سریع متن در کل Project با Include/Exclude و بازکردن مستقیم نتیجه در Editor.
 - **Terminal داخلی** — اجرای Command در Scope پروژه، تاریخچه‌ی خروجی، Stop و پایان Process tree.
-- **Live Preview** — Preview لوکال مبتنی بر Capability در پنجره‌ی قابل‌جابجایی و تغییر اندازه؛ TL Studio فایل Previewable فعال را بین HTML، SVG و Image، PDF، Video، Audio، Markdown رندرشده و Plain Text دنبال می‌کند. فایل‌های باینری Previewable مثل PDF و Image به‌صورت Tab واقعی ولی View-only در Workspace باز می‌شوند تا بدون واردکردن داده‌ی باینری به Monaco بتوانند Preview را کنترل کنند.
+- **Live Preview** — Preview لوکال مبتنی بر Capability در پنجره‌ی قابل‌جابجایی و تغییر اندازه؛ TL Studio فایل Previewable فعال را بین HTML، SVG و Image، PDF به‌صورت Inline، Video، Audio، Markdown رندرشده و Plain Text رندرشده دنبال می‌کند. فایل‌های باینری Previewable مثل PDF و Image به‌صورت Tab واقعی ولی View-only باز می‌شوند و پنجره‌ی Preview از هر 4 لبه و هر 4 گوشه قابل Resize است.
 - **تنظیمات ظاهر و Editor** — حالت System، Dark و Light به‌همراه Editor theme و Font جداگانه برای UI، Code و Terminal.
 - **معماری Local-first** — اجرای Loopback-only، رمز تصادفی Backend در هر اجرا، کنترل Origin و CSP محدودکننده.
 - **بدون Cloud یا Telemetry اختصاصی TL Studio** — ترافیک Model براساس Provider و Runtime انتخاب‌شده‌ی کاربر انجام می‌شود و از زیرساخت TL Studio عبور نمی‌کند.
