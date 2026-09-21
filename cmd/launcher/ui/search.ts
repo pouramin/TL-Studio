@@ -55,17 +55,17 @@
     <div id="projectSearchResults" class="project-search-results"></div>`;
   mainPane.appendChild(panel);
 
-  const query = document.getElementById("projectSearchQuery");
-  const include = document.getElementById("projectSearchInclude");
-  const exclude = document.getElementById("projectSearchExclude");
-  const caseSensitive = document.getElementById("projectSearchCase");
-  const status = document.getElementById("projectSearchStatus");
-  const count = document.getElementById("projectSearchCount");
-  const results = document.getElementById("projectSearchResults");
-  const close = document.getElementById("closeProjectSearch");
+  const query = document.getElementById("projectSearchQuery") as HTMLInputElement;
+  const include = document.getElementById("projectSearchInclude") as HTMLInputElement;
+  const exclude = document.getElementById("projectSearchExclude") as HTMLInputElement;
+  const caseSensitive = document.getElementById("projectSearchCase") as HTMLInputElement;
+  const status = document.getElementById("projectSearchStatus")!;
+  const count = document.getElementById("projectSearchCount")!;
+  const results = document.getElementById("projectSearchResults")!;
+  const close = document.getElementById("closeProjectSearch") as HTMLButtonElement;
 
   let timer = 0;
-  let controller = null;
+  let controller: AbortController | null = null;
   let generation = 0;
 
   const clearResults = (message = "Type to search the current project") => {
