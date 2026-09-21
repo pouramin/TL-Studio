@@ -73,13 +73,15 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		t.Fatal("preview.css missing preview panel/frame/entry selector styles")
 	}
 	floatingText := string(floatingJS)
-	for _, required := range []string{"preview-resize-left", "Drag to resize preview width", "MIN_WIDTH = 340", "panel.style.width"} {
+	for _, required := range []string{"resizeDirections", "\"n\", \"s\", \"e\", \"w\", \"ne\", \"nw\", \"se\", \"sw\"", "preview-resize-handle", "MIN_WIDTH = 340", "MIN_HEIGHT = 300", "panel.style.width", "panel.style.height"} {
 		if !strings.Contains(floatingText, required) {
 			t.Fatalf("preview-floating.js missing width resize behavior %q", required)
 		}
 	}
-	if !strings.Contains(string(floatingCSS), ".preview-resize-left") || !strings.Contains(string(floatingCSS), "cursor: ew-resize") {
-		t.Fatal("preview-floating.css missing left-edge resize affordance")
+	for _, required := range []string{".preview-resize-n", ".preview-resize-s", ".preview-resize-e", ".preview-resize-w", ".preview-resize-ne", ".preview-resize-nw", ".preview-resize-se", ".preview-resize-sw", "cursor: ew-resize", "cursor: ns-resize", "cursor: nwse-resize", "cursor: nesw-resize"} {
+		if !strings.Contains(string(floatingCSS), required) {
+			t.Fatalf("preview-floating.css missing full resize affordance %q", required)
+		}
 	}
 	if !strings.Contains(string(app), `"/preview.js"`) {
 		t.Fatal("app.js does not load preview.js")
