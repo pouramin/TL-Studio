@@ -115,9 +115,29 @@ The launcher translates the bundled runtime's session records, `info + parts` me
 
 The current semantic message contract exposes stable product fields such as `role`, `text`, `activities`, `usage`, `changes`, `createdAt`, and `completedAt`. Tool activities carry both the TL Studio semantic Tool Registry ID and the runtime ID for diagnostics. Unknown runtime tools still degrade through the Tool Registry's conservative fallback.
 
-This milestone deliberately owns **reading and presentation semantics**, not session persistence or agent execution. Session creation, rename/delete mutations, prompts, aborts, the agent loop, persisted runtime session storage, and live SSE events still go through the runtime adapter. The runtime remains authoritative for execution and persisted transcript data.
+This milestone owns **reading and presentation semantics**, not session persistence or agent execution. Session creation, rename/delete mutations, prompts, aborts, the agent loop, and persisted runtime session storage still remain in the runtime. Live runtime events are now consumed by the launcher and projected through TL Studio's semantic SSE boundary described below. The runtime remains authoritative for execution and persisted transcript data.
 
 A narrow read-only compatibility bridge remains for sessions created during an older TL Studio alpha protocol window. Legacy parsing is isolated to that compatibility path rather than defining the current session contract.
+
+## Live event projection ownership
+
+TL Studio owns the Browser-facing live-event contract at:
+
+- `GET /local/events` (SSE)
+
+The launcher maintains the authenticated connection to the bundled runtime's implementation event stream and projects engine-specific events into a small, versioned semantic vocabulary:
+
+- `stream.ready`
+- `session.changed`
+- `message.changed`
+- `attention.changed`
+- `workspace.changed`
+
+Projected events expose only stable product metadata such as `sessionID`, `messageID`, `attentionKind`, `path`, and a normalized action. Raw runtime envelopes such as `properties`, `message.part.updated`, `session.status`, or `permission.asked` do not cross into Browser code.
+
+The event stream is intentionally a responsiveness signal rather than transcript authority. After a semantic event, Browser modules refresh the launcher-owned Session/Permission contracts; persisted semantic session reads remain the reconnect-safe source of truth. Unknown runtime event types are ignored instead of being surfaced as accidental product API.
+
+The runtime remains the source of execution events. TL Studio owns their translation and Browser-facing meaning.
 
 ## Provider and model ownership
 
@@ -203,4 +223,4 @@ The browser must not call implementation-specific runtime routes directly. `/run
 
 The current engine remains replaceable. New browser features must depend on TL Studio concepts such as sessions, messages, providers, permissions, questions, tools, and events rather than on the bundled engine's product name.
 
-Phase 1 established the runtime independence boundary. Provider/model definitions, tool semantics, permission policy, and the current session read/presentation model are now TL Studio-owned. Session persistence, live-event projection, questions, and the Agent execution loop remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.
+Phase 1 established the runtime independence boundary. Provider/model definitions, tool semantics, permission policy, the current session read/presentation model, and Browser-facing live-event projection are now TL Studio-owned. Session persistence, question semantics, and the Agent execution loop remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.

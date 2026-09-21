@@ -144,6 +144,29 @@ interface TLStudioPermissionRule {
   createdAt: string;
 }
 
+type TLStudioLiveEventType =
+  | "stream.ready"
+  | "session.changed"
+  | "message.changed"
+  | "attention.changed"
+  | "workspace.changed";
+
+interface TLStudioLiveEvent {
+  version: 1;
+  type: TLStudioLiveEventType;
+  action?: "created" | "removed" | "requested" | "resolved" | "content" | "state" | "changed";
+  sessionID?: RuntimeSessionID;
+  messageID?: string;
+  attentionKind?: "permission" | "question";
+  path?: string;
+}
+
+interface TLStudioEventSubscribeOptions {
+  onEvent?: (event: TLStudioLiveEvent) => void;
+  onOpen?: (event: Event) => void;
+  onError?: (event: Event) => void;
+}
+
 interface RuntimeHostedProviderContract {
   readonly providerID: RuntimeProviderID;
   readonly preferredModels: readonly string[];
@@ -182,6 +205,9 @@ interface TLStudioRuntimeContract {
     remove(sessionID: RuntimeSessionID, options?: { directory?: string }): Promise<unknown>;
     promptAsync(sessionID: RuntimeSessionID, input?: RuntimePromptInput): Promise<unknown>;
     abort(sessionID: RuntimeSessionID, options?: { scope?: string; directory?: string }): Promise<unknown>;
+  };
+  events: {
+    subscribe(options?: TLStudioEventSubscribeOptions): EventSource;
   };
 }
 

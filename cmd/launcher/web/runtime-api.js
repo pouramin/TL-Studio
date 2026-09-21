@@ -50,8 +50,8 @@
     }
   };
 
-  const openEventSource = (path, { onEvent, onOpen, onError } = {}) => {
-    const source = new EventSource(`/runtime${route(path)}`);
+  const openLocalEventSource = (path, { onEvent, onOpen, onError } = {}) => {
+    const source = new EventSource(path);
     if (onOpen) source.addEventListener("open", onOpen);
     if (onError) source.addEventListener("error", onError);
     if (onEvent) source.addEventListener("message", parseSSE(onEvent));
@@ -196,7 +196,7 @@
     },
 
     events: {
-      subscribe: (options = {}) => openEventSource("/global/event", options),
+      subscribe: (options = {}) => openLocalEventSource("/local/events", options),
     },
   });
 })();
