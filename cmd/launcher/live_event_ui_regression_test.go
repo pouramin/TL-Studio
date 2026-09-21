@@ -11,7 +11,7 @@ func TestBrowserUsesTLStudioLiveEventContract(t *testing.T) {
 
 	for _, required := range []string{
 		"new EventSource(path)",
-		""/local/events"",
+		`"/local/events"`,
 	} {
 		if !strings.Contains(runtimeAPI, required) {
 			t.Fatalf("runtime-api.ts missing TL Studio live event behavior %q", required)
@@ -20,11 +20,11 @@ func TestBrowserUsesTLStudioLiveEventContract(t *testing.T) {
 
 	for _, required := range []string{
 		"handleLiveEvent",
-		"type === "stream.ready"",
-		"type === "attention.changed"",
-		"type === "session.changed"",
-		"type === "message.changed"",
-		"type === "workspace.changed"",
+		`type === "stream.ready"`,
+		`type === "attention.changed"`,
+		`type === "session.changed"`,
+		`type === "message.changed"`,
+		`type === "workspace.changed"`,
 		"event?.sessionID",
 	} {
 		if !strings.Contains(chat, required) {
