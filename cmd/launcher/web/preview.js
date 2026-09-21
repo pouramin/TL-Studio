@@ -44,12 +44,12 @@
       <code id="previewURL">No preview URL yet</code>
     </div>
     <div id="previewEntryRow" class="preview-entry-row hidden">
-      <span>HTML file</span>
-      <select id="previewEntry" aria-label="HTML file to preview"></select>
+      <span>Preview file</span>
+      <select id="previewEntry" aria-label="File to preview"></select>
     </div>
     <div id="previewEmpty" class="preview-empty">
       <strong>Preview this project</strong>
-      <span id="previewHint">TL Studio can preview HTML files or run a package.json dev script.</span>
+      <span id="previewHint">TL Studio can preview supported files or run a package.json dev script.</span>
       <pre id="previewLogs" class="preview-logs hidden"></pre>
     </div>
     <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
@@ -74,7 +74,7 @@
     frame: document.getElementById("previewFrame"),
   };
 
-  K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "", followTimer: null, entrySwitchGeneration: 0 };
+  K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "", followTimer: null, entrySwitchGeneration: 0, registry: null, registryPromise: null };
 
   const request = async (path, options = {}) => {
     const response = await fetch(path, {
@@ -104,12 +104,42 @@
     K.state.preview.open = !!open;
     ui.panel.classList.toggle("hidden", !open);
     ui.button.classList.toggle("preview-toggle-active", !!open);
-    if (open) refreshStatus().catch(() => {});
+    if (open) loadPreviewRegistry().then(() => refreshStatus()).catch(() => {});
   };
 
-  const kindLabel = (kind) => kind === "dev-server" ? "Dev server" : kind === "static" ? "Static HTML" : "Web preview";
-  const isHTMLPath = (value) => /\.html?$/i.test(String(value || "").trim());
-  const activeHTMLEntry = () => isHTMLPath(K.state.activeEditorPath) ? String(K.state.activeEditorPath) : "";
+  const loadPreviewRegistry = async () => {
+    if (K.state.preview.registry) return K.state.preview.registry;
+    if (!K.state.preview.registryPromise) {
+      K.state.preview.registryPromise = request("/local/preview/capabilities")
+        .then((registry) => {
+          K.state.preview.registry = registry && typeof registry === "object" ? registry : { version: 1, capabilities: [] };
+          return K.state.preview.registry;
+        })
+        .finally(() => { K.state.preview.registryPromise = null; });
+    }
+    return K.state.preview.registryPromise;
+  };
+
+  const extensionOf = (value) => {
+    const name = String(value || "").trim().split(/[\\/]/).pop() || "";
+    const index = name.lastIndexOf(".");
+    return index > 0 ? name.slice(index).toLowerCase() : "";
+  };
+
+  const previewCapabilityForPath = (value) => {
+    const ext = extensionOf(value);
+    if (!ext) return null;
+    for (const capability of K.state.preview.registry?.capabilities || []) {
+      if ((capability?.extensions || []).some((candidate) => String(candidate).toLowerCase() === ext)) return capability;
+    }
+    return null;
+  };
+
+  const isPreviewablePath = (value) => !!previewCapabilityForPath(value);
+  const activePreviewEntry = () => isPreviewablePath(K.state.activeEditorPath) ? String(K.state.activeEditorPath) : "";
+  const kindLabel = (snapshot) => snapshot?.kind === "dev-server"
+    ? "Dev server"
+    : snapshot?.entryMeta?.name || (snapshot?.kind === "file" ? "File preview" : "Web preview");
 
   const previewPath = (base = "/local/preview", entry = "") => {
     const value = String(entry || "").trim();
@@ -117,22 +147,25 @@
   };
 
   const renderEntryChoices = (snapshot) => {
-    const entries = Array.isArray(snapshot?.entries) ? snapshot.entries.filter(isHTMLPath) : [];
-    const signature = entries.join("\n");
-    const preferred = String(snapshot?.entry || activeHTMLEntry() || ui.entry?.value || "");
+    const entries = Array.isArray(snapshot?.entries)
+      ? snapshot.entries.filter((entry) => entry && typeof entry.path === "string")
+      : [];
+    const paths = entries.map((entry) => entry.path);
+    const signature = entries.map((entry) => `${entry.path}:${entry.capabilityID || entry.kind || ""}`).join("\n");
+    const preferred = String(snapshot?.entry || activePreviewEntry() || ui.entry?.value || "");
     if (ui.entry && K.state.preview.entrySignature !== signature) {
       K.state.preview.entrySignature = signature;
       ui.entry.textContent = "";
       for (const entry of entries) {
         const option = document.createElement("option");
-        option.value = entry;
-        option.textContent = entry;
+        option.value = entry.path;
+        option.textContent = `${entry.path} · ${entry.name || entry.kind || "Preview"}`;
         ui.entry.appendChild(option);
       }
     }
-    if (ui.entry && entries.includes(preferred)) ui.entry.value = preferred;
-    else if (ui.entry && entries.length && !entries.includes(ui.entry.value)) ui.entry.value = entries[0];
-    ui.entryRow?.classList.toggle("hidden", entries.length <= 1);
+    if (ui.entry && paths.includes(preferred)) ui.entry.value = preferred;
+    else if (ui.entry && paths.length && !paths.includes(ui.entry.value)) ui.entry.value = paths[0];
+    ui.entryRow?.classList.toggle("hidden", entries.length <= 1 || snapshot?.kind === "dev-server");
     return entries;
   };
 
@@ -143,9 +176,9 @@
     const url = snapshot?.url || "";
     const starting = running && snapshot?.kind === "dev-server" && !url;
     const entries = renderEntryChoices(snapshot);
-    const needsChoice = snapshot?.kind === "static" && entries.length > 1 && !snapshot?.entry;
+    const needsChoice = snapshot?.kind === "file" && entries.length > 1 && !snapshot?.entry;
 
-    ui.kind.textContent = kindLabel(snapshot?.kind);
+    ui.kind.textContent = kindLabel(snapshot);
     ui.status.textContent = url ? "Live" : starting ? "Starting…" : running ? "Running" : available ? "Ready" : "Unavailable";
     ui.url.textContent = url || "No preview URL yet";
     ui.url.title = url;
@@ -185,7 +218,7 @@
   };
 
   const refreshStatus = async () => {
-    const snapshot = await request(previewPath("/local/preview", activeHTMLEntry()));
+    const snapshot = await request(previewPath("/local/preview", activePreviewEntry()));
     render(snapshot);
     return snapshot;
   };
@@ -195,7 +228,8 @@
     setOpen(true);
     ui.start.disabled = true;
     try {
-      const requestedEntry = String(ui.entry?.value || activeHTMLEntry() || "").trim();
+      await loadPreviewRegistry().catch(() => null);
+      const requestedEntry = String(ui.entry?.value || activePreviewEntry() || "").trim();
       const snapshot = await request(previewPath("/local/preview", requestedEntry), { method: "POST" });
       render(snapshot);
       if (snapshot?.running && !snapshot?.url && !K.state.preview.poll) {
@@ -206,9 +240,9 @@
     }
   };
 
-  const switchStaticEntry = async (entry) => {
+  const switchPreviewEntry = async (entry) => {
     const value = String(entry || "").trim();
-    if (!value || K.state.preview.snapshot?.kind !== "static") return K.state.preview.snapshot;
+    if (!value) return K.state.preview.snapshot;
     const generation = ++K.state.preview.entrySwitchGeneration;
     K.showError?.("");
     try {
@@ -223,19 +257,21 @@
     }
   };
 
-  const followActiveHTMLEntry = (path) => {
+  const followActivePreviewEntry = async (path) => {
     const entry = String(path || "").trim();
-    if (!isHTMLPath(entry)) return;
+    if (!entry || !K.state.preview.open) return;
+    await loadPreviewRegistry().catch(() => null);
+    if (!isPreviewablePath(entry)) return;
     const snapshot = K.state.preview.snapshot;
-    if (!K.state.preview.open || !snapshot?.running || snapshot?.kind !== "static" || snapshot?.entry === entry) return;
+    if (!snapshot?.running || snapshot?.entry === entry) return;
     if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
     K.state.preview.followTimer = window.setTimeout(() => {
       K.state.preview.followTimer = null;
-      const activeEntry = activeHTMLEntry();
+      const activeEntry = activePreviewEntry();
       const current = K.state.preview.snapshot;
-      if (!K.state.preview.open || !current?.running || current?.kind !== "static") return;
+      if (!K.state.preview.open || !current?.running) return;
       if (!activeEntry || activeEntry !== entry || current?.entry === activeEntry) return;
-      switchStaticEntry(activeEntry);
+      switchPreviewEntry(activeEntry);
     }, 50);
   };
 
@@ -255,8 +291,8 @@
     catch { ui.frame.src = ui.frame.src; }
   };
 
-  const scheduleStaticReload = () => {
-    if (!K.state.preview.open || K.state.preview.snapshot?.kind !== "static" || !K.state.preview.snapshot?.url) return;
+  const scheduleFileReload = () => {
+    if (!K.state.preview.open || K.state.preview.snapshot?.kind !== "file" || !K.state.preview.snapshot?.url) return;
     if (K.state.preview.reloadTimer) window.clearTimeout(K.state.preview.reloadTimer);
     K.state.preview.reloadTimer = window.setTimeout(() => {
       K.state.preview.reloadTimer = null;
@@ -268,13 +304,14 @@
     const opening = ui.panel.classList.contains("hidden");
     setOpen(opening);
     if (opening) {
+      await loadPreviewRegistry().catch(() => null);
       const snapshot = await refreshStatus().catch(() => null);
-      const activeEntry = activeHTMLEntry();
-      if (snapshot?.running && snapshot?.kind === "static" && activeEntry && activeEntry !== snapshot?.entry) {
-        await switchStaticEntry(activeEntry);
+      const activeEntry = activePreviewEntry();
+      if (snapshot?.running && activeEntry && activeEntry !== snapshot?.entry) {
+        await switchPreviewEntry(activeEntry);
         return;
       }
-      const needsChoice = snapshot?.kind === "static" && Array.isArray(snapshot?.entries) && snapshot.entries.length > 1 && !snapshot?.entry;
+      const needsChoice = snapshot?.kind === "file" && Array.isArray(snapshot?.entries) && snapshot.entries.length > 1 && !snapshot?.entry;
       if (snapshot?.available && !snapshot?.running && !needsChoice) await start();
     }
   });
@@ -282,8 +319,8 @@
   ui.entry?.addEventListener("change", async () => {
     const value = String(ui.entry.value || "").trim();
     if (!value) return;
-    if (K.state.preview.snapshot?.running && K.state.preview.snapshot?.kind === "static") {
-      await switchStaticEntry(value);
+    if (K.state.preview.snapshot?.running) {
+      await switchPreviewEntry(value);
       return;
     }
     ui.start.disabled = false;
@@ -314,14 +351,14 @@
     } catch {}
     return response;
   };
-  window.addEventListener("tl-studio:project-file-changed", scheduleStaticReload);
-  window.addEventListener("tl-studio:editor-render", (event) => followActiveHTMLEntry(event.detail?.path));
+  window.addEventListener("tl-studio:project-file-changed", scheduleFileReload);
+  window.addEventListener("tl-studio:editor-render", (event) => followActivePreviewEntry(event.detail?.path));
 
   const baseHandleRuntimeEvent = K.handleRuntimeEvent;
   if (typeof baseHandleRuntimeEvent === "function") {
     K.handleRuntimeEvent = (event) => {
       const result = baseHandleRuntimeEvent(event);
-      if (String(event?.type || "").startsWith("file.")) scheduleStaticReload();
+      if (String(event?.type || "").startsWith("file.")) scheduleFileReload();
       return result;
     };
   }
@@ -342,5 +379,6 @@
     try { fetch("/local/preview", { method: "DELETE", keepalive: true }); } catch {}
   });
 
-  K.preview = Object.freeze({ open: () => setOpen(true), start, stop, reload, refresh: refreshStatus, selectEntry: switchStaticEntry });
+  loadPreviewRegistry().catch(() => {});
+  K.preview = Object.freeze({ open: () => setOpen(true), start, stop, reload, refresh: refreshStatus, selectEntry: switchPreviewEntry, capabilities: loadPreviewRegistry });
 })();
