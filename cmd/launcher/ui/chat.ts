@@ -253,19 +253,22 @@
     }, delay);
   };
 
-  K.handleRuntimeEvent = (event) => {
+  K.handleLiveEvent = (event) => {
     const type = event?.type || "";
-    const props = event?.properties || event?.data || {};
     const selectedID = K.state.session?.id;
-    const sessionID = props.sessionID || props.info?.sessionID || props.part?.sessionID;
+    const sessionID = event?.sessionID || "";
 
-    if (type === "server.connected") return;
-    if (type.startsWith("permission.") || type.startsWith("question.")) K.loadAttention?.().catch(() => {});
+    if (type === "stream.ready") return;
+    if (type === "attention.changed") K.loadAttention?.().catch(() => {});
     if (sessionID && sessionID !== selectedID) {
-      if (type.startsWith("session.") || type.startsWith("message.")) window.setTimeout(() => K.loadSessions().catch(() => {}), 100);
+      if (type === "session.changed" || type === "message.changed") {
+        window.setTimeout(() => K.loadSessions().catch(() => {}), 100);
+      }
       return;
     }
-    if (type.startsWith("session.") || type.startsWith("message.") || type.startsWith("file.")) scheduleSelectedRefresh(30);
+    if (type === "session.changed" || type === "message.changed" || type === "workspace.changed") {
+      scheduleSelectedRefresh(30);
+    }
   };
 
   K.startEvents = () => {
@@ -279,10 +282,10 @@
       return;
     }
     K.state.eventSource = K.api.events.subscribe({
-      onEvent: K.handleRuntimeEvent,
+      onEvent: K.handleLiveEvent,
       onError: () => {
-        // Native EventSource reconnects automatically. Prompt polling remains a
-        // second source of truth for headless/server variations.
+        // Native EventSource reconnects automatically. Persisted semantic Session
+        // reads and prompt polling remain reconnect-safe sources of truth.
       },
     });
   };
