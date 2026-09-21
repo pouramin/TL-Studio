@@ -321,7 +321,7 @@ import { K } from "./kernel";
       });
       K.renderMessages();
 
-      await K.api.sessions.promptAsync(K.state.session!.id, { text, parts, agent, model, variant: model?.variant });
+      await K.api.sessionCommands.run(K.state.session!.id, { text, parts, agent, model, variant: model?.variant });
       K.clearAttachments();
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       K.renderMessages();
