@@ -67,6 +67,13 @@ func TestNativeOpenAICompatibleRequestAndToolNormalization(t *testing.T) {
 	if len(response.ToolCalls) != 1 || response.ToolCalls[0].Name != "files.write" {
 		t.Fatalf("tool name was not normalized: %#v", response.ToolCalls)
 	}
+	var arguments map[string]any
+	if err := json.Unmarshal(response.ToolCalls[0].Arguments, &arguments); err != nil {
+		t.Fatalf("tool arguments are not a JSON object: %s (%v)", response.ToolCalls[0].Arguments, err)
+	}
+	if arguments["path"] != "x.txt" {
+		t.Fatalf("unexpected normalized tool arguments %#v", arguments)
+	}
 	if response.Usage.Input != 9 || response.Usage.Output != 4 {
 		t.Fatalf("unexpected usage %#v", response.Usage)
 	}
