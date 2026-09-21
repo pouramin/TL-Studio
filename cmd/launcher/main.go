@@ -187,22 +187,10 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	}
 	proxy := backend.reverseProxy()
 
-	providerManager, err := newRuntimeProviderManager(state, backendURL, credentials.Username, credentials.Password)
-	if err != nil {
-		return nil, fmt.Errorf("create runtime provider manager: %w", err)
-	}
-	permissionEngine, err := newPermissionEngine(state, backendURL, username, password)
-	if err != nil {
-		return nil, fmt.Errorf("create permission engine: %w", err)
-	}
-	sessionRead, err := newSessionReadContract(state, backendURL, username, password)
-	if err != nil {
-		return nil, fmt.Errorf("create session read contract: %w", err)
-	}
-	liveEvents, err := newLiveEventContract(state, backendURL, username, password)
-	if err != nil {
-		return nil, fmt.Errorf("create live event contract: %w", err)
-	}
+	providerManager := newRuntimeProviderManagerWithBackend(state, backend)
+	permissionEngine := newPermissionEngineWithBackend(state, backend)
+	sessionRead := newSessionReadContractWithBackend(state, backend)
+	liveEvents := newLiveEventContractWithBackend(state, backend)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", func(w http.ResponseWriter, _ *http.Request) {
