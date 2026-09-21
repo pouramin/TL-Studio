@@ -12,7 +12,7 @@
     document.head.appendChild(link);
   };
 
-  const request = async (path, options = {}) => {
+  const request = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
@@ -64,7 +64,7 @@
     </form>`;
   main.appendChild(panel);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button,
     panel,
     cwd: document.getElementById("terminalCwd"),
