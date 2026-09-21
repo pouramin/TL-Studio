@@ -37,7 +37,7 @@
     return "";
   };
 
-  const buildProviderDefinition = (draft: any, existing = {}) => {
+  const buildProviderDefinition = (draft: any, existing: any = {}) => {
     const modelID = clean(draft.modelID);
     const context = positiveInt(draft.contextLimit);
     const output = positiveInt(draft.outputLimit);
@@ -144,7 +144,7 @@
   document.head.appendChild(style);
 
   const $ = (id: any) => document.getElementById(id);
-  const els = {
+  const els: TLStudioDynamicRecord = {
     add: $("providerAddButton"), notice: $("providerNotice"), list: $("providerList"), form: $("providerForm"),
     title: $("providerFormTitle"), cancel: $("providerFormCancel"), cancelTop: $("providerFormCancelTop"), save: $("providerFormSave"),
     id: $("providerIdInput"), name: $("providerNameInput"), protocol: $("providerProtocolSelect"), baseURL: $("providerBaseUrlInput"), apiKey: $("providerApiKeyInput"),
@@ -152,7 +152,7 @@
     toolCall: $("providerToolCallInput"), reasoning: $("providerReasoningInput"),
   };
 
-  let providerConfig = { providers: [] };
+  let providerConfig: { providers: any[] } = { providers: [] };
   let editingID = "";
   let saving = false;
 
@@ -171,12 +171,12 @@
       K.activateSettingsSection("providers");
       return;
     }
-    for (const button of settingsDialog.querySelectorAll("[data-settings-section]")) {
+    for (const button of settingsDialog.querySelectorAll<HTMLElement>("[data-settings-section]")) {
       const active = button.dataset.settingsSection === "providers";
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
     }
-    for (const item of settingsDialog.querySelectorAll("[data-settings-panel]")) item.classList.toggle("hidden", item.dataset.settingsPanel !== "providers");
+    for (const item of settingsDialog.querySelectorAll<HTMLElement>("[data-settings-panel]")) item.classList.toggle("hidden", item.dataset.settingsPanel !== "providers");
   };
 
   const draft = () => ({
@@ -286,7 +286,7 @@
       providerConfig = await K.api.providers.config();
       renderList();
     } catch (error) {
-      notice(`Could not load provider settings: ${error.message || String(error)}`, true);
+      notice(`Could not load provider settings: ${error instanceof Error ? error.message : String(error)}`, true);
     }
   };
 
@@ -332,7 +332,7 @@
         ? `${value.name} saved. ${clean(value.modelID)} is now available in the model selector.`
         : `${value.name} was saved by TL Studio, but the active runtime did not load ${clean(value.modelID)}. Check the endpoint, protocol, and model ID.`, !loaded);
     } catch (err) {
-      notice(`Could not save provider: ${err.message || String(err)}`, true);
+      notice(`Could not save provider: ${err instanceof Error ? err.message : String(err)}`, true);
       try { providerConfig = await K.api.providers.config(); renderList(); } catch {}
     } finally {
       setBusy(false);
@@ -378,7 +378,7 @@
         console.warn("[TL Studio] Runtime catalog refresh after provider delete failed", error);
       }
     } catch (error) {
-      notice(`Could not delete provider: ${error.message || String(error)}`, true);
+      notice(`Could not delete provider: ${error instanceof Error ? error.message : String(error)}`, true);
     } finally {
       setBusy(false);
     }
@@ -389,7 +389,7 @@
     activate();
     load();
   });
-  for (const button of settingsDialog.querySelectorAll("[data-settings-section]")) {
+  for (const button of settingsDialog.querySelectorAll<HTMLElement>("[data-settings-section]")) {
     if (button.dataset.settingsSection === "providers") continue;
     button.addEventListener("click", resetTransientForm);
   }
