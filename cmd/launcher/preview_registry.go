@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/fs"
 	"mime"
 	"os"
 	"path/filepath"
@@ -144,7 +145,7 @@ func previewFileCandidates(project string) []previewEntryDescriptor {
 		}
 		candidates = append(candidates, descriptor)
 		if len(candidates) >= 128 {
-			return filepath.SkipAll
+			return fs.SkipAll
 		}
 		return nil
 	})
