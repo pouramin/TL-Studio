@@ -8,7 +8,7 @@
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.20</strong> · نسخه Stable همچنان v0.2.1 است.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.21</strong> · نسخه Stable همچنان v0.2.1 است.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -47,6 +47,7 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **Permission Policy خود TL Studio و Question** — Allow یک‌باره، ذخیره‌ی Ruleهای غیرحساس به‌صورت Project-scoped داخل TL Studio، Forget از Settings، Reject و پاسخ به سؤال‌های تعاملی.
 - **Stop و Recovery** — توقف Run فعال و بازیابی Sessionهای گیرکرده یا خطاهای Retryable.
 - **Session Read Model خود TL Studio** — Session، Message، Activity، Status، Usage metadata و Changes از Routeهای semantic متعلق به Launcher در `/local/sessions*` خوانده می‌شوند و UI دیگر برای Sessionهای فعلی به envelope خام Runtime وابسته نیست.
+- **Session Command Contract خود TL Studio** — ساخت، تغییر نام، حذف، اجرای Prompt/Run و توقف Session از Routeهای semantic متعلق به Launcher در `/local/sessions*` انجام می‌شود و Adapter موتور فعال آن‌ها را به API خصوصی همان موتور ترجمه می‌کند.
 - **مدیریت Session** — ساخت، ادامه، تغییر نام، حذف و جابه‌جایی Sessionها بین Projectهای اخیر.
 - **Project Usage** — نمایش مصرف هر Turn و مجموع Project شامل Token، Request، Time، Reasoning و Cache.
 - **Changes panel** — مشاهده‌ی فایل‌های تغییرکرده، تعداد خطوط اضافه/حذف‌شده و Patch.
