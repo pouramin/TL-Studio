@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -191,8 +192,13 @@ func (m *previewManager) syncProjectLocked() {
 }
 
 func previewEntryURL(baseURL string, entry previewEntryDescriptor) string {
-	if entry.Renderer == "markdown" {
+	switch entry.Renderer {
+	case "markdown":
 		return strings.TrimRight(baseURL, "/") + "/.tl-preview/markdown?file=" + url.QueryEscape(entry.Path)
+	case "text":
+		return strings.TrimRight(baseURL, "/") + "/.tl-preview/text?file=" + url.QueryEscape(entry.Path)
+	case "pdf":
+		return strings.TrimRight(baseURL, "/") + "/.tl-preview/pdf?file=" + url.QueryEscape(entry.Path)
 	}
 	if strings.EqualFold(filepath.ToSlash(entry.Path), "index.html") || strings.TrimSpace(entry.Path) == "" {
 		return baseURL
@@ -323,7 +329,7 @@ func safeStaticPreviewHandler(project string) http.Handler {
 			http.Error(w, "preview is read-only", http.StatusMethodNotAllowed)
 			return
 		}
-		if serveMarkdownPreview(w, r, project) {
+		if serveMarkdownPreview(w, r, project) || serveTextPreview(w, r, project) || servePDFPreview(w, r, project) {
 			return
 		}
 		rel := strings.TrimPrefix(pathpkg.Clean("/"+r.URL.Path), "/")
@@ -353,6 +359,14 @@ func safeStaticPreviewHandler(project string) http.Handler {
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if descriptor, ok := validPreviewEntry(project, rel); ok {
+			if descriptor.MIME != "" {
+				w.Header().Set("Content-Type", descriptor.MIME)
+			}
+			if descriptor.Kind == "pdf" {
+				w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filepath.Base(target)}))
+			}
+		}
 		http.ServeFile(w, r, target)
 	})
 }
