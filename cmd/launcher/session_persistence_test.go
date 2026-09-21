@@ -142,3 +142,53 @@ func TestAcceptedRunIsRecordedBeforeRuntimeTranscriptRefresh(t *testing.T) {
 		t.Fatalf("accepted run semantic message mismatch: %#v", messages[0])
 	}
 }
+
+func TestPersistedOnlySessionCanBeRenamedAndDeleted(t *testing.T) {
+	project := t.TempDir()
+	root := filepath.Join(t.TempDir(), "sessions")
+	store := newSessionPersistenceStore(root, "kilo-code")
+	session := sessionView{
+		ID: "offline", Title: "Original", Directory: project,
+		CreatedAt: 1000, UpdatedAt: 2000,
+	}
+	if err := store.upsertSession(session); err != nil {
+		t.Fatal(err)
+	}
+
+	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusNotFound, jsonError{Error: "runtime session missing"})
+	}))
+	defer runtimeServer.Close()
+
+	state := &appState{project: project}
+	backend, err := newRuntimeBackend(
+		state,
+		runtimeServer.URL,
+		runtimeCredentials{Username: "runtime", Password: "secret"},
+		kiloRuntimeEngine{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := newSessionReadContractWithBackend(state, backend)
+	read.history = newProjectHistoryStoreForTest(filepath.Join(t.TempDir(), "projects.json"))
+	read.history.remember(project)
+	read.store = newSessionPersistenceStore(root, "kilo-code")
+	commands := newSessionCommandContract(state, backend, read)
+
+	title := "Renamed offline"
+	updated, err := commands.update(context.Background(), project, "offline", sessionUpdateInput{Title: &title})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Title != title {
+		t.Fatalf("persisted-only rename failed: %#v", updated)
+	}
+
+	if err := commands.remove(context.Background(), project, "offline"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok, err := read.store.getSession("offline"); err != nil || ok {
+		t.Fatalf("persisted-only delete failed: ok=%v err=%v", ok, err)
+	}
+}
