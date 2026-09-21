@@ -439,6 +439,35 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 	return s.persistIndexLocked()
 }
 
+func (s *sessionPersistenceStore) updateTitle(sessionID, title string) (sessionView, bool, error) {
+	sessionID = strings.TrimSpace(sessionID)
+	title = strings.TrimSpace(title)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return sessionView{}, false, err
+	}
+	session, ok := s.sessions[sessionID]
+	if !ok {
+		return sessionView{}, false, nil
+	}
+	session.Title = title
+	session.UpdatedAt = time.Now().UnixMilli()
+	s.sessions[sessionID] = session
+	snapshot, err := s.loadSnapshotLocked(sessionID)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return sessionView{}, false, err
+	}
+	snapshot.Session = session
+	if err := s.saveSnapshotLocked(snapshot); err != nil {
+		return sessionView{}, false, err
+	}
+	if err := s.persistIndexLocked(); err != nil {
+		return sessionView{}, false, err
+	}
+	return session, true, nil
+}
+
 func (s *sessionPersistenceStore) remove(sessionID string) error {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
