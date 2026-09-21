@@ -86,7 +86,7 @@
         await K.afterProjectChange();
         session = K.state.sessions.find((item) => item.id === session.id) || session;
       } catch (error) {
-        K.showError(`Could not switch to this session's project: ${error.message || String(error)}`);
+        K.showError(`Could not switch to this session's project: ${(error as any).message || String(error)}`);
         return;
       }
     }
@@ -156,7 +156,7 @@
       K.renderChanges?.();
       K.refreshWorkspaceControls?.();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -186,7 +186,7 @@
     try {
       await K.refreshHostedAuthStatus?.();
     } catch (error) {
-      K.showError(`Unable to verify hosted account state: ${error.message || String(error)}`);
+      K.showError(`Unable to verify hosted account state: ${(error as any).message || String(error)}`);
     }
     renderAccountDialog();
     ui.accountDialog?.showModal();
@@ -220,7 +220,7 @@
       renderAccountDialog();
       if (ui.accountDialog?.open) ui.accountDialog.close();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
       try { await K.refreshHostedAuthStatus?.(); } catch {}
       renderAccountDialog();
     } finally {
