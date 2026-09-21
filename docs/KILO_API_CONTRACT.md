@@ -82,7 +82,7 @@ Normal Browser reads no longer consume the engine's session/message shapes direc
 
 The projection owns cross-project aggregation, flat session timestamps, semantic message roles/text, activity classification, usage, normalized status, and Changes fallback. Runtime-specific `info`, `parts`, `busy`, and `retry` shapes therefore stay on this compatibility side of the boundary.
 
-TL Studio owns the Browser-facing mutation/run/abort semantics and now persists its own semantic session snapshots. Kilo still maintains its execution-side session state, executes models and tools, emits execution events, and runs the agent loop. Launcher reads refresh the TL Studio snapshot; if Kilo later loses a historical session, TL Studio can still present, rename, and delete its persisted semantic history. Resuming execution still requires a live runtime execution binding.
+TL Studio owns the Browser-facing mutation/run/abort semantics and persists its own semantic session snapshots. For supported custom-provider runs, TL Studio now executes the model/tool/model loop and core coding tools directly; persisted native semantic state is authoritative for those runs. Kilo still maintains execution-side state for the compatibility path, including hosted Kilo models/authentication and capabilities that have not moved into the native executor. Launcher reads continue to project compatibility sessions without exposing Kilo's raw envelope.
 
 ### Events
 
@@ -109,7 +109,7 @@ Those routes are now an implementation compatibility surface. Normal browser per
 
 Tool identity and product-facing metadata are no longer inferred directly in the browser. The launcher exposes `GET /local/tools`, which maps known Kilo 7.6.2 runtime IDs such as `read`, `write`, `edit`, `apply_patch`, `bash`, `webfetch`, and `websearch` to TL Studio semantic descriptors.
 
-This registry does not replace Kilo's execution engine. Tool parts still arrive through runtime session messages and Kilo still executes the underlying tool. Unknown IDs use TL Studio's conservative runtime-controlled fallback. Permission decisions continue through the separate TL Studio permission-policy boundary and final runtime enforcement.
+For the TL Studio native path, the registry now feeds executable TL Studio tool definitions and the native dispatcher. Core file/search/terminal tools execute without Kilo's Agent tool executor. On the Kilo compatibility path, runtime tool parts are still normalized through this registry for presentation. Unknown native tool IDs are rejected rather than silently executed.
 
 ### Questions
 
@@ -269,3 +269,17 @@ The current release bundle includes Kilo Code under its MIT license. Required at
 - `third_party/KILO_LICENSE.txt`
 
 Reducing product coupling does not remove or weaken required third-party attribution.
+
+
+## Native execution vs Kilo compatibility
+
+Kilo is no longer the mandatory owner of Agent orchestration or core tool execution for supported custom providers.
+
+The split is:
+
+- TL Studio native execution: custom providers using supported protocols, direct model requests, native Agent loop, native core coding tools, TL Studio permission enforcement, semantic persistence/events.
+- Kilo compatibility execution: hosted Kilo authentication/models and runtime-only capabilities that are not yet represented by TL Studio-native handlers.
+
+Kilo-private details such as `x-kilo-directory`, `prompt_async`, raw Kilo session envelopes, private auth routes, and Kilo question routes must remain in compatibility adapter files and must not enter the generic native Agent/model/tool implementation.
+
+The native proof test uses a deterministic fake model client that requests a real filesystem write, receives the TL Studio tool result on the next model turn, returns a final answer, and verifies semantic session persistence. Kilo does not execute the Agent loop or the tool in that test.
