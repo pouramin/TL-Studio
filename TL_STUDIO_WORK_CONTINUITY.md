@@ -12,7 +12,7 @@ This file is a durable operating instruction for future TL Studio development se
 ## Branch and release discipline
 
 - `main` is stable production only and is promoted to the stable `v0.3.0` line after Phase 2 validation.
-- `dev` is the next private alpha line.
+- `dev` is the next private alpha line and currently starts from `0.4.0-alpha.1`.
 - Feature/fix branches start from `dev`.
 - Experimental work must not be merged into `main`.
 - Private alpha builds use the GitHub Actions Preview Build artifact flow.
@@ -23,6 +23,12 @@ This file is a durable operating instruction for future TL Studio development se
 Current stable baseline after Phase 2 promotion:
 
 `0.3.0`
+
+Current private development line:
+
+`0.4.0-alpha.1`
+
+Phase 3 implementation has not started yet. The branch was reopened from the stable `v0.3.0` baseline after successful release publication.
 
 Phase 2 native execution milestone was squash-merged through PR:
 
