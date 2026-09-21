@@ -5,10 +5,9 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
 </p>
-
-<p align="center"><strong>Development branch: 0.3.0-alpha.23</strong> · نسخه Stable همچنان v0.2.1 است.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -22,6 +21,22 @@
 برای استفاده‌ی معمول نیازی به VS Code، JetBrains، Cursor، Docker، Backend ابری TL Studio یا Database جداگانه نیست.
 
 ## شروع سریع
+
+### اجرا با یک دستور
+
+اگر Node.js و npm نصب هستند، داخل فولدر پروژه‌ای که می‌خواهید روی آن کار کنید این دستور را اجرا کنید:
+
+```bash
+npx --yes tl-studio
+```
+
+پکیج npm یک Launcher سبک است که به نسخه Stable متناظر TL Studio روی GitHub Release متصل می‌شود. سیستم‌عامل و معماری را تشخیص می‌دهد، Archive رسمی را دانلود می‌کند، SHA-256 آن را بررسی می‌کند، فایل را Local Cache می‌کند و TL Studio را با فولدر فعلی به‌عنوان Project باز می‌کند.
+
+برای جلوگیری از بازشدن خودکار مرورگر:
+
+```bash
+npx --yes tl-studio --no-browser
+```
 
 ### نسخه‌ی Portable
 
@@ -184,7 +199,7 @@ TL Studio UI
 → final assistant response
 ```
 
-Alphaها فقط به‌صورت Preview Build خصوصی روی `dev` می‌مانند و روی npm یا GitHub Releases منتشر نمی‌شوند.
+Buildهای آزمایشی روی `dev` به‌صورت Preview خصوصی ادامه پیدا می‌کنند و مسیر Stable با dist-tag `latest` در npm و GitHub Release پایدار را تغییر نمی‌دهند.
 
 ## لایسنس و Attribution
 
