@@ -57,7 +57,7 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 	if !strings.Contains(string(css), ".preview-panel") || !strings.Contains(string(css), ".preview-frame") || !strings.Contains(string(css), ".preview-entry-row") {
 		t.Fatal("preview.css missing preview panel/frame/entry selector styles")
 	}
-	for _, required := range []string{"resizeDirections", ""n", "s", "e", "w", "ne", "nw", "se", "sw"", "preview-resize-handle", "MIN_WIDTH = 340", "MIN_HEIGHT = 300", "panel.style.width", "panel.style.height"} {
+	for _, required := range []string{"resizeDirections", `"n", "s", "e", "w", "ne", "nw", "se", "sw"`, "preview-resize-handle", "MIN_WIDTH = 340", "MIN_HEIGHT = 300", "panel.style.width", "panel.style.height"} {
 		if !strings.Contains(floatingText, required) {
 			t.Fatalf("preview-floating.ts missing width resize behavior %q", required)
 		}
