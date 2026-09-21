@@ -71,13 +71,13 @@
   K.els.attachmentInput = attachmentInput;
   K.els.composerAttachments = tray;
 
-  const fileExtension = (name) => {
+  const fileExtension = (name: any) => {
     const clean = String(name || "").toLowerCase();
     if (!clean.includes(".")) return clean;
     return clean.split(".").pop() || "";
   };
 
-  const normalizeMime = (file) => {
+  const normalizeMime = (file: any) => {
     const type = String(file?.type || "").toLowerCase();
     const extension = fileExtension(file?.name);
     if (IMAGE_MIMES.has(type)) return type;
@@ -87,19 +87,19 @@
     return "";
   };
 
-  const formatBytes = (bytes) => {
+  const formatBytes = (bytes: any) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
   };
 
-  const kindLabel = (mime) => {
+  const kindLabel = (mime: any) => {
     if (mime === "application/pdf") return "PDF";
     if (mime.startsWith("image/")) return "IMG";
     return "TXT";
   };
 
-  const readAsDataURL = (file, mime) => new Promise((resolve, reject) => {
+  const readAsDataURL = (file: any, mime: any) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error || new Error(`Could not read ${file.name}`));
     reader.onload = () => {
@@ -236,17 +236,17 @@
     K.addAttachments(files);
   });
 
-  const messageAttachments = (message) => {
+  const messageAttachments = (message: any) => {
     if (Array.isArray(message?.attachments)) return message.attachments;
     const parts = Array.isArray(message?.parts) ? message.parts : Array.isArray(message?.content) ? message.content : [];
-    return parts.filter((part) => part?.type === "file").map((part) => ({
+    return parts.filter((part: any) => part?.type === "file").map((part) => ({
       name: part.filename || part.name || "Attachment",
       mime: part.mime || "text/plain",
       url: part.url || "",
     }));
   };
 
-  const renderedMessage = (message) => {
+  const renderedMessage = (message: any) => {
     if (message?.role) return message.role === "user" || message.role === "assistant";
     if (message?.info && Array.isArray(message.parts)) return message.info.role === "user" || message.info.role === "assistant";
     return ["user", "assistant", "shell", "system", "synthetic"].includes(message?.type);
