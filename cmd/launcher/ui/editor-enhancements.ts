@@ -9,8 +9,8 @@
   css.href = "/editor-enhancements.css";
   document.head.appendChild(css);
 
-  const esc = (s) => String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const lang = (path) => {
+  const esc = (s: any) => String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const lang = (path: any) => {
     const ext = String(path || "").toLowerCase().split(".").pop();
     if (["html","htm","xml","svg","vue","svelte"].includes(ext)) return "markup";
     if (["css","scss","sass","less"].includes(ext)) return "css";
@@ -30,10 +30,10 @@
     generic: "class const let var function return if else for while switch case break continue import export from new true false null public private protected static async await try catch finally throw".split(" "),
   };
 
-  const highlight = (source, language) => {
+  const highlight = (source: any, language: any) => {
     let text = esc(source);
     const stash = [];
-    const protect = (html, cls) => {
+    const protect = (html: any, cls: any) => {
       const id = stash.length;
       stash.push(`<span class="tok-${cls}">${html}</span>`);
       return `@@TL${id}@@`;
