@@ -436,8 +436,8 @@
     K.showError("");
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path })}`);
-      const viewOnly = !!preview?.binary && !!preview?.previewable;
-      if (preview?.binary && !viewOnly) throw new Error(`Binary files without a TL Studio preview cannot be opened yet (${preview.mime || "unknown type"}).`);
+      const viewOnly = !!preview?.viewOnly && !!preview?.previewable;
+      if (preview?.binary && !preview?.previewable) throw new Error(`Binary files without a TL Studio preview cannot be opened yet (${preview.mime || "unknown type"}).`);
       const tab = {
         path: preview.path || path,
         content: viewOnly ? "" : preview.content || "",
@@ -465,8 +465,7 @@
     if (!tab?.path) return;
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path: tab.path })}`);
-      if (preview?.binary) {
-        if (!preview.previewable) return;
+      if (preview?.viewOnly && preview?.previewable) {
         tab.viewOnly = true;
         tab.content = "";
         tab.savedContent = "";
