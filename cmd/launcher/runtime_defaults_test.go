@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestKiloRuntimeEnvironmentAppliesSafeDefaults(t *testing.T) {
 		"DO_NOT_TRACK":              "1",
 		"OTEL_SDK_DISABLED":         "true",
 		"KILO_ENABLE_QUESTION_TOOL": "true",
-		"KILO_PARENT_PID":           strconv.Itoa(currentProcessID()),
+		"KILO_PARENT_PID":           strconv.Itoa(os.Getpid()),
 		"KILO_CONFIG_CONTENT":       `{"permission":{"edit":"ask"}}`,
 	} {
 		if got := runtimeEnvValue(env, key); got != want {
@@ -72,7 +73,3 @@ func TestKiloRuntimeEngineOwnsRequestDecoration(t *testing.T) {
 	}
 }
 
-func currentProcessID() int {
-	// Keep the assertion independent from any package init side effect.
-	return processID()
-}
