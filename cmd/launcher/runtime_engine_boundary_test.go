@@ -111,6 +111,7 @@ func TestRuntimeEngineBoundaryKeepsKiloRoutingOutOfGenericLauncher(t *testing.T)
 		"cmd/launcher/main.go",
 		"cmd/launcher/runtime_engine.go",
 		"cmd/launcher/session_contract.go",
+		"cmd/launcher/session_command_contract.go",
 		"cmd/launcher/live_event_contract.go",
 		"cmd/launcher/permission_engine.go",
 	} {
