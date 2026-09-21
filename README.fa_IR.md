@@ -8,7 +8,7 @@
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.6</strong> · نسخه Stable همچنان v0.2.1 است.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.18</strong> · نسخه Stable همچنان v0.2.1 است.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
