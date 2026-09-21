@@ -6,7 +6,7 @@
   const json = (value: any) => JSON.stringify(value);
   const body = (value: any) => ({ body: json(value) });
   const unwrapData = (payload: any) => payload && typeof payload === "object" && "data" in payload ? payload.data : payload;
-  const request = (path: any, options: any) => K.request(`/runtime${path}`, options);
+  const request = (path: string, options: RequestInit = {}) => K.request(`/runtime${path}`, options);
   const wrapData = (data: any) => ({ data });
   const hostedMeta = { providerID: "", preferredModels: [] };
   const applyHostedMeta = (value: any) => {
@@ -15,19 +15,19 @@
   };
 
   const projectDirectory = () => K.state?.local?.project || "";
-  const withQuery = (path: any, params = {}) => {
+  const withQuery = (path: string, params: Record<string, unknown> = {}) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
     }
     return query.size ? `${path}?${query}` : path;
   };
-  const route = (path: any, params = {}, directory = projectDirectory()) => withQuery(path, {
+  const route = (path: string, params: Record<string, unknown> = {}, directory = projectDirectory()) => withQuery(path, {
     ...(directory ? { directory } : {}),
     ...params,
   });
 
-  const legacyPageQuery = ({ order, limit, cursor } = {}) => {
+  const legacyPageQuery = ({ order, limit, cursor }: { order?: string; limit?: number; cursor?: string } = {}) => {
     const query = new URLSearchParams();
     if (cursor) query.set("cursor", cursor);
     else if (order) query.set("order", order);
@@ -40,7 +40,7 @@
     modelID: model.modelID || model.id,
   } : undefined;
 
-  const parseSSE = (handler: any) => (event) => {
+  const parseSSE = (handler: (payload: any) => void) => (event: MessageEvent<string>) => {
     if (!event?.data) return;
     try {
       const decoded = JSON.parse(event.data);
@@ -50,7 +50,7 @@
     }
   };
 
-  const openLocalEventSource = (path: any, { onEvent, onOpen, onError } = {}) => {
+  const openLocalEventSource = (path: string, { onEvent, onOpen, onError }: { onEvent?: (event: TLStudioLiveEvent) => void; onOpen?: (event: Event) => void; onError?: (event: Event) => void } = {}) => {
     const source = new EventSource(path);
     if (onOpen) source.addEventListener("open", onOpen);
     if (onError) source.addEventListener("error", onError);
@@ -89,7 +89,7 @@
         const payload = unwrapData(await request("/providers/config")) || {};
         return { providers: Array.isArray(payload.providers) ? payload.providers : [] };
       },
-      upsert: async (providerID: any, { provider, apiKey } = {}) => unwrapData(await request(`/providers/config/${enc(providerID)}`, {
+      upsert: async (providerID: any, { provider, apiKey }: any = {}) => unwrapData(await request(`/providers/config/${enc(providerID)}`, {
         method: "PUT",
         ...body({ provider, ...(apiKey ? { apiKey } : {}) }),
       })),
@@ -112,17 +112,17 @@
     },
 
     sessions: {
-      create: async (input = {}) => {
+      create: async (input: any = {}) => {
         const payload = {};
         if (input.parentID) payload.parentID = input.parentID;
         if (input.title) payload.title = input.title;
         return wrapData(unwrapData(await request(route("/session"), { method: "POST", ...body(payload) })));
       },
-      update: async (sessionID: any, input = {}, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), {
+      update: async (sessionID: any, input: any = {}, { directory }: any = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), {
         method: "PATCH", ...body(input),
       }))),
-      remove: async (sessionID: any, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), { method: "DELETE" }))),
-      promptAsync: (sessionID: any, { text, parts, agent, model, variant, messageID, directory } = {}) => {
+      remove: async (sessionID: any, { directory }: any = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), { method: "DELETE" }))),
+      promptAsync: (sessionID: any, { text, parts, agent, model, variant, messageID, directory }: any = {}) => {
         const payload = {
           parts: Array.isArray(parts) && parts.length ? parts : [{ type: "text", text: text || "" }],
           ...(messageID ? { messageID } : {}),
@@ -132,18 +132,18 @@
         };
         return request(route(`/session/${enc(sessionID)}/prompt_async`, {}, directory), { method: "POST", ...body(payload) });
       },
-      abort: (sessionID: any, { scope, directory } = {}) => request(route(`/session/${enc(sessionID)}/abort`, { scope }, directory), { method: "POST" }),
+      abort: (sessionID: any, { scope, directory }: any = {}) => request(route(`/session/${enc(sessionID)}/abort`, { scope }, directory), { method: "POST" }),
     },
 
     // Read-only compatibility bridge for sessions created during TL Studio's
     // short Protocol v2 alpha window. New sessions and all normal coding stay
     // on the production Session API above.
     legacySessions: {
-      list: ({ order = "desc", limit = 100, cursor } = {}) => {
+      list: ({ order = "desc", limit = 100, cursor }: { order?: string; limit?: number; cursor?: string } = {}) => {
         const query = legacyPageQuery({ order, limit, cursor });
         return request(`/api/session${query.size ? `?${query}` : ""}`);
       },
-      messages: (sessionID: any, { order = "asc", limit = 500, cursor } = {}) => {
+      messages: (sessionID: any, { order = "asc", limit = 500, cursor }: { order?: string; limit?: number; cursor?: string } = {}) => {
         const query = legacyPageQuery({ order, limit, cursor });
         return request(`/api/session/${enc(sessionID)}/message${query.size ? `?${query}` : ""}`);
       },
@@ -196,7 +196,7 @@
     },
 
     events: {
-      subscribe: (options = {}) => openLocalEventSource("/local/events", options),
+      subscribe: (options: { onEvent?: (event: TLStudioLiveEvent) => void; onOpen?: (event: Event) => void; onError?: (event: Event) => void } = {}) => openLocalEventSource("/local/events", options),
     },
   });
 })();
