@@ -352,8 +352,8 @@ func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, on
 				ToolCalls []struct {
 					ID       string `json:"id"`
 					Function struct {
-						Name      string          `json:"name"`
-						Arguments json.RawMessage `json:"arguments"`
+						Name      string `json:"name"`
+						Arguments string `json:"arguments"`
 					} `json:"function"`
 				} `json:"tool_calls"`
 			} `json:"message"`
@@ -381,7 +381,7 @@ func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, on
 		result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
 			ID: call.ID,
 			Name: nativeToolIDFromWire(call.Function.Name, tools),
-			Arguments: call.Function.Arguments,
+			Arguments: json.RawMessage(call.Function.Arguments),
 		})
 	}
 	return result, nil
