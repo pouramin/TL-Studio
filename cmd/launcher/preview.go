@@ -139,16 +139,23 @@ func detectPreviewCapability(project, preferredEntry string) previewCapability {
 		}
 	}
 
-	indexPath := filepath.Join(project, "index.html")
-	if info, err := os.Stat(indexPath); err == nil && info.Mode().IsRegular() {
-		return previewCapability{Available: true, Kind: "static", Entry: "index.html"}
+	candidates := previewHTMLCandidates(project)
+	withEntries := func(cap previewCapability) previewCapability {
+		if len(candidates) > 1 {
+			cap.Entries = candidates
+		}
+		return cap
 	}
 
 	if entry, ok := validStaticPreviewEntry(project, preferredEntry); ok {
-		return previewCapability{Available: true, Kind: "static", Entry: entry}
+		return withEntries(previewCapability{Available: true, Kind: "static", Entry: entry})
 	}
 
-	candidates := previewHTMLCandidates(project)
+	indexPath := filepath.Join(project, "index.html")
+	if info, err := os.Stat(indexPath); err == nil && info.Mode().IsRegular() {
+		return withEntries(previewCapability{Available: true, Kind: "static", Entry: "index.html"})
+	}
+
 	switch len(candidates) {
 	case 0:
 		return previewCapability{Reason: "Preview supports projects with a package.json dev script or an HTML file."}
@@ -263,7 +270,6 @@ func (m *previewManager) start(preferredEntry string) (previewSnapshot, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
-	m.stopLocked()
 
 	project := m.state.projectPath()
 	capability := detectPreviewCapability(project, preferredEntry)
@@ -275,6 +281,13 @@ func (m *previewManager) start(preferredEntry string) (previewSnapshot, error) {
 		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
 	}
 
+	if m.project != "" && sameProjectPath(m.project, project) && m.kind == "static" && capability.Kind == "static" && m.listener != nil {
+		m.entry = capability.Entry
+		m.previewURL = previewEntryURL("http://"+m.listener.Addr().String()+"/", capability.Entry)
+		return m.snapshotLocked(capability), nil
+	}
+
+	m.stopLocked()
 	m.project = project
 	m.kind = capability.Kind
 	m.command = capability.Command
@@ -330,12 +343,18 @@ func (m *previewManager) snapshot(preferredEntry string) previewSnapshot {
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
 	project := m.state.projectPath()
-	if m.project != "" && m.kind == "static" && m.entry != "" {
+	if strings.TrimSpace(preferredEntry) == "" && m.project != "" && m.kind == "static" && m.entry != "" {
 		preferredEntry = m.entry
 	}
 	capability := detectPreviewCapability(project, preferredEntry)
 	if m.project == "" {
 		return previewSnapshot{previewCapability: capability, Project: project}
+	}
+	if m.kind == "static" {
+		capability.Entry = m.entry
+		if len(capability.Entries) == 0 {
+			capability.Entries = previewHTMLCandidates(project)
+		}
 	}
 	return m.snapshotLocked(capability)
 }
