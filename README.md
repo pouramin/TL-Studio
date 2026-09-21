@@ -8,7 +8,7 @@
   A fast local development workspace with AI built in.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.19</strong> · Stable release remains v0.2.1.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.20</strong> · Stable release remains v0.2.1.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -90,7 +90,7 @@ The selected project stays on the user's computer, and TL Studio does not proxy 
 
 TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser execution traffic stays behind the local `/runtime/*` adapter, current session reads use launcher-owned `/local/sessions*` semantics, and live Browser updates use launcher-owned `/local/events` semantic SSE. Provider/model definitions, tool semantics, session presentation/read models, live-event presentation semantics, permission policy, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio. Permission prompts use launcher-owned `/local/permissions*` routes so remembered approvals are not delegated to the bundled engine.
 
-The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. That engine is an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. The launcher now selects it through a TL Studio-owned `runtimeEngine` boundary: binary discovery, process startup, credentials, project request scoping, and engine-specific request decoration live in the Kilo adapter instead of generic launcher/session/provider/permission/event code. That engine remains an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
 CI validates the pinned engine through TL Studio's public runtime boundary for project routing, agent/provider/session APIs, async prompts, live events, permissions, provider configuration, tool execution, and real file writes.
 
