@@ -1,17 +1,19 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   if (!K || K.__settingsEnhancementsInstalled) return;
   K.__settingsEnhancementsInstalled = true;
 
   const panel = document.querySelector('[data-settings-panel="general"]');
   if (!panel || document.getElementById("editorThemeSelect")) return;
 
-  const read = (key, fallback) => {
+  const read = (key: any, fallback: any) => {
     try { return localStorage.getItem(key) || fallback; }
     catch { return fallback; }
   };
-  const write = (key, value) => {
+  const write = (key: any, value: any) => {
     try { localStorage.setItem(key, value); } catch {}
   };
 
@@ -22,7 +24,7 @@
     terminalFont: "tl-studio.terminal-font",
   };
 
-  const fonts = {
+  const fonts: Record<string, string> = {
     system: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     segoe: '"Segoe UI", Arial, sans-serif',
     arial: 'Arial, Helvetica, sans-serif',
@@ -83,7 +85,19 @@
 
   panel.append(title, ...holder.children);
 
-  const controls = {
+  const permissionTitle = document.createElement("div");
+  permissionTitle.className = "settings-section-title";
+  permissionTitle.textContent = "Agent Permissions";
+
+  const permissionHolder = document.createElement("div");
+  permissionHolder.innerHTML = `
+    <div class="settings-row settings-row-stack permission-policy-row">
+      <div class="settings-copy"><strong>Remembered project rules</strong><span>TL Studio can automatically approve matching non-sensitive requests you explicitly chose to remember. Sensitive shell and sandbox escalation requests are never remembered.</span></div>
+      <div id="permissionRules" class="permission-rules" aria-live="polite">Loading…</div>
+    </div>`;
+  panel.append(permissionTitle, ...permissionHolder.children);
+
+  const controls: TLStudioDynamicRecord = {
     theme: document.getElementById("editorThemeSelect"),
     uiFont: document.getElementById("uiFontSelect"),
     codeFont: document.getElementById("codeFontSelect"),
@@ -101,6 +115,58 @@
   controls.codeFont.addEventListener("change", () => { write(KEYS.codeFont, controls.codeFont.value); apply(); });
   controls.terminalFont.addEventListener("change", () => { write(KEYS.terminalFont, controls.terminalFont.value); apply(); });
   controls.resetPreview.addEventListener("click", () => K.previewWindow?.reset?.());
+
+  const permissionRules = document.getElementById("permissionRules");
+  const projectName = (value: any) => String(value || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Project";
+  const renderPermissionRules = async () => {
+    if (!permissionRules || !K.api?.permissions?.rules) return;
+    permissionRules.textContent = "Loading…";
+    try {
+      const rules = await K.api.permissions.rules();
+      permissionRules.textContent = "";
+      if (!rules.length) {
+        const empty = document.createElement("span");
+        empty.className = "permission-rules-empty";
+        empty.textContent = "No remembered permission rules.";
+        permissionRules.appendChild(empty);
+        return;
+      }
+      for (const rule of rules) {
+        const row = document.createElement("div");
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        const meta = document.createElement("span");
+        const remove = document.createElement("button");
+        row.className = "permission-rule";
+        title.textContent = rule.permission || "action";
+        meta.textContent = `${projectName(rule.project)} · ${rule.matcher || "matching request"}`;
+        remove.type = "button";
+        remove.className = "ghost small";
+        remove.textContent = "Forget";
+        remove.dataset.ruleId = rule.id || "";
+        copy.append(title, meta);
+        row.append(copy, remove);
+        permissionRules.appendChild(row);
+      }
+    } catch (error) {
+      permissionRules.textContent = `Could not load permission rules: ${(error as Error).message || String(error)}`;
+    }
+  };
+  permissionRules?.addEventListener("click", async (event) => {
+    const button = (event.target as Element | null)?.closest<HTMLButtonElement>("button[data-rule-id]");
+    const id = button?.dataset?.ruleId;
+    if (!id) return;
+    button.disabled = true;
+    try {
+      await K.api.permissions.removeRule(id);
+      await renderPermissionRules();
+    } catch (error) {
+      K.showError((error as Error).message || String(error));
+      button.disabled = false;
+    }
+  });
+  K.refreshPermissionRules = renderPermissionRules;
+  renderPermissionRules();
 
   apply();
 })();

@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   A fast local development workspace with AI built in.
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
   <a href="https://github.com/pouramin/TL-Studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pouramin/TL-Studio/ci.yml?branch=main&label=CI" alt="CI"></a>
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/downloads/pouramin/TL-Studio/total" alt="Downloads"></a>
@@ -57,17 +57,25 @@ The release already includes the pinned local agent runtime.
 - **Agent & model selection** — switch agents and available provider models from the composer.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
-- **Live agent activity** — compact Reasoning and Tool cards with live status updates.
-- **Permissions & questions** — approve one-time actions, save matching rules when supported, reject actions, and answer interactive questions.
+- **TL Studio-native Agent execution** — supported custom providers now run through a TL Studio-owned model/tool/model loop with cancellation, loop guards, semantic persistence, and live events; hosted Kilo remains available through the compatibility adapter.
+- **TL Studio Tool Executor** — core coding tools for project file read/list/write/edit, project search, and terminal commands execute through TL Studio-owned handlers with project confinement, validation, cancellation, and permission enforcement.
+- **TL Studio Tool Registry** — product tools use TL Studio-owned names, categories, capability metadata, permission classes, schemas, and presentation hints.
+- **Live agent activity** — compact Reasoning and Tool cards with live status updates using TL Studio tool semantics.
+- **TL Studio permission policies & questions** — approve one-time actions, remember project-scoped non-sensitive rules in TL Studio, forget saved rules from Settings, reject actions, and answer interactive questions through launcher-owned `/local/questions*` semantics rather than raw runtime question routes.
 - **Stop & recovery** — interrupt active work and recover from stalled or retryable upstream failures.
+- **TL Studio session read model** — current sessions, messages, activity, status, usage metadata, and session changes are projected through launcher-owned semantic `/local/sessions*` contracts instead of exposing the runtime's raw message envelope to the product UI.
+- **TL Studio session command contract** — session create, rename, delete, run/prompt, and abort now use launcher-owned semantic `/local/sessions*` routes; the active engine adapter translates those commands to its private implementation API.
+- **TL Studio session persistence** — semantic session metadata, transcripts, usage/activity history, and changes are mirrored into TL Studio-owned local storage. History remains readable after runtime history loss, and persisted-only sessions can still be renamed or deleted locally.
+- **TL Studio credential vault** — custom-provider API keys are owned by TL Studio, never written to `providers.json` or browser storage, restored into the active runtime when needed, and protected with Windows DPAPI, macOS Keychain, Linux Secret Service when available, or an encrypted private-file fallback.
 - **Session management** — create, resume, rename, delete, and switch sessions across recent projects.
 - **Project-scoped usage** — per-turn and project totals for tokens, requests, time, reasoning, and cache usage.
 - **Changes panel** — inspect changed files, addition/deletion counts, and patches.
-- **Project workspace** — writable local file explorer, multi-tab editor, save/create/rename/delete actions, and external-change reconciliation.
+- **Project workspace** — writable local file explorer plus a locally bundled, lazy-loaded Monaco editor with multi-tab editing, find/replace, multi-cursor editing, save/create/rename/delete actions, external-change reconciliation, and **Show in Folder** for revealing the active file in the native system file manager.
 - **Project Search** — fast project-wide text search with include/exclude filters and click-to-open results.
 - **Integrated terminal** — project-scoped command execution, output history, stop controls, and process-tree termination.
-- **Live Preview** — local static or Node dev-server preview in a movable/resizable browser window.
+- **Live Preview** — capability-driven local preview in a movable/resizable browser window. TL Studio follows the active previewable file across HTML, SVG/raster images, PDF, video, audio, rendered Markdown, and rendered plain text; PDF is served directly with inline MIME/disposition and HTTP range support for the browser's native PDF viewer. Previewable binary media opens as a real read-only Workspace tab, while the floating Preview can be resized from all four edges and all four corners.
 - **Appearance & editor settings** — System, Dark, and Light themes plus editor theme and separate UI/code/terminal font controls.
+- **Strict TypeScript + real Browser modules** — all Browser UI source under `cmd/launcher/ui` is type-checked with `strict: true`; `kernel.ts` exports the shared typed Browser kernel, feature modules import it directly, `browser.ts` defines the ES-module graph, and esbuild produces one primary `browser.js` bundle. No `window.KLU` dependency or legacy per-module JavaScript build is required.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
 - **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
 
@@ -79,26 +87,27 @@ Browser workspace
     ▼
 TL Studio launcher (Go)
     │
-    ├─ TL Studio provider/model registry
+    ├─ TL Studio provider/model registry + credential vault
+    ├─ TL Studio native Agent loop
+    ├─ TL Studio Tool Executor + permission policy
+    ├─ semantic sessions / persistence / live events
     ├─ project files / search / terminal / preview
     │
-    └─ authenticated runtime adapter
-            ▼
-        Local agent runtime
-            ├─ agents / sessions / tools
-            ├─ permissions / questions / live events
-            └─ provider execution / model inference
+    ├─ supported custom providers → direct model APIs
+    │
+    └─ compatibility adapter → bundled Kilo engine
+                              → hosted Kilo / compatibility capabilities
 ```
 
-TL Studio owns the workspace, product UI, local launcher, provider/model definitions, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, custom-provider credentials, tool semantics/metadata, semantic session persistence/read/command models, semantic question handling, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions and semantic session history are persisted in TL Studio's local state and translated/synchronized to the active runtime as needed. For supported custom-provider coding, TL Studio now owns the Agent loop and core tool execution directly. Kilo remains bundled as the currently tested compatibility engine for hosted Kilo authentication/models and capabilities not yet provided by the native path.
 
 The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
 ## Runtime boundary
 
-TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Browser runtime traffic stays under the local `/runtime/*` boundary, while provider/model definitions, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio.
+TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Current session reads, persistence, and session commands use launcher-owned `/local/sessions*` semantics; interactive questions use `/local/questions*`; permissions use `/local/permissions*`; and live Browser updates use `/local/events` semantic SSE. Custom-provider credentials are stored by TL Studio and synchronized into the active runtime only for execution. Remaining generic runtime capabilities stay behind the local `/runtime/*` adapter.
 
-The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. That engine is an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party compatibility engine. The launcher now selects it through a TL Studio-owned `runtimeEngine` boundary: binary discovery, process startup, credentials, project request scoping, and engine-specific request decoration live in the Kilo adapter instead of generic launcher/session/provider/permission/event code. That engine remains an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
 CI validates the pinned engine through TL Studio's public runtime boundary for project routing, agent/provider/session APIs, async prompts, live events, permissions, provider configuration, tool execution, and real file writes.
 
@@ -120,7 +129,9 @@ tl-studio/
 ├─ LICENSE
 ├─ THIRD_PARTY_NOTICES.md
 └─ third_party/
-   └─ KILO_LICENSE.txt
+   ├─ KILO_LICENSE.txt
+   ├─ MONACO_LICENSE.txt
+   └─ MONACO_THIRD_PARTY_NOTICES.txt
 ```
 
 ## Run from source
@@ -128,7 +139,17 @@ tl-studio/
 Development requirements:
 
 - Go 1.23+
+- Node.js 18+ and npm for the local Browser build
 - the compatible local runtime binary in `PATH`, beside the launcher, or supplied explicitly
+
+Build the Browser assets once after cloning or after Browser-source changes:
+
+```bash
+npm install --ignore-scripts --no-audit --no-fund
+npm run build:web
+```
+
+Then run the launcher:
 
 ```bash
 go run ./cmd/launcher
@@ -181,7 +202,7 @@ TL Studio UI
 → final assistant response
 ```
 
-Experimental builds continue on explicit prerelease channels without changing the stable `latest` npm path.
+Experimental builds continue on private Preview Build artifacts from `dev` without changing the stable `latest` npm path or GitHub stable release.
 
 ## License & attribution
 

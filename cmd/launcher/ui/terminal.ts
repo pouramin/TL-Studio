@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   if (!K || K.__terminalInstalled) return;
   K.__terminalInstalled = true;
 
@@ -12,7 +14,7 @@
     document.head.appendChild(link);
   };
 
-  const request = async (path, options = {}) => {
+  const request = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
@@ -64,7 +66,7 @@
     </form>`;
   main.appendChild(panel);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button,
     panel,
     cwd: document.getElementById("terminalCwd"),
@@ -80,12 +82,12 @@
   K.state.terminal = { process: null, poll: null, history: [], historyIndex: 0, transcript: "", stoppedByUser: false };
 
   const projectLabel = () => K.state.local?.project || "Project root";
-  const setCwd = (value) => {
+  const setCwd = (value: any) => {
     const cwd = value || projectLabel();
     ui.cwd.textContent = cwd;
     ui.cwd.title = cwd;
   };
-  const setOpen = (open) => {
+  const setOpen = (open: any) => {
     ui.panel.classList.toggle("hidden", !open);
     ui.button.classList.toggle("terminal-toggle-active", open);
     if (open) {
@@ -94,7 +96,7 @@
     }
   };
 
-  const append = (text) => {
+  const append = (text: any) => {
     K.state.terminal.transcript += String(text || "");
     if (K.state.terminal.transcript.length > 1_000_000) K.state.terminal.transcript = K.state.terminal.transcript.slice(-1_000_000);
     ui.output.textContent = K.state.terminal.transcript;
@@ -106,7 +108,7 @@
     K.state.terminal.poll = null;
   };
 
-  const renderSnapshot = (snapshot) => {
+  const renderSnapshot = (snapshot: any) => {
     const previous = K.state.terminal.process?.output || "";
     K.state.terminal.process = snapshot;
     if (snapshot?.cwd) setCwd(snapshot.cwd);
@@ -142,14 +144,14 @@
       renderSnapshot(await request(`/local/process/${encodeURIComponent(id)}`));
     } catch (error) {
       stopPolling();
-      append(`\n[terminal error] ${error.message || error}\n`);
+      append(`\n[terminal error] ${(error as any).message || error}\n`);
       ui.input.disabled = false;
       ui.run.disabled = false;
       ui.stop.disabled = true;
     }
   };
 
-  const runCommand = async (command) => {
+  const runCommand = async (command: any) => {
     command = String(command || "").trim();
     if (!command || K.state.terminal.process?.running) return;
     setOpen(true);
@@ -169,7 +171,7 @@
       K.state.terminal.poll = window.setInterval(pollProcess, 250);
       await pollProcess();
     } catch (error) {
-      append(`[terminal error] ${error.message || error}\n`);
+      append(`[terminal error] ${(error as any).message || error}\n`);
       K.state.terminal.process = null;
       K.state.terminal.stoppedByUser = false;
       ui.input.disabled = false;
@@ -189,7 +191,7 @@
       append("\n[stopping process…]\n");
     } catch (error) {
       K.state.terminal.stoppedByUser = false;
-      append(`\n[stop error] ${error.message || error}\n`);
+      append(`\n[stop error] ${(error as any).message || error}\n`);
     }
   };
 
@@ -197,8 +199,8 @@
   ui.close.addEventListener("click", () => setOpen(false));
   ui.clear.addEventListener("click", () => { K.state.terminal.transcript = ""; ui.output.textContent = ""; });
   ui.stop.addEventListener("click", stopProcess);
-  ui.form.addEventListener("submit", (event) => { event.preventDefault(); runCommand(ui.input.value); });
-  ui.input.addEventListener("keydown", (event) => {
+  ui.form.addEventListener("submit", (event: any) => { event.preventDefault(); runCommand(ui.input.value); });
+  ui.input.addEventListener("keydown", (event: any) => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     const history = K.state.terminal.history;
     if (!history.length) return;

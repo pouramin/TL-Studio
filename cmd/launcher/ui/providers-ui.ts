@@ -1,21 +1,23 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
 
-  const K = window.KLU;
+  
   if (!K || K.__providersUiInstalled) return;
   K.__providersUiInstalled = true;
 
   const PROTOCOLS = new Set(["openai-compatible", "openai-responses", "anthropic-messages"]);
   const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/;
 
-  const clean = (value) => String(value ?? "").trim();
-  const positiveInt = (value) => {
+  const clean = (value: any) => String(value ?? "").trim();
+  const positiveInt = (value: any) => {
     const raw = clean(value);
     if (!raw) return undefined;
     const number = Number(raw);
     return Number.isInteger(number) && number > 0 ? number : NaN;
   };
-  const safeURL = (value) => {
+  const safeURL = (value: any) => {
     try {
       const url = new URL(clean(value));
       if (!/^https?:$/.test(url.protocol)) return "";
@@ -23,7 +25,7 @@
     } catch { return ""; }
   };
 
-  const validateDraft = (draft) => {
+  const validateDraft = (draft: any) => {
     const id = clean(draft.providerID);
     if (!PROVIDER_ID.test(id)) return "Provider ID must use lowercase letters, numbers, dashes, or underscores.";
     if (!clean(draft.name)) return "Display name is required.";
@@ -37,11 +39,11 @@
     return "";
   };
 
-  const buildProviderDefinition = (draft, existing = {}) => {
+  const buildProviderDefinition = (draft: any, existing: any = {}) => {
     const modelID = clean(draft.modelID);
     const context = positiveInt(draft.contextLimit);
     const output = positiveInt(draft.outputLimit);
-    const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model) => model?.id && model.id !== modelID) : [];
+    const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model: any) => model?.id && model.id !== modelID) : [];
     const model = {
       id: modelID,
       name: clean(draft.modelName) || modelID,
@@ -59,14 +61,14 @@
     };
   };
 
-  const customProviderEntries = (config) => Array.isArray(config?.providers)
+  const customProviderEntries = (config: any) => Array.isArray(config?.providers)
     ? [...config.providers].sort((a, b) => String(a?.name || a?.id || "").localeCompare(String(b?.name || b?.id || "")))
     : [];
 
-  const withoutProvider = (config, providerID) => ({
+  const withoutProvider = (config: any, providerID: any) => ({
     ...(config && typeof config === "object" ? config : {}),
     providers: Array.isArray(config?.providers)
-      ? config.providers.filter((provider) => provider?.id !== providerID)
+      ? config.providers.filter((provider: any) => provider?.id !== providerID)
       : [],
   });
 
@@ -143,8 +145,8 @@
   `;
   document.head.appendChild(style);
 
-  const $ = (id) => document.getElementById(id);
-  const els = {
+  const $ = (id: any) => document.getElementById(id);
+  const els: TLStudioDynamicRecord = {
     add: $("providerAddButton"), notice: $("providerNotice"), list: $("providerList"), form: $("providerForm"),
     title: $("providerFormTitle"), cancel: $("providerFormCancel"), cancelTop: $("providerFormCancelTop"), save: $("providerFormSave"),
     id: $("providerIdInput"), name: $("providerNameInput"), protocol: $("providerProtocolSelect"), baseURL: $("providerBaseUrlInput"), apiKey: $("providerApiKeyInput"),
@@ -152,11 +154,11 @@
     toolCall: $("providerToolCallInput"), reasoning: $("providerReasoningInput"),
   };
 
-  let providerConfig = { providers: [] };
+  let providerConfig: { providers: any[] } = { providers: [] };
   let editingID = "";
   let saving = false;
 
-  const setBusy = (value) => {
+  const setBusy = (value: any) => {
     saving = value;
     panel.classList.toggle("busy", value);
     if (els.save) els.save.disabled = value;
@@ -171,12 +173,12 @@
       K.activateSettingsSection("providers");
       return;
     }
-    for (const button of settingsDialog.querySelectorAll("[data-settings-section]")) {
+    for (const button of settingsDialog.querySelectorAll<HTMLElement>("[data-settings-section]")) {
       const active = button.dataset.settingsSection === "providers";
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
     }
-    for (const item of settingsDialog.querySelectorAll("[data-settings-panel]")) item.classList.toggle("hidden", item.dataset.settingsPanel !== "providers");
+    for (const item of settingsDialog.querySelectorAll<HTMLElement>("[data-settings-panel]")) item.classList.toggle("hidden", item.dataset.settingsPanel !== "providers");
   };
 
   const draft = () => ({
@@ -213,7 +215,7 @@
   };
   K.__providersUi.resetTransientForm = resetTransientForm;
 
-  const fillForm = (value, existingID = "") => {
+  const fillForm = (value: any, existingID = "") => {
     editingID = existingID;
     els.id.value = value.providerID || "";
     els.name.value = value.name || "";
@@ -232,7 +234,7 @@
     els.form.scrollIntoView?.({ block: "nearest" });
   };
 
-  const modelCount = (provider) => Array.isArray(provider?.models) ? provider.models.length : 0;
+  const modelCount = (provider: any) => Array.isArray(provider?.models) ? provider.models.length : 0;
   const renderList = () => {
     els.list.textContent = "";
     const entries = customProviderEntries(providerConfig);
@@ -286,11 +288,11 @@
       providerConfig = await K.api.providers.config();
       renderList();
     } catch (error) {
-      notice(`Could not load provider settings: ${error.message || String(error)}`, true);
+      notice(`Could not load provider settings: ${error instanceof Error ? error.message : String(error)}`, true);
     }
   };
 
-  const editEntry = (entry) => {
+  const editEntry = (entry: any) => {
     const first = Array.isArray(entry?.models) && entry.models.length ? entry.models[0] : {};
     fillForm({
       providerID: entry.id,
@@ -306,7 +308,7 @@
     }, entry.id);
   };
 
-  const save = async (event) => {
+  const save = async (event: any) => {
     event?.preventDefault();
     if (saving) return;
     const value = draft();
@@ -332,14 +334,14 @@
         ? `${value.name} saved. ${clean(value.modelID)} is now available in the model selector.`
         : `${value.name} was saved by TL Studio, but the active runtime did not load ${clean(value.modelID)}. Check the endpoint, protocol, and model ID.`, !loaded);
     } catch (err) {
-      notice(`Could not save provider: ${err.message || String(err)}`, true);
+      notice(`Could not save provider: ${err instanceof Error ? err.message : String(err)}`, true);
       try { providerConfig = await K.api.providers.config(); renderList(); } catch {}
     } finally {
       setBusy(false);
     }
   };
 
-  const deleteEntry = async (entry) => {
+  const deleteEntry = async (entry: any) => {
     if (saving) return;
     if (!window.confirm(`Delete provider “${entry.name || entry.id}”? Stored credentials for this provider will also be removed.`)) return;
     setBusy(true);
@@ -378,7 +380,7 @@
         console.warn("[TL Studio] Runtime catalog refresh after provider delete failed", error);
       }
     } catch (error) {
-      notice(`Could not delete provider: ${error.message || String(error)}`, true);
+      notice(`Could not delete provider: ${error instanceof Error ? error.message : String(error)}`, true);
     } finally {
       setBusy(false);
     }
@@ -389,7 +391,7 @@
     activate();
     load();
   });
-  for (const button of settingsDialog.querySelectorAll("[data-settings-section]")) {
+  for (const button of settingsDialog.querySelectorAll<HTMLElement>("[data-settings-section]")) {
     if (button.dataset.settingsSection === "providers") continue;
     button.addEventListener("click", resetTransientForm);
   }

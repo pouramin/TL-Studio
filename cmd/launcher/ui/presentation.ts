@@ -1,33 +1,36 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
 
-  const safeJSON = (value) => {
+  const safeJSON = (value: any) => {
     try { return JSON.stringify(value, null, 2); }
     catch { return String(value); }
   };
 
-  const errorText = (error) => {
+  const errorText = (error: any) => {
     if (!error) return "";
     if (typeof error === "string") return error;
     return String(error.message || error.data?.message || error.error?.message || safeJSON(error));
   };
 
-  const partsOf = (message) => Array.isArray(message?.parts)
+  const partsOf = (message: any) => Array.isArray(message?.parts)
     ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
+  const activitiesOf = (message: any) => Array.isArray(message?.activities) ? message.activities : partsOf(message);
 
-  const textOf = (message) => {
+  const textOf = (message: any) => {
     if (typeof message?.text === "string" && message.text) return message.text;
     return partsOf(message)
-      .filter((part) => part?.type === "text" && !part.ignored)
-      .map((part) => part.text || "")
+      .filter((part: any) => part?.type === "text" && !part.ignored)
+      .map((part: any) => part.text || "")
       .filter(Boolean)
       .join("\n")
       .trim();
   };
 
-  const normalizeStatus = (input) => {
+  const normalizeStatus = (input: any) => {
     const value = String(input || "pending").toLowerCase();
     if (["completed", "success", "done"].includes(value)) return "completed";
     if (["error", "failed", "failure"].includes(value)) return "failed";
@@ -35,7 +38,11 @@
     return value;
   };
 
-  const fileHint = (item) => {
+  const fileHint = (item: any) => {
+    if (item?.kind === "tool" && Array.isArray(item.changes) && item.changes[0]?.file) {
+      const bits = String(item.changes[0].file).split(/[\\/]/);
+      return bits[bits.length - 1] || String(item.changes[0].file);
+    }
     const state = item?.state || {};
     const metadata = state.metadata || {};
     const input = state.input || {};
@@ -46,7 +53,12 @@
     return bits[bits.length - 1] || String(path);
   };
 
-  const diffHint = (item) => {
+  const diffHint = (item: any) => {
+    if (item?.kind === "tool" && Array.isArray(item.changes) && item.changes.length) {
+      const additions = item.changes.reduce((sum: any, change: any) => sum + (Number(change?.additions) || 0), 0);
+      const deletions = item.changes.reduce((sum: any, change: any) => sum + (Number(change?.deletions) || 0), 0);
+      return `+${additions} −${deletions}`;
+    }
     const state = item?.state || {};
     const metadata = state.metadata || {};
     const diff = metadata.filediff || metadata.fileDiff || state.output?.filediff || {};
@@ -56,9 +68,23 @@
     return `+${Number.isFinite(additions) ? additions : 0} −${Number.isFinite(deletions) ? deletions : 0}`;
   };
 
-  const toolDetails = (item) => {
+  const toolDescriptor = (item: any) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
+    name: "Runtime tool",
+    category: "runtime",
+    permissionClass: "runtime",
+  };
+
+  const toolDetails = (item: any) => {
+    if (item?.kind === "tool") {
+      const blocks: Array<[string, string]> = [];
+      if (item.input && typeof item.input === "object" && Object.keys(item.input).length) blocks.push(["Input", safeJSON(item.input)]);
+      if (item.output !== undefined && item.output !== "") blocks.push(["Output", typeof item.output === "string" ? item.output : safeJSON(item.output)]);
+      if (item.error) blocks.push(["Error", errorText(item.error)]);
+      if (item.metadata && Object.keys(item.metadata).length) blocks.push(["Metadata", safeJSON(item.metadata)]);
+      return blocks;
+    }
     const state = item?.state || {};
-    const blocks = [];
+    const blocks: Array<[string, string]> = [];
     if (state.input && Object.keys(state.input).length) blocks.push(["Input", safeJSON(state.input)]);
     const output = state.output ?? state.result ?? item.output ?? item.result;
     if (output !== undefined && output !== "") blocks.push(["Output", typeof output === "string" ? output : safeJSON(output)]);
@@ -67,14 +93,14 @@
     return blocks;
   };
 
-  const safeLink = (href) => {
+  const safeLink = (href: any) => {
     try {
       const url = new URL(href, window.location.href);
       return ["http:", "https:"].includes(url.protocol) ? url.href : "";
     } catch { return ""; }
   };
 
-  const appendInlineMarkdown = (parent, input) => {
+  const appendInlineMarkdown = (parent: any, input: any) => {
     let text = String(input || "");
     while (text) {
       const codeAt = text.indexOf("`");
@@ -138,10 +164,10 @@
     }
   };
 
-  const renderMarkdown = (container, input) => {
+  const renderMarkdown = (container: any, input: any) => {
     const lines = String(input || "").replace(/\r\n?/g, "\n").split("\n");
     let index = 0;
-    const paragraph = [];
+    const paragraph: string[] = [];
 
     const flushParagraph = () => {
       if (!paragraph.length) return;
@@ -163,7 +189,7 @@
       if (fence) {
         flushParagraph();
         const language = fence[1].trim();
-        const body = [];
+        const body: string[] = [];
         index++;
         while (index < lines.length && !/^\s*```\s*$/.test(lines[index])) body.push(lines[index++]);
         if (index < lines.length) index++;
@@ -211,7 +237,7 @@
       if (quote) {
         flushParagraph();
         const blockquote = document.createElement("blockquote");
-        const values = [];
+        const values: string[] = [];
         while (index < lines.length) {
           const match = lines[index].match(/^\s*>\s?(.*)$/);
           if (!match) break;
@@ -229,7 +255,7 @@
     flushParagraph();
   };
 
-  const messageNode = (kind, author, text, time, error) => {
+  const messageNode = (kind: any, author: any, text: any, time: any, error: any = "") => {
     const row = document.createElement("article");
     row.className = `message ${kind}${error ? " error" : ""}`;
 
@@ -260,7 +286,7 @@
     return row;
   };
 
-  const activityCard = ({ title, status, meta = "", blocks = [], reasoning = false }) => {
+  const activityCard = ({ title, status, meta = "", blocks = [], reasoning = false }: { title: string; status: any; meta?: string; blocks?: Array<[string, string]>; reasoning?: boolean }) => {
     const details = document.createElement("details");
     const normalized = normalizeStatus(status);
     details.className = `activity-card${reasoning ? " reasoning-card" : ""}`;
@@ -303,7 +329,35 @@
     return details;
   };
 
-  const activityNode = (item) => {
+  const activityNode = (item: any) => {
+    if (item?.kind === "reasoning" && item.text) {
+      return activityCard({
+        title: "Reasoning",
+        status: item.status || "completed",
+        blocks: [["Thought process", item.text]],
+        reasoning: true,
+      });
+    }
+
+    if (item?.kind === "tool") {
+      const meta = [item.category, item.permissionClass, fileHint(item), diffHint(item)].filter(Boolean).join(" · ");
+      return activityCard({
+        title: item.toolName || "Runtime tool",
+        status: item.status || "pending",
+        meta,
+        blocks: toolDetails(item),
+      });
+    }
+
+    if (item?.kind === "subtask") {
+      return activityCard({
+        title: "Subtask",
+        status: item.status || "created",
+        meta: item.agent || "",
+        blocks: [["Task", item.text || ""]],
+      });
+    }
+
     if (item?.type === "reasoning" && item.text) {
       return activityCard({
         title: "Reasoning",
@@ -315,9 +369,10 @@
 
     if (item?.type === "tool") {
       const state = item.state || {};
-      const meta = [fileHint(item), diffHint(item)].filter(Boolean).join(" · ");
+      const descriptor = toolDescriptor(item);
+      const meta = [descriptor.category, descriptor.permissionClass, fileHint(item), diffHint(item)].filter(Boolean).join(" · ");
       return activityCard({
-        title: item.tool || item.name || "Tool",
+        title: descriptor.name,
         status: state.status || item.status || "pending",
         meta,
         blocks: toolDetails(item),
@@ -335,9 +390,9 @@
     return null;
   };
 
-  const appendAssistantContent = (node, message, error = "") => {
+  const appendAssistantContent = (node: any, message: any, error = "") => {
     const content = node.querySelector(".message-content");
-    const parts = partsOf(message);
+    const parts = activitiesOf(message);
 
     // Keep operational activity above the user-facing answer. Some providers
     // append reasoning after text in the raw part array even though it belongs
@@ -347,11 +402,13 @@
       if (activity) content.appendChild(activity);
     }
 
-    const text = parts
-      .filter((part) => part?.type === "text" && !part.ignored && part.text)
-      .map((part) => part.text)
-      .join("\n")
-      .trim() || textOf(message);
+    const text = typeof message?.text === "string"
+      ? message.text.trim()
+      : partsOf(message)
+        .filter((part: any) => part?.type === "text" && !part.ignored && part.text)
+        .map((part: any) => part.text)
+        .join("\n")
+        .trim() || textOf(message);
 
     if (text) {
       const body = document.createElement("div");
@@ -368,7 +425,28 @@
     }
   };
 
-  const renderEnvelope = (view, message) => {
+  const renderEnvelope = (view: any, message: any) => {
+    if (message?.role) {
+      const time = message.createdAt ?? message.completedAt;
+      if (message.role === "user") {
+        view.appendChild(messageNode("user", "You", message.text || "", time));
+        return true;
+      }
+      if (message.role === "assistant") {
+        const error = errorText(message.error);
+        const node = messageNode("assistant", message.agent || "Agent", "", time, "");
+        if (error) node.classList.add("error");
+        appendAssistantContent(node, message, error);
+        view.appendChild(node);
+        return true;
+      }
+      if (message.role === "system") {
+        view.appendChild(messageNode("system", "System", message.text || "", time));
+        return true;
+      }
+      return false;
+    }
+
     if (!message?.info || !Array.isArray(message.parts)) return false;
     const info = message.info;
     const time = info.time?.created ?? info.time?.completed;
@@ -404,7 +482,7 @@
         view.appendChild(node);
       } else if (message?.type === "shell") {
         const node = messageNode("assistant", "Shell", "", message.time?.created);
-        node.querySelector(".message-content").appendChild(activityCard({
+        node.querySelector<HTMLElement>(".message-content")!.appendChild(activityCard({
           title: message.command || "Command",
           status: message.time?.completed ? "completed" : "running",
           blocks: [["Output", message.output || ""]],
@@ -425,7 +503,7 @@
       typing.className = "typing";
       typing.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
       working.appendChild(typing);
-      row.querySelector(".message-content").appendChild(working);
+      row.querySelector<HTMLElement>(".message-content")!.appendChild(working);
       view.appendChild(row);
     }
 

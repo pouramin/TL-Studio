@@ -114,7 +114,7 @@ jobs:
           chmod +x "staging/package/bin/${{ matrix.kilo_binary }}" || true
           cp LICENSE THIRD_PARTY_NOTICES.md staging/package/
           mkdir -p staging/package/third_party
-          cp third_party/KILO_LICENSE.txt staging/package/third_party/
+          cp -R third_party/. staging/package/third_party/
       - name: Real bundled-runtime product API contract test
         if: matrix.name == 'linux-x64'
         shell: bash

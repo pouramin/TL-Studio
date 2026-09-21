@@ -60,7 +60,7 @@ def routed(path: str, project: str, **params) -> str:
 def sse_events(base: str, project: str, sink: list[dict], ready: threading.Event, stop: threading.Event):
     try:
         req = urllib.request.Request(
-            base.rstrip("/") + routed("/runtime/global/event", project),
+            base.rstrip("/") + "/local/events",
             headers={"Accept": "text/event-stream", "Cache-Control": "no-cache"},
         )
         with urllib.request.urlopen(req, timeout=60) as res:
@@ -77,8 +77,7 @@ def sse_events(base: str, project: str, sink: list[dict], ready: threading.Event
                         envelope = json.loads("\n".join(data_lines))
                         if isinstance(envelope, dict):
                             sink.append(envelope)
-                            payload = envelope.get("payload", envelope)
-                            if isinstance(payload, dict) and payload.get("type") == "server.connected":
+                            if envelope.get("type") == "stream.ready":
                                 ready.set()
                     finally:
                         data_lines = []
@@ -186,6 +185,21 @@ def main() -> int:
     project = local.get("project") if isinstance(local, dict) else None
     require(isinstance(project, str) and project, f"local project missing: {local!r}")
 
+    registry = request(base, "/local/tools")
+    require(isinstance(registry, dict) and registry.get("version") == 1, f"tool registry missing: {registry!r}")
+    tools_meta = registry.get("tools")
+    require(isinstance(tools_meta, list), f"tool registry tools missing: {registry!r}")
+    write_meta = next(
+        (item for item in tools_meta if isinstance(item, dict) and "write" in item.get("runtimeIDs", [])),
+        None,
+    )
+    require(write_meta is not None, f"write tool semantic mapping missing: {tools_meta!r}")
+    require(write_meta.get("id") == "files.write" and write_meta.get("permissionClass") == "write",
+            f"write tool semantic mapping mismatch: {write_meta!r}")
+    unknown_meta = registry.get("unknown")
+    require(isinstance(unknown_meta, dict) and unknown_meta.get("permissionClass") == "runtime",
+            f"unknown tool fallback must stay runtime-controlled: {unknown_meta!r}")
+
     agents = unwrap(request(base, routed("/runtime/agent", project)))
     require(isinstance(agents, list), f"agent response mismatch: {agents!r}")
     visible = [a for a in agents if isinstance(a, dict) and not a.get("hidden") and a.get("mode") != "subagent"]
@@ -210,8 +224,8 @@ def main() -> int:
     else:
         raise E2EError(f"test provider models have invalid shape: {models!r}")
 
-    created = unwrap(request(base, routed("/runtime/session", project), method="POST", payload={}))
-    require(isinstance(created, dict) and isinstance(created.get("id"), str), f"session creation failed: {created!r}")
+    created = request(base, routed("/local/sessions", project), method="POST", payload={})
+    require(isinstance(created, dict) and isinstance(created.get("id"), str), f"semantic session creation failed: {created!r}")
     session_id = created["id"]
     sid = urllib.parse.quote(session_id, safe="")
 
@@ -220,19 +234,21 @@ def main() -> int:
     stop = threading.Event()
     thread = threading.Thread(target=sse_events, args=(base, project, events, ready, stop), daemon=True)
     thread.start()
-    require(ready.wait(5), f"global SSE did not connect: {events!r}")
+    require(ready.wait(5), f"TL Studio semantic SSE did not connect: {events!r}")
     require(not any(event.get("type") == "test.sse.error" for event in events), f"SSE failed: {events!r}")
 
-    request(
+    run_result = request(
         base,
-        routed(f"/runtime/session/{sid}/prompt_async", project),
+        routed(f"/local/sessions/{sid}/runs", project),
         method="POST",
         payload={
             "agent": "code",
-            "model": {"providerID": "test", "modelID": "test-model"},
+            "model": {"providerID": "test", "id": "test-model"},
             "parts": [{"type": "text", "text": "Create the requested fixture file, then confirm completion."}],
         },
     )
+    require(isinstance(run_result, dict) and run_result.get("accepted") is True,
+            f"semantic session run was not accepted: {run_result!r}")
 
     deadline = time.time() + 45
     messages: list[dict] = []
@@ -247,7 +263,7 @@ def main() -> int:
         if isinstance(status, dict) and status.get("type") != "idle":
             saw_running = True
 
-        pending = unwrap(request(base, routed("/runtime/permission", project)))
+        pending = request(base, f"/local/permissions?{urllib.parse.urlencode({'sessionID': session_id})}")
         pending = pending if isinstance(pending, list) else []
         for permission in pending:
             if not isinstance(permission, dict) or permission.get("sessionID") != session_id:
@@ -261,9 +277,9 @@ def main() -> int:
                     f"edit permission did not target hello.txt: {permission!r}")
             request(
                 base,
-                routed(f"/runtime/permission/{urllib.parse.quote(permission_id, safe='')}/reply", project),
+                f"/local/permissions/{urllib.parse.quote(permission_id, safe='')}/reply",
                 method="POST",
-                payload={"reply": "once"},
+                payload={"sessionID": session_id, "reply": "once"},
             )
             approved_permissions.add(permission_id)
             saw_edit_permission = True
@@ -298,6 +314,23 @@ def main() -> int:
     require(any(EXPECTED in assistant_text(m) for m in assistants), f"fixture reply missing: {assistants!r}")
     require(any(has_completed_write(m) for m in assistants), f"completed write tool part missing: {assistants!r}")
 
+    semantic_messages = request(base, f"/local/sessions/{sid}/messages?limit=200")
+    require(isinstance(semantic_messages, list), f"semantic messages missing: {semantic_messages!r}")
+    semantic_write = next((
+        activity
+        for message in semantic_messages if isinstance(message, dict)
+        for activity in message.get("activities", []) if isinstance(activity, dict)
+        if activity.get("kind") == "tool" and activity.get("toolID") == "files.write"
+    ), None)
+    require(semantic_write is not None, f"semantic write activity missing: {semantic_messages!r}")
+    require(semantic_write.get("runtimeToolID") == "write" and semantic_write.get("status") == "completed",
+            f"semantic write activity mismatch: {semantic_write!r}")
+    semantic_changes = request(base, f"/local/sessions/{sid}/changes")
+    require(isinstance(semantic_changes, list) and any(
+        isinstance(change, dict) and str(change.get("file") or "").replace("\\", "/").endswith("hello.txt")
+        for change in semantic_changes
+    ), f"semantic session changes missing hello.txt: {semantic_changes!r}")
+
     target = os.path.join(project, "hello.txt")
     require(os.path.isfile(target), f"bundled runtime did not create {target}")
     with open(target, "r", encoding="utf-8") as handle:
@@ -315,19 +348,19 @@ def main() -> int:
     require(hello_diff is not None, f"hello.txt missing from TL Studio change projection: {visible_changes!r}")
     require(int(hello_diff.get("additions") or 0) >= 1, f"hello.txt change additions missing: {hello_diff!r}")
 
-    interesting = []
-    for envelope in events:
-        payload = envelope.get("payload", envelope) if isinstance(envelope, dict) else {}
-        if isinstance(payload, dict):
-            props = payload.get("properties") if isinstance(payload.get("properties"), dict) else {}
-            info = props.get("info") if isinstance(props.get("info"), dict) else {}
-            part = props.get("part") if isinstance(props.get("part"), dict) else {}
-            sid_from_event = props.get("sessionID") or info.get("sessionID") or part.get("sessionID")
-            if sid_from_event == session_id:
-                interesting.append(payload.get("type"))
-    require(any(t in {"message.updated", "message.part.updated", "session.status", "session.idle"} for t in interesting),
-            f"no production session/message event observed for session: {interesting!r}")
-    require("permission.asked" in interesting, f"permission.asked event missing: {interesting!r}")
+    semantic_events = [
+        event for event in events
+        if isinstance(event, dict) and event.get("sessionID") == session_id
+    ]
+    interesting = [event.get("type") for event in semantic_events]
+    require(any(t in {"message.changed", "session.changed"} for t in interesting),
+            f"no TL Studio semantic session/message event observed for session: {semantic_events!r}")
+    require(any(
+        event.get("type") == "attention.changed" and event.get("attentionKind") == "permission"
+        for event in semantic_events
+    ), f"semantic permission attention event missing: {semantic_events!r}")
+    require(all("properties" not in event and "payload" not in event for event in semantic_events),
+            f"raw runtime event envelope leaked into semantic SSE: {semantic_events!r}")
 
     print(json.dumps({
         "ok": True,
@@ -336,7 +369,10 @@ def main() -> int:
         "model": "test/test-model",
         "messages": len(messages),
         "events": interesting,
+        "live_event_contract": "semantic /local/events",
         "saw_running": saw_running,
+        "tool_registry": "files.write",
+        "session_contract": "semantic create/run + write activity + changes",
         "permission": "edit/once",
         "file": target,
         "changes_source": change_source,

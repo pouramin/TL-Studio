@@ -1,40 +1,45 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   if (!K || K.__diagnosticsUiInstalled) return;
   K.__diagnosticsUiInstalled = true;
 
   const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
-  const partsOf = (message) => Array.isArray(message?.parts)
-    ? message.parts
+  const partsOf = (message: any) => Array.isArray(message?.activities)
+    ? message.activities
+    : Array.isArray(message?.parts) ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const messageRole = (message) => message?.info?.role || message?.type || "";
-  const messageTime = (message) => message?.info?.time || message?.time || {};
+  const messageRole = (message: any) => message?.role || message?.info?.role || message?.type || "";
+  const messageTime = (message: any) => message?.role
+    ? { created: message.createdAt, completed: message.completedAt, updated: message.completedAt }
+    : message?.info?.time || message?.time || {};
 
-  const exactUserText = (message) => {
+  const exactUserText = (message: any) => {
     if (typeof message?.text === "string") return message.text;
     return partsOf(message)
-      .filter((part) => part?.type === "text" && !part.ignored)
-      .map((part) => typeof part.text === "string" ? part.text : "")
+      .filter((part: any) => part?.type === "text" && !part.ignored)
+      .map((part: any) => typeof part.text === "string" ? part.text : "")
       .filter(Boolean)
       .join("\n");
   };
 
-  const isResumeMessage = (message) => messageRole(message) === "user"
+  const isResumeMessage = (message: any) => messageRole(message) === "user"
     && exactUserText(message).trim() === RESUME_PROMPT;
 
-  const routedModelSteps = (message) => partsOf(message)
-    .filter((part) => part?.type === "step-finish" && part?.model?.modelID)
-    .map((part) => ({
-      providerID: String(part.model.providerID || ""),
-      modelID: String(part.model.modelID || ""),
-      elapsed: Number(part?.time?.elapsed || 0),
+  const routedModelSteps = (message: any) => partsOf(message)
+    .filter((part: any) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
+    .map((part: any) => ({
+      providerID: String(part.model?.providerID || ""),
+      modelID: String(part.model?.id || part.model?.modelID || ""),
+      elapsed: Number(part?.elapsed || part?.time?.elapsed || 0),
     }));
 
-  const modelLabel = (model) => {
+  const modelLabel = (model: any) => {
     const modelID = String(model?.modelID || "").trim();
     const providerID = String(model?.providerID || "").trim();
     if (!modelID) return "";
@@ -42,7 +47,7 @@
     return `${providerID}/${modelID}`;
   };
 
-  const attemptNumberAt = (targetIndex, messages = K.state.messages) => {
+  const attemptNumberAt = (targetIndex: any, messages = K.state.messages) => {
     let attempt = 1;
     let seenTurn = false;
     for (let index = 0; index <= targetIndex && index < messages.length; index++) {
@@ -59,14 +64,14 @@
     return attempt;
   };
 
-  const attemptStartIndex = (targetIndex, messages = K.state.messages) => {
+  const attemptStartIndex = (targetIndex: any, messages = K.state.messages) => {
     for (let index = Math.min(targetIndex, messages.length - 1); index >= 0; index--) {
       if (messageRole(messages[index]) === "user") return index;
     }
     return 0;
   };
 
-  const lastRecordedModelInAttempt = (targetIndex, messages = K.state.messages) => {
+  const lastRecordedModelInAttempt = (targetIndex: any, messages = K.state.messages) => {
     const start = attemptStartIndex(targetIndex, messages);
     for (let index = Math.min(targetIndex, messages.length - 1); index > start; index--) {
       const steps = routedModelSteps(messages[index]);
@@ -78,7 +83,7 @@
     return null;
   };
 
-  const timestampOf = (value) => {
+  const timestampOf = (value: any) => {
     const number = Number(value || 0);
     return Number.isFinite(number) ? number : 0;
   };
@@ -92,6 +97,10 @@
         timestampOf(time.updated),
         timestampOf(time.completed));
       for (const part of partsOf(message)) {
+        if (part?.kind) {
+          latest = Math.max(latest, timestampOf(part.startAt), timestampOf(part.endAt));
+          continue;
+        }
         const partTime = part?.time || {};
         const stateTime = part?.state?.time || {};
         latest = Math.max(latest,
@@ -105,7 +114,7 @@
     return latest;
   };
 
-  const shortDuration = (milliseconds) => {
+  const shortDuration = (milliseconds: any) => {
     const seconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
@@ -114,7 +123,7 @@
     return `${hours}h ${minutes % 60}m`;
   };
 
-  const retryMessage = (input) => {
+  const retryMessage = (input: any) => {
     const raw = String(input || "").trim();
     if (!raw) return "";
     let value = raw;
@@ -136,8 +145,8 @@
     const lastActivity = lastActivityAt(messages);
     const idleFor = lastActivity ? Math.max(0, now - lastActivity) : 0;
 
-    if (status?.type === "retry") {
-      const next = timestampOf(status.next);
+    if (status?.state === "retrying") {
+      const next = timestampOf(status.nextAt);
       const untilNext = next ? next - now : 0;
       const retry = Number(status.attempt || 0);
       return {
@@ -155,7 +164,7 @@
       };
     }
 
-    if (status?.type === "busy") {
+    if (status?.state === "running") {
       const stale = idleFor >= 120_000;
       return {
         type: "busy",
@@ -172,7 +181,7 @@
     }
 
     return {
-      type: K.state.sending ? "starting" : String(status?.type || "unknown"),
+      type: K.state.sending ? "starting" : String(status?.state || "unknown"),
       title: K.state.sending ? "Starting" : "Working",
       meta: `TL attempt ${tlAttempt}`,
       detail: "",
@@ -184,7 +193,7 @@
 
   let recovering = false;
 
-  const waitForSessionIdle = async (sessionID, timeoutMs = 7000) => {
+  const waitForSessionIdle = async (sessionID: any, timeoutMs = 7000) => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       try { await K.loadActiveSessions?.(); } catch {}
@@ -195,7 +204,7 @@
     return !K.isSessionRunning?.(sessionID);
   };
 
-  const recoverStalledSession = async (button) => {
+  const recoverStalledSession = async (button: any) => {
     const session = K.state.session;
     const snapshot = workingStatusSnapshot();
     if (!session || recovering || snapshot.type !== "busy" || !snapshot.stale) return false;
@@ -209,7 +218,7 @@
     K.showError?.("");
 
     try {
-      await K.api.sessions.abort(session.id, { scope: "session" });
+      await K.api.sessionCommands.abort(session.id, { scope: "session" });
       K.state.sending = false;
       K.stopSessionPolling?.();
 
@@ -228,7 +237,7 @@
       await K.sendPrompt?.();
       return true;
     } catch (error) {
-      K.showError?.(`Recovery failed: ${error.message || String(error)}`);
+      K.showError?.(`Recovery failed: ${(error as any).message || String(error)}`);
       return false;
     } finally {
       recovering = false;
@@ -246,11 +255,11 @@
   const correctTimeoutModelMetadata = () => {
     const view = K.els.conversation;
     if (!view) return;
-    const rows = [...view.querySelectorAll(".message.assistant:not(.working-message)")];
+    const rows = [...view.querySelectorAll<HTMLElement>(".message.assistant:not(.working-message)")];
     const entries = timeoutEntries();
     rows.forEach((row, rowIndex) => {
       if (!row.classList.contains("error")) return;
-      const meta = row.querySelector(".timeout-recovery-meta");
+      const meta = row.querySelector<HTMLElement>(".timeout-recovery-meta");
       if (!meta) return;
       const entry = entries[rowIndex];
       if (!entry) return;
@@ -268,7 +277,7 @@
   const decorateWorkingStatus = () => {
     const view = K.els.conversation;
     if (!view) return;
-    const row = view.querySelector(".working-message");
+    const row = view.querySelector<HTMLElement>(".working-message");
     if (!row) return;
     const content = row.querySelector(".message-content");
     const body = row.querySelector(".message-text");

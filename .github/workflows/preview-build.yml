@@ -64,7 +64,7 @@ jobs:
           cp "$RUNTIME_BIN" staging/package/bin/kilo.exe
           cp LICENSE THIRD_PARTY_NOTICES.md staging/package/
           mkdir -p staging/package/third_party
-          cp third_party/KILO_LICENSE.txt staging/package/third_party/
+          cp -R third_party/. staging/package/third_party/
 
       - name: Package Windows preview
         shell: bash

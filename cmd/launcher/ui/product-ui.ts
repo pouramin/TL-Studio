@@ -1,9 +1,11 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     settingsButton: $("settingsButton"),
     settingsDialog: $("settingsDialog"),
     settingsClose: $("settingsClose"),
@@ -24,24 +26,24 @@
   const systemTheme = window.matchMedia?.("(prefers-color-scheme: light)");
   const hostedConnected = () => K.state.hostedAuth?.authenticated ?? K.state.connectedProviders.has(K.api.hosted.providerID);
 
-  const readSetting = (key, fallback) => {
+  const readSetting = (key: any, fallback: any) => {
     try { return window.localStorage.getItem(key) || fallback; }
     catch { return fallback; }
   };
-  const writeSetting = (key, value) => {
+  const writeSetting = (key: any, value: any) => {
     try { window.localStorage.setItem(key, value); }
     catch {}
   };
 
-  const normalizePath = (value) => {
+  const normalizePath = (value: any) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
     if (K.state.local?.platform === "windows") path = path.toLowerCase();
     return path;
   };
-  const samePath = (a, b) => normalizePath(a) === normalizePath(b);
-  const sessionDirectory = (session) => session?.directory || session?.path || "";
+  const samePath = (a: any, b: any) => normalizePath(a) === normalizePath(b);
+  const sessionDirectory = (session: any) => session?.directory || session?.path || "";
 
-  const applyAppearance = (value) => {
+  const applyAppearance = (value: any) => {
     const preference = ["system", "dark", "light"].includes(value) ? value : "system";
     const resolved = preference === "system" ? (systemTheme?.matches ? "light" : "dark") : preference;
     document.documentElement.dataset.theme = preference;
@@ -50,7 +52,7 @@
     if (ui.appearanceSelect) ui.appearanceSelect.value = preference;
   };
 
-  const applyFontSize = (value) => {
+  const applyFontSize = (value: any) => {
     const size = ["small", "default", "large"].includes(value) ? value : "default";
     document.documentElement.dataset.fontSize = size;
     if (ui.fontSizeSelect) ui.fontSizeSelect.value = size;
@@ -62,49 +64,13 @@
     if (readSetting(THEME_KEY, "system") === "system") applyAppearance("system");
   });
 
-  // The bundled runtime scopes session listing to a directory. TL Studio keeps
-  // only a small persistent history of project paths, then asks the runtime for the
-  // authoritative root sessions in every known project and merges the results.
-  // Session content itself never lives in TL Studio's history file.
-  const scopedLoadSessions = K.loadSessions;
+  // TL Studio owns the cross-project session read model. The launcher merges
+  // recent-project histories and returns stable product session descriptors.
   K.loadSessions = async () => {
-    let history;
-    try {
-      history = await K.request("/local/projects");
-    } catch (error) {
-      console.warn("[TL Studio] Recent-project history unavailable; falling back to current project", error);
-      return scopedLoadSessions();
-    }
-
-    const projects = Array.isArray(history?.projects) ? history.projects.filter(Boolean) : [];
-    if (!projects.length && K.state.local?.project) projects.push(K.state.local.project);
-    const results = await Promise.allSettled(
-      projects.map((directory) => K.api.sessions.list({ limit: 50, directory })),
-    );
-
-    const merged = new Map();
-    results.forEach((result, index) => {
-      const directory = projects[index];
-      if (result.status !== "fulfilled") {
-        console.warn(`[TL Studio] Could not read sessions for ${directory}`, result.reason);
-        return;
-      }
-      for (const raw of Array.isArray(result.value?.data) ? result.value.data : []) {
-        if (!raw?.id) continue;
-        const session = { ...raw, directory: raw.directory || directory };
-        const previous = merged.get(session.id);
-        const updated = Number(session.time?.updated || session.time?.created || 0);
-        const previousUpdated = Number(previous?.time?.updated || previous?.time?.created || 0);
-        if (!previous || updated >= previousUpdated) merged.set(session.id, session);
-      }
-    });
-
-    const sessions = [...merged.values()]
-      .sort((a, b) => Number(b?.time?.updated || b?.time?.created || 0) - Number(a?.time?.updated || a?.time?.created || 0))
-      .slice(0, 150);
-    K.state.sessions = sessions;
+    const sessions = await K.api.sessionView.list({ limit: 150 });
+    K.state.sessions = Array.isArray(sessions) ? sessions : [];
     K.renderSessions();
-    return sessions;
+    return K.state.sessions;
   };
 
   const selectSessionInCurrentProject = K.selectSession;
@@ -122,7 +88,7 @@
         await K.afterProjectChange();
         session = K.state.sessions.find((item) => item.id === session.id) || session;
       } catch (error) {
-        K.showError(`Could not switch to this session's project: ${error.message || String(error)}`);
+        K.showError(`Could not switch to this session's project: ${(error as any).message || String(error)}`);
         return;
       }
     }
@@ -149,7 +115,7 @@
       const meta = document.createElement("span");
       const directory = sessionDirectory(session);
       const project = directory ? K.basename(directory) : "Unknown project";
-      const age = K.relativeTime(session.time?.updated || session.time?.created);
+      const age = K.relativeTime(session.updatedAt || session.createdAt || session.time?.updated || session.time?.created);
 
       row.className = "session-row";
       open.className = `session-item session-main${K.state.session?.id === session.id ? " active" : ""}`;
@@ -182,8 +148,8 @@
     try {
       // Abort defensively even when the session belongs to a different project;
       // active-session status is scoped to the currently open directory.
-      await K.api.sessions.abort(session.id, { scope: "tree", directory }).catch(() => {});
-      await K.api.sessions.remove(session.id, { directory });
+      await K.api.sessionCommands.abort(session.id, { scope: "tree", directory }).catch(() => {});
+      await K.api.sessionCommands.remove(session.id, { directory });
       if (K.state.session?.id === session.id) {
         K.state.changes = [];
         K.newSession();
@@ -192,7 +158,7 @@
       K.renderChanges?.();
       K.refreshWorkspaceControls?.();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -222,7 +188,7 @@
     try {
       await K.refreshHostedAuthStatus?.();
     } catch (error) {
-      K.showError(`Unable to verify hosted account state: ${error.message || String(error)}`);
+      K.showError(`Unable to verify hosted account state: ${(error as any).message || String(error)}`);
     }
     renderAccountDialog();
     ui.accountDialog?.showModal();
@@ -256,7 +222,7 @@
       renderAccountDialog();
       if (ui.accountDialog?.open) ui.accountDialog.close();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
       try { await K.refreshHostedAuthStatus?.(); } catch {}
       renderAccountDialog();
     } finally {

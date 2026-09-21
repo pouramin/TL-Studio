@@ -1,30 +1,35 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
   const PROJECT_MESSAGE_LIMIT = 1000;
   const projectUsageCache = new Map();
   let projectUsageLoading = false;
-  let projectUsageTimer = null;
+  let projectUsageTimer: number | null = null;
 
-  const partsOf = (message) => Array.isArray(message?.parts)
-    ? message.parts
+  const partsOf = (message: any) => Array.isArray(message?.activities)
+    ? message.activities
+    : Array.isArray(message?.parts) ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const messageRole = (message) => message?.info?.role || message?.type || "";
-  const messageTime = (message) => message?.info?.time || message?.time || {};
+  const messageRole = (message: any) => message?.role || message?.info?.role || message?.type || "";
+  const messageTime = (message: any) => message?.role
+    ? { created: message.createdAt, completed: message.completedAt, updated: message.completedAt }
+    : message?.info?.time || message?.time || {};
 
-  const exactUserText = (message) => {
+  const exactUserText = (message: any) => {
     if (typeof message?.text === "string") return message.text;
     return partsOf(message)
-      .filter((part) => part?.type === "text" && !part.ignored)
-      .map((part) => typeof part.text === "string" ? part.text : "")
-      .filter((text) => text.length > 0)
+      .filter((part: any) => part?.type === "text" && !part.ignored)
+      .map((part: any) => typeof part.text === "string" ? part.text : "")
+      .filter((text: any) => text.length > 0)
       .join("\n");
   };
 
-  const isResumeMessage = (message) => messageRole(message) === "user"
+  const isResumeMessage = (message: any) => messageRole(message) === "user"
     && exactUserText(message).trim() === RESUME_PROMPT;
 
   const hideResumeMessages = () => {
@@ -36,9 +41,9 @@
   };
 
   const normalizeCancellation = () => {
-    const rows = K.els.conversation?.querySelectorAll(".message.error") || [];
+    const rows = K.els.conversation?.querySelectorAll<HTMLElement>(".message.error") || [];
     for (const row of rows) {
-      const error = row.querySelector(".message-error-text");
+      const error = row.querySelector<HTMLElement>(".message-error-text");
       const text = String(error?.textContent || "").trim();
       if (!/\b(aborted|cancelled|canceled|interrupted)\b/i.test(text)) continue;
       row.classList.remove("error");
@@ -52,7 +57,7 @@
   };
 
   const normalizeRetryableToolErrors = () => {
-    const cards = K.els.conversation?.querySelectorAll('.activity-card[data-status="failed"]') || [];
+    const cards = K.els.conversation?.querySelectorAll<HTMLDetailsElement>('.activity-card[data-status="failed"]') || [];
     const running = !!K.state.session && (K.state.sending || K.isSessionRunning(K.state.session.id));
     for (const card of cards) {
       const text = String(card.textContent || "");
@@ -73,7 +78,7 @@
     }
   };
 
-  const fallbackCopy = (text) => {
+  const fallbackCopy = (text: any) => {
     const area = document.createElement("textarea");
     area.value = text;
     area.setAttribute("readonly", "");
@@ -87,7 +92,7 @@
     if (!ok) throw new Error("Copy command failed");
   };
 
-  const copyText = async (text, button) => {
+  const copyText = async (text: any, button: any) => {
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
       else fallbackCopy(text);
@@ -101,7 +106,7 @@
         button.title = previous;
       }, 1300);
     } catch (error) {
-      K.showError?.(`Could not copy prompt: ${error.message || String(error)}`);
+      K.showError?.(`Could not copy prompt: ${(error as any).message || String(error)}`);
     }
   };
 
@@ -138,19 +143,19 @@
 
   const emptyTokens = () => ({ input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 });
 
-  const tokenShape = (value) => {
+  const tokenShape = (value: any) => {
     const tokens = value && typeof value === "object" ? value : {};
     const cache = tokens.cache && typeof tokens.cache === "object" ? tokens.cache : {};
     return {
       input: Number(tokens.input || 0),
       output: Number(tokens.output || 0),
       reasoning: Number(tokens.reasoning || 0),
-      cacheRead: Number(cache.read || 0),
-      cacheWrite: Number(cache.write || 0),
+      cacheRead: Number(tokens.cacheRead ?? cache.read ?? 0),
+      cacheWrite: Number(tokens.cacheWrite ?? cache.write ?? 0),
     };
   };
 
-  const addTokens = (target, source) => {
+  const addTokens = (target: any, source: any) => {
     target.input += Number(source.input || 0);
     target.output += Number(source.output || 0);
     target.reasoning += Number(source.reasoning || 0);
@@ -159,33 +164,34 @@
     return target;
   };
 
-  const tokenTotal = (tokens) => tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead + tokens.cacheWrite;
+  const tokenTotal = (tokens: any) => tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead + tokens.cacheWrite;
 
-  const assistantTokens = (message) => {
-    const direct = tokenShape(message?.info?.tokens || message?.tokens);
+  const assistantTokens = (message: any) => {
+    const direct = tokenShape(message?.usage || message?.info?.tokens || message?.tokens);
     if (tokenTotal(direct) > 0) return direct;
 
     const total = emptyTokens();
     for (const part of partsOf(message)) {
-      if (part?.type !== "step-finish") continue;
-      addTokens(total, tokenShape(part.tokens));
+      if (part?.kind === "model") addTokens(total, tokenShape(part.usage));
+      else if (part?.type === "step-finish") addTokens(total, tokenShape(part.tokens));
     }
     return total;
   };
 
-  const partTimestamp = (part) => {
+  const partTimestamp = (part: any) => {
+    if (part?.kind) return Number(part.endAt || part.startAt || 0);
     const time = part?.time || {};
     return Number(time.end || time.completed || time.start || 0);
   };
 
-  const endTimestamp = (message) => {
+  const endTimestamp = (message: any) => {
     const time = messageTime(message);
     let end = Number(time.completed || time.updated || time.created || 0);
     for (const part of partsOf(message)) end = Math.max(end, partTimestamp(part));
     return end;
   };
 
-  const activeWorkMs = (messages, { running = false } = {}) => {
+  const activeWorkMs = (messages: any, { running = false } = {}) => {
     let total = 0;
     for (let index = 0; index < messages.length; index++) {
       if (messageRole(messages[index]) !== "user") continue;
@@ -206,7 +212,7 @@
     return total;
   };
 
-  const usageForMessages = (messages, { running = false } = {}) => {
+  const usageForMessages = (messages: any, { running = false } = {}) => {
     const totals = emptyTokens();
     let requests = 0;
     for (const message of messages) {
@@ -222,14 +228,14 @@
     };
   };
 
-  const compactNumber = (value) => {
+  const compactNumber = (value: any) => {
     const number = Number(value || 0);
     if (number < 1000) return String(Math.round(number));
     if (number < 1_000_000) return `${(number / 1000).toFixed(number < 10_000 ? 1 : 0)}K`;
     return `${(number / 1_000_000).toFixed(number < 10_000_000 ? 1 : 0)}M`;
   };
 
-  const formatDuration = (milliseconds) => {
+  const formatDuration = (milliseconds: any) => {
     const seconds = Math.max(0, Math.round(Number(milliseconds || 0) / 1000));
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
@@ -239,7 +245,7 @@
     return `${hours}h ${minutes % 60}m`;
   };
 
-  const usageTitle = (breakdown) => `Input ${compactNumber(breakdown.input)} · Output ${compactNumber(breakdown.output)} · Reasoning ${compactNumber(breakdown.reasoning)} · Cache read ${compactNumber(breakdown.cacheRead)} · Cache write ${compactNumber(breakdown.cacheWrite)}`;
+  const usageTitle = (breakdown: any) => `Input ${compactNumber(breakdown.input)} · Output ${compactNumber(breakdown.output)} · Reasoning ${compactNumber(breakdown.reasoning)} · Cache read ${compactNumber(breakdown.cacheRead)} · Cache write ${compactNumber(breakdown.cacheWrite)}`;
 
   const turnGroups = () => {
     const turns = [];
@@ -261,7 +267,7 @@
     return turns;
   };
 
-  const turnUsageLine = (stats) => {
+  const turnUsageLine = (stats: any) => {
     const line = document.createElement("div");
     line.className = "turn-usage";
     line.title = usageTitle(stats.breakdown);
@@ -291,15 +297,15 @@
     });
   };
 
-  const routedModelSteps = (message) => partsOf(message)
-    .filter((part) => part?.type === "step-finish" && part?.model?.modelID)
-    .map((part) => ({
-      providerID: String(part.model.providerID || ""),
-      modelID: String(part.model.modelID || ""),
-      elapsed: Number(part?.time?.elapsed || 0),
+  const routedModelSteps = (message: any) => partsOf(message)
+    .filter((part: any) => (part?.kind === "model" && part?.model?.id) || (part?.type === "step-finish" && part?.model?.modelID))
+    .map((part: any) => ({
+      providerID: String(part.model?.providerID || ""),
+      modelID: String(part.model?.id || part.model?.modelID || ""),
+      elapsed: Number(part?.elapsed || part?.time?.elapsed || 0),
     }));
 
-  const modelLabel = (model) => {
+  const modelLabel = (model: any) => {
     const modelID = String(model?.modelID || "").trim();
     const providerID = String(model?.providerID || "").trim();
     if (!modelID) return "";
@@ -307,9 +313,9 @@
     return `${providerID}/${modelID}`;
   };
 
-  const modelRouteSummary = (message) => {
+  const modelRouteSummary = (message: any) => {
     const steps = routedModelSteps(message);
-    const groups = [];
+    const groups: Array<{ label: string; count: number }> = [];
     for (const step of steps) {
       const label = modelLabel(step);
       if (!label) continue;
@@ -320,7 +326,7 @@
     return groups.map((item) => item.count > 1 ? `${item.label} ×${item.count}` : item.label).join(" → ");
   };
 
-  const attemptNumberAt = (targetIndex) => {
+  const attemptNumberAt = (targetIndex: any) => {
     let attempt = 1;
     let seenTurn = false;
     for (let index = 0; index <= targetIndex && index < K.state.messages.length; index++) {
@@ -337,7 +343,7 @@
     return attempt;
   };
 
-  const lastRecordedModelBefore = (targetIndex) => {
+  const lastRecordedModelBefore = (targetIndex: any) => {
     for (let index = Math.min(targetIndex, K.state.messages.length - 1); index >= 0; index--) {
       const steps = routedModelSteps(K.state.messages[index]);
       if (!steps.length) continue;
@@ -355,7 +361,7 @@
   const renderRoutedModels = () => {
     const view = K.els.conversation;
     if (!view) return;
-    const rows = [...view.querySelectorAll(".message.assistant:not(.working-message)")];
+    const rows = [...view.querySelectorAll<HTMLElement>(".message.assistant:not(.working-message)")];
     const entries = assistantEntries();
     rows.forEach((row, rowIndex) => {
       const entry = entries[rowIndex];
@@ -372,17 +378,17 @@
     });
   };
 
-  const sessionStamp = (session) => String(session?.time?.updated || session?.time?.created || "");
+  const sessionStamp = (session: any) => String(session?.updatedAt || session?.createdAt || session?.time?.updated || session?.time?.created || "");
 
-  const normalizePath = (value) => {
+  const normalizePath = (value: any) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
     if (K.state.local?.platform === "windows") path = path.toLowerCase();
     return path;
   };
 
-  const samePath = (a, b) => normalizePath(a) === normalizePath(b);
-  const sessionDirectory = (session) => session?.directory || session?.path || "";
-  const usageCacheKey = (session) => `${normalizePath(sessionDirectory(session) || K.state.local?.project || "")}\n${session?.id || ""}`;
+  const samePath = (a: any, b: any) => normalizePath(a) === normalizePath(b);
+  const sessionDirectory = (session: any) => session?.directory || session?.path || "";
+  const usageCacheKey = (session: any) => `${normalizePath(sessionDirectory(session) || K.state.local?.project || "")}\n${session?.id || ""}`;
 
   const activeProjectSessions = () => {
     const sessions = Array.isArray(K.state.sessions) ? K.state.sessions : [];
@@ -396,7 +402,7 @@
     });
   };
 
-  const mergeUsage = (target, source) => {
+  const mergeUsage = (target: any, source: any) => {
     target.tokens += Number(source.tokens || 0);
     target.requests += Number(source.requests || 0);
     target.duration += Number(source.duration || 0);
@@ -471,8 +477,8 @@
         const session = pending[cursor++];
         try {
           const directory = sessionDirectory(session) || K.state.local?.project || undefined;
-          const payload = await K.api.sessions.messages(session.id, { limit: PROJECT_MESSAGE_LIMIT, directory });
-          const messages = Array.isArray(payload?.data) ? payload.data : [];
+          const payload = await K.api.sessionView.messages(session.id, { limit: PROJECT_MESSAGE_LIMIT, directory });
+          const messages = Array.isArray(payload) ? payload : [];
           projectUsageCache.set(usageCacheKey(session), {
             stamp: sessionStamp(session),
             usage: usageForMessages(messages),
@@ -497,7 +503,7 @@
     }, 120);
   };
 
-  const timeoutKind = (text) => {
+  const timeoutKind = (text: any) => {
     const value = String(text || "");
     if (/upstream idle timeout exceeded/i.test(value)) return "idle";
     if (/upstream provider timed out while sending the response/i.test(value)) return "provider";
@@ -513,7 +519,7 @@
     const entries = assistantEntries();
 
     for (const row of rows) {
-      const error = row.querySelector(".message-error-text");
+      const error = row.querySelector<HTMLElement>(".message-error-text");
       const raw = String(error?.textContent || "").trim();
       const kind = timeoutKind(raw);
       if (!error || !kind) continue;

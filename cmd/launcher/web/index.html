@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
-  <meta name="description" content="TL Studio is a fast local browser-based development workspace with AI built in." />
+  <meta name="description" content="TL Studio is a local browser-based coding agent workspace." />
   <title>TL Studio</title>
   <link rel="icon" type="image/svg+xml" href="/tl-studio-mark.svg" />
   <link rel="stylesheet" href="/styles.css" />
@@ -63,8 +63,8 @@
 
       <section id="emptyState" class="empty-state">
         <div class="empty-icon"><img src="/tl-studio-mark.svg" alt="" /></div>
-        <h1>Your local development workspace, with AI built in.</h1>
-        <p>Edit code yourself, run commands, preview the project, or hand work to the local agent — all from TL Studio.</p>
+        <h1>Your local coding agent, without the IDE.</h1>
+        <p>TL Studio runs a local coding agent on this computer. The browser is your workspace.</p>
         <div class="empty-actions">
           <button id="emptyNewSession" class="primary">Start a session</button>
           <button id="emptyPickProject" class="ghost">Choose project</button>
@@ -276,15 +276,6 @@
     </div>
   </dialog>
 
-  <script src="/core.js" defer></script>
-  <script src="/runtime-api.js" defer></script>
-  <script src="/chat.js" defer></script>
-  <script src="/presentation.js" defer></script>
-  <script src="/attention.js" defer></script>
-  <script src="/workspace.js" defer></script>
-  <script src="/files.js" defer></script>
-  <script src="/status-ui.js" defer></script>
-  <script src="/product-ui.js" defer></script>
-  <script src="/app.js" defer></script>
+  <script type="module" src="/browser.js"></script>
 </body>
 </html>

@@ -6,15 +6,11 @@ import (
 )
 
 func TestBrowserIDEFoundationIsEmbeddedAndWired(t *testing.T) {
-	filesJS, err := webFS.ReadFile("web/files.js")
-	if err != nil {
-		t.Fatalf("read embedded files.js: %v", err)
-	}
-	filesText := string(filesJS)
+	filesText := readBrowserSource(t, "files.ts")
 	for _, expected := range []string{
 		`K.state.editorTabs = []`,
 		`expectedSha256: tab.sha256`,
-		`error.status === 409`,
+		`(error as any).status === 409`,
 		`method: "POST"`,
 		`method: "PATCH"`,
 		`method: "DELETE"`,
@@ -22,15 +18,11 @@ func TestBrowserIDEFoundationIsEmbeddedAndWired(t *testing.T) {
 		`Ask Agent`,
 	} {
 		if !strings.Contains(filesText, expected) {
-			t.Fatalf("files.js is missing IDE behavior %q", expected)
+			t.Fatalf("files.ts is missing IDE behavior %q", expected)
 		}
 	}
 
-	hardeningJS, err := webFS.ReadFile("web/ide-foundation.js")
-	if err != nil {
-		t.Fatalf("read embedded ide-foundation.js: %v", err)
-	}
-	hardeningText := string(hardeningJS)
+	hardeningText := readBrowserSource(t, "ide-foundation.ts")
 	for _, expected := range []string{
 		`refreshOpenTabs`,
 		`beforeunload`,
@@ -40,19 +32,16 @@ func TestBrowserIDEFoundationIsEmbeddedAndWired(t *testing.T) {
 		`K.state.local?.platform === "windows"`,
 	} {
 		if !strings.Contains(hardeningText, expected) {
-			t.Fatalf("ide-foundation.js is missing reconciliation behavior %q", expected)
+			t.Fatalf("ide-foundation.ts is missing reconciliation behavior %q", expected)
 		}
 	}
 	if strings.Contains(filesText+hardeningText, "cdn.") || strings.Contains(filesText+hardeningText, "unpkg.com") || strings.Contains(filesText+hardeningText, "jsdelivr.net") {
 		t.Fatal("browser IDE must not depend on a runtime CDN")
 	}
 
-	appJS, err := webFS.ReadFile("web/app.js")
-	if err != nil {
-		t.Fatalf("read embedded app.js: %v", err)
-	}
-	if !strings.Contains(string(appJS), `"/ide-foundation.js"`) {
-		t.Fatal("app.js does not load the browser IDE reconciliation extension")
+	entry := readBrowserSource(t, "browser.ts")
+	if !strings.Contains(entry, `import "./ide-foundation";`) {
+		t.Fatal("Browser module graph does not include the IDE reconciliation module")
 	}
 
 	css, err := webFS.ReadFile("web/files.css")

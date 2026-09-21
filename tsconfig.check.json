@@ -1,13 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "none",
-    "lib": ["DOM", "ES2020"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "ES2020", "DOM.Iterable"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "files": [
-    "cmd/launcher/ui/runtime-contract.ts"
-  ]
+  "include": ["cmd/launcher/ui/**/*.ts", "cmd/launcher/ui/**/*.d.ts"]
 }

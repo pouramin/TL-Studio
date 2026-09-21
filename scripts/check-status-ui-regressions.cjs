@@ -1,9 +1,8 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
+const { readBrowserTypeScript, stripKernelImport, transpileBrowserTypeScript } = require("./browser-source-harness.cjs");
 
 class FakeClassList {
   constructor(element) {
@@ -89,14 +88,13 @@ class FakeElement {
   }
 }
 
-const repoRoot = path.resolve(__dirname, "..");
-const statusUIPath = path.join(repoRoot, "cmd", "launcher", "web", "status-ui.js");
-const source = fs.readFileSync(statusUIPath, "utf8");
+const source = stripKernelImport(readBrowserTypeScript("status-ui.ts"));
 const trailer = "\n})();";
 const trailerIndex = source.lastIndexOf(trailer);
-assert.notEqual(trailerIndex, -1, "status-ui.js must remain an IIFE so the regression harness can instrument it");
+assert.notEqual(trailerIndex, -1, "status-ui.ts must remain an IIFE so the regression harness can instrument it");
 
-const instrumented = `${source.slice(0, trailerIndex)}\n  K.__statusUiRegression = {\n    RESUME_PROMPT,\n    exactUserText,\n    isResumeMessage,\n    hideResumeMessages,\n    turnGroups,\n    routedModelSteps,\n    modelRouteSummary,\n    attemptNumberAt,\n    lastRecordedModelBefore,\n    renderRoutedModels,\n    normalizePath,\n    samePath,\n    sessionDirectory,\n    usageCacheKey,\n    activeProjectSessions,\n    projectUsageSnapshot,\n    projectUsageCache,\n    timeoutKind,\n    addTimeoutRecovery,\n  };${source.slice(trailerIndex)}`;
+const instrumentedSource = `${source.slice(0, trailerIndex)}\n  K.__statusUiRegression = {\n    RESUME_PROMPT,\n    exactUserText,\n    isResumeMessage,\n    hideResumeMessages,\n    turnGroups,\n    routedModelSteps,\n    modelRouteSummary,\n    attemptNumberAt,\n    lastRecordedModelBefore,\n    renderRoutedModels,\n    normalizePath,\n    samePath,\n    sessionDirectory,\n    usageCacheKey,\n    activeProjectSessions,\n    projectUsageSnapshot,\n    projectUsageCache,\n    timeoutKind,\n    addTimeoutRecovery,\n  };${source.slice(trailerIndex)}`;
+const instrumented = transpileBrowserTypeScript(instrumentedSource, "status-ui.ts");
 
 const document = {
   createElement: (tag) => new FakeElement(tag),
@@ -159,8 +157,8 @@ const K = {
 };
 
 const context = vm.createContext({
+  K,
   window: {
-    KLU: K,
     setTimeout: () => 0,
     clearTimeout: () => {},
   },
@@ -168,7 +166,7 @@ const context = vm.createContext({
   navigator: {},
   console,
 });
-vm.runInContext(instrumented, context, { filename: statusUIPath });
+vm.runInContext(instrumented, context, { filename: "status-ui.ts" });
 
 const hooks = K.__statusUiRegression;
 assert.ok(hooks, "status-ui regression hooks were not injected");

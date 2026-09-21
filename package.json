@@ -19,10 +19,12 @@
     "scripts/npx-launch.cjs"
   ],
   "scripts": {
-    "build:web": "tsc -p tsconfig.json",
+    "build:web": "node scripts/build-web.mjs",
     "check:web": "tsc -p tsconfig.check.json --noEmit"
   },
   "devDependencies": {
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "esbuild": "0.28.2",
+    "monaco-editor": "0.56.0"
   }
 }

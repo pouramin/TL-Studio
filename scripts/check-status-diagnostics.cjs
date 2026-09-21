@@ -1,9 +1,8 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
+const { loadBrowserModule } = require("./browser-source-harness.cjs");
 
 class FakeElement {
   constructor(tag = "div") {
@@ -21,29 +20,39 @@ class FakeElement {
   addEventListener() {}
 }
 
-const repoRoot = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "diagnostics-ui.js"), "utf8");
+const source = loadBrowserModule("diagnostics-ui.ts");
 const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
 const originalUser = (created = 1000) => ({
-  info: { role: "user", time: { created } },
-  parts: [{ type: "text", text: "Build the site" }],
+  role: "user",
+  createdAt: created,
+  text: "Build the site",
+  activities: [],
 });
 const resumeUser = (created = 3000) => ({
-  info: { role: "user", time: { created } },
-  parts: [{ type: "text", text: RESUME_PROMPT }],
+  role: "user",
+  createdAt: created,
+  text: RESUME_PROMPT,
+  activities: [],
 });
 const assistantStep = (modelID, created = 1500, completed = 2000) => ({
-  info: { role: "assistant", time: { created, completed } },
-  parts: [{
-    type: "step-finish",
-    time: { start: created, end: completed },
-    model: { providerID: "kilo", modelID },
+  role: "assistant",
+  createdAt: created,
+  completedAt: completed,
+  activities: [{
+    kind: "model",
+    status: "completed",
+    startAt: created,
+    endAt: completed,
+    model: { providerID: "kilo", id: modelID },
   }],
 });
 const assistantError = (created = 2500) => ({
-  info: { role: "assistant", time: { created, completed: created + 10 }, error: { message: "Upstream idle timeout exceeded" } },
-  parts: [],
+  role: "assistant",
+  createdAt: created,
+  completedAt: created + 10,
+  error: { message: "Upstream idle timeout exceeded" },
+  activities: [],
 });
 
 const K = {
@@ -66,7 +75,8 @@ const document = {
 };
 
 const context = vm.createContext({
-  window: { KLU: K, setTimeout },
+  K,
+  window: { setTimeout },
   document,
   console,
   Date,
@@ -74,7 +84,7 @@ const context = vm.createContext({
   Promise,
   setTimeout,
 });
-vm.runInContext(source, context, { filename: "diagnostics-ui.js" });
+vm.runInContext(source, context, { filename: "diagnostics-ui.ts" });
 
 const hooks = K.__statusDiagnostics;
 assert.ok(hooks, "diagnostics hooks should be installed");
@@ -105,10 +115,11 @@ assert.equal(hooks.attemptNumberAt(5, currentAttemptModelMessages), 2);
 const now = 1_000_000;
 K.state.messages = currentAttemptModelMessages;
 K.state.activeSessions["session-1"] = {
-  type: "retry",
+  state: "retrying",
+  active: true,
   attempt: 3,
   message: "Upstream idle timeout exceeded",
-  next: now + 5_000,
+  nextAt: now + 5_000,
 };
 let snapshot = hooks.workingStatusSnapshot(now, currentAttemptModelMessages);
 assert.equal(snapshot.type, "retry");
@@ -121,7 +132,7 @@ const staleMessages = [
   originalUser(now - 600_000),
   assistantStep("qwen/qwen3-coder:free", now - 400_000, now - 300_000),
 ];
-K.state.activeSessions["session-1"] = { type: "busy" };
+K.state.activeSessions["session-1"] = { state: "running", active: true };
 snapshot = hooks.workingStatusSnapshot(now, staleMessages);
 assert.equal(snapshot.type, "busy");
 assert.equal(snapshot.stale, true);
@@ -134,20 +145,20 @@ async function testRecovery() {
   let errorMessage = "";
 
   K.state.messages = staleMessages;
-  K.state.activeSessions["session-1"] = { type: "busy" };
+  K.state.activeSessions["session-1"] = { state: "running", active: true };
   K.api = {
     hosted: { providerID: "kilo" },
-    sessions: {
+    sessionCommands: {
       abort: async (sessionID, options) => {
         abortCalls += 1;
         assert.equal(sessionID, "session-1");
         assert.equal(options.scope, "session");
-        K.state.activeSessions[sessionID] = { type: "idle" };
+        K.state.activeSessions[sessionID] = { state: "idle", active: false };
       },
     },
   };
   K.loadActiveSessions = async () => {};
-  K.isSessionRunning = (sessionID) => K.state.activeSessions[sessionID]?.type !== "idle";
+  K.isSessionRunning = (sessionID) => K.state.activeSessions[sessionID]?.active === true;
   K.stopSessionPolling = () => {};
   K.loadMessages = async () => [];
   K.loadAttention = async () => {};
@@ -160,8 +171,8 @@ async function testRecovery() {
 
   const recovered = await hooks.recoverStalledSession();
   assert.equal(recovered, true);
-  assert.equal(abortCalls, 1, "recovery should interrupt the stuck Kilo session exactly once");
-  assert.equal(sendCalls, 1, "recovery should resume the task exactly once after Kilo becomes idle");
+  assert.equal(abortCalls, 1, "recovery should interrupt the stuck runtime session exactly once");
+  assert.equal(sendCalls, 1, "recovery should resume the task exactly once after the runtime becomes idle");
   assert.equal(errorMessage, "");
 }
 

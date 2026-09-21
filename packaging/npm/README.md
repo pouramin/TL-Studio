@@ -1,6 +1,6 @@
 # TL Studio
 
-This npm package is a lightweight launcher for **TL Studio**, a fast local development workspace with AI built in.
+This npm package is a lightweight launcher for **TL Studio**, a local, standalone coding-agent workspace.
 
 It does not bundle or replace the TL Studio application. The launcher detects the current OS/architecture, downloads the matching official GitHub Release, verifies its SHA-256 checksum, caches it locally, and runs it in the current project directory.
 

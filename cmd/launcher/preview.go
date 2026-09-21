@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -17,11 +18,13 @@ import (
 )
 
 type previewCapability struct {
-	Available bool   `json:"available"`
-	Kind      string `json:"kind,omitempty"`
-	Command   string `json:"command,omitempty"`
-	Entry     string `json:"entry,omitempty"`
-	Reason    string `json:"reason,omitempty"`
+	Available bool                     `json:"available"`
+	Kind      string                   `json:"kind,omitempty"`
+	Command   string                   `json:"command,omitempty"`
+	Entry     string                   `json:"entry,omitempty"`
+	EntryMeta *previewEntryDescriptor  `json:"entryMeta,omitempty"`
+	Entries   []previewEntryDescriptor `json:"entries,omitempty"`
+	Reason    string                   `json:"reason,omitempty"`
 }
 
 type previewSnapshot struct {
@@ -40,6 +43,7 @@ type previewManager struct {
 	project    string
 	kind       string
 	command    string
+	entry      string
 	processID  string
 	previewURL string
 	server     *http.Server
@@ -52,30 +56,73 @@ func newPreviewManager(state *appState) *previewManager {
 	return &previewManager{state: state, processes: newProcessManager(state.projectPath)}
 }
 
-func detectPreviewCapability(project string) previewCapability {
+func projectDevCommand(project string) string {
+	packagePath := filepath.Join(project, "package.json")
+	data, err := os.ReadFile(packagePath)
+	if err != nil {
+		return ""
+	}
+	var manifest struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if json.Unmarshal(data, &manifest) != nil || strings.TrimSpace(manifest.Scripts["dev"]) == "" {
+		return ""
+	}
+	return "npm run dev"
+}
+
+func filePreviewCapability(entry previewEntryDescriptor, candidates []previewEntryDescriptor) previewCapability {
+	entryCopy := entry
+	result := previewCapability{
+		Available: true,
+		Kind:      "file",
+		Entry:     entry.Path,
+		EntryMeta: &entryCopy,
+	}
+	if len(candidates) > 1 {
+		result.Entries = candidates
+	}
+	return result
+}
+
+func detectPreviewCapability(project, preferredEntry string) previewCapability {
 	project = strings.TrimSpace(project)
 	if project == "" {
 		return previewCapability{Reason: "Open a project before starting Preview."}
 	}
 
-	packagePath := filepath.Join(project, "package.json")
-	if data, err := os.ReadFile(packagePath); err == nil {
-		var manifest struct {
-			Scripts map[string]string `json:"scripts"`
+	candidates := previewFileCandidates(project)
+	preferred, hasPreferred := validPreviewEntry(project, preferredEntry)
+	devCommand := projectDevCommand(project)
+
+	if hasPreferred {
+		if preferred.Kind == "html" && devCommand != "" {
+			return previewCapability{Available: true, Kind: "dev-server", Command: devCommand}
 		}
-		if json.Unmarshal(data, &manifest) == nil {
-			if strings.TrimSpace(manifest.Scripts["dev"]) != "" {
-				return previewCapability{Available: true, Kind: "dev-server", Command: "npm run dev"}
-			}
-		}
+		return filePreviewCapability(preferred, candidates)
 	}
 
-	indexPath := filepath.Join(project, "index.html")
-	if info, err := os.Stat(indexPath); err == nil && info.Mode().IsRegular() {
-		return previewCapability{Available: true, Kind: "static", Entry: "index.html"}
+	if devCommand != "" {
+		return previewCapability{Available: true, Kind: "dev-server", Command: devCommand}
 	}
 
-	return previewCapability{Reason: "Preview currently supports projects with a package.json dev script or a root index.html."}
+	if index, ok := defaultHTMLPreviewEntry(candidates); ok {
+		return filePreviewCapability(index, candidates)
+	}
+
+	switch len(candidates) {
+	case 0:
+		return previewCapability{Reason: "No previewable file or package.json dev script was found in this project."}
+	case 1:
+		return filePreviewCapability(candidates[0], candidates)
+	default:
+		return previewCapability{
+			Available: true,
+			Kind:      "file",
+			Entries:   candidates,
+			Reason:    "Choose a file to preview.",
+		}
+	}
 }
 
 func normalizePreviewURL(raw string) string {
@@ -124,6 +171,7 @@ func (m *previewManager) stopLocked() {
 	m.project = ""
 	m.kind = ""
 	m.command = ""
+	m.entry = ""
 	m.processID = ""
 	m.previewURL = ""
 	m.server = nil
@@ -143,7 +191,26 @@ func (m *previewManager) syncProjectLocked() {
 	}
 }
 
-func (m *previewManager) startStatic(project string) error {
+func previewEntryURL(baseURL string, entry previewEntryDescriptor) string {
+	switch entry.Renderer {
+	case "markdown":
+		return strings.TrimRight(baseURL, "/") + "/.tl-preview/markdown?file=" + url.QueryEscape(entry.Path)
+	case "text":
+		return strings.TrimRight(baseURL, "/") + "/.tl-preview/text?file=" + url.QueryEscape(entry.Path)
+	case "pdf":
+		return strings.TrimRight(baseURL, "/") + "/.tl-preview/pdf?file=" + url.QueryEscape(entry.Path)
+	}
+	if strings.EqualFold(filepath.ToSlash(entry.Path), "index.html") || strings.TrimSpace(entry.Path) == "" {
+		return baseURL
+	}
+	parts := strings.Split(filepath.ToSlash(entry.Path), "/")
+	for index, part := range parts {
+		parts[index] = url.PathEscape(part)
+	}
+	return strings.TrimRight(baseURL, "/") + "/" + strings.Join(parts, "/")
+}
+
+func (m *previewManager) startStatic(project string, entry previewEntryDescriptor) error {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return err
@@ -154,30 +221,41 @@ func (m *previewManager) startStatic(project string) error {
 	}
 	m.listener = listener
 	m.server = server
-	m.previewURL = "http://" + listener.Addr().String() + "/"
+	m.previewURL = previewEntryURL("http://"+listener.Addr().String()+"/", entry)
 	go func() {
 		_ = server.Serve(listener)
 	}()
 	return nil
 }
 
-func (m *previewManager) start() (previewSnapshot, error) {
+func (m *previewManager) start(preferredEntry string) (previewSnapshot, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
-	m.stopLocked()
 
 	project := m.state.projectPath()
-	capability := detectPreviewCapability(project)
+	capability := detectPreviewCapability(project, preferredEntry)
 	if !capability.Available {
 		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
 	}
 
+	if capability.Kind == "file" && (capability.Entry == "" || capability.EntryMeta == nil) {
+		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
+	}
+
+	if m.project != "" && sameProjectPath(m.project, project) && m.kind == "file" && capability.Kind == "file" && m.listener != nil && capability.EntryMeta != nil {
+		m.entry = capability.Entry
+		m.previewURL = previewEntryURL("http://"+m.listener.Addr().String()+"/", *capability.EntryMeta)
+		return m.snapshotLocked(capability), nil
+	}
+
+	m.stopLocked()
 	m.project = project
 	m.kind = capability.Kind
 	m.command = capability.Command
-	if capability.Kind == "static" {
-		if err := m.startStatic(project); err != nil {
+	m.entry = capability.Entry
+	if capability.Kind == "file" && capability.EntryMeta != nil {
+		if err := m.startStatic(project, *capability.EntryMeta); err != nil {
 			m.stopLocked()
 			return previewSnapshot{}, err
 		}
@@ -222,15 +300,26 @@ func (m *previewManager) snapshotLocked(capability previewCapability) previewSna
 	return snapshot
 }
 
-func (m *previewManager) snapshot() previewSnapshot {
+func (m *previewManager) snapshot(preferredEntry string) previewSnapshot {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.syncProjectLocked()
 	project := m.state.projectPath()
-	capability := detectPreviewCapability(project)
 	if m.project == "" {
+		capability := detectPreviewCapability(project, preferredEntry)
 		return previewSnapshot{previewCapability: capability, Project: project}
 	}
+
+	if m.kind == "file" {
+		capability := previewCapability{Available: true, Kind: "file", Entry: m.entry}
+		if current, ok := validPreviewEntry(project, m.entry); ok {
+			capability.EntryMeta = &current
+		}
+		capability.Entries = previewFileCandidates(project)
+		return m.snapshotLocked(capability)
+	}
+
+	capability := previewCapability{Available: true, Kind: "dev-server", Command: m.command}
 	return m.snapshotLocked(capability)
 }
 
@@ -238,6 +327,9 @@ func safeStaticPreviewHandler(project string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.Error(w, "preview is read-only", http.StatusMethodNotAllowed)
+			return
+		}
+		if serveMarkdownPreview(w, r, project) || serveTextPreview(w, r, project) || servePDFPreview(w, r, project) {
 			return
 		}
 		rel := strings.TrimPrefix(pathpkg.Clean("/"+r.URL.Path), "/")
@@ -267,6 +359,14 @@ func safeStaticPreviewHandler(project string) http.Handler {
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if descriptor, ok := validPreviewEntry(project, rel); ok {
+			if descriptor.MIME != "" {
+				w.Header().Set("Content-Type", descriptor.MIME)
+			}
+			if descriptor.Kind == "pdf" {
+				w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filepath.Base(target)}))
+			}
+		}
 		http.ServeFile(w, r, target)
 	})
 }
@@ -289,11 +389,14 @@ func registerLivePreviewRoutes(mux *http.ServeMux, state *appState) {
 		_, _ = w.Write(indexHTML)
 	})
 
-	mux.HandleFunc("GET /local/preview", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, manager.snapshot())
+	mux.HandleFunc("GET /local/preview/capabilities", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, previewRegistry())
 	})
-	mux.HandleFunc("POST /local/preview", func(w http.ResponseWriter, _ *http.Request) {
-		snapshot, err := manager.start()
+	mux.HandleFunc("GET /local/preview", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, manager.snapshot(r.URL.Query().Get("entry")))
+	})
+	mux.HandleFunc("POST /local/preview", func(w http.ResponseWriter, r *http.Request) {
+		snapshot, err := manager.start(r.URL.Query().Get("entry"))
 		if err != nil {
 			if snapshot.Project == "" {
 				snapshot.Project = state.projectPath()
