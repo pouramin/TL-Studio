@@ -8,14 +8,14 @@
   const PROTOCOLS = new Set(["openai-compatible", "openai-responses", "anthropic-messages"]);
   const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/;
 
-  const clean = (value) => String(value ?? "").trim();
-  const positiveInt = (value) => {
+  const clean = (value: any) => String(value ?? "").trim();
+  const positiveInt = (value: any) => {
     const raw = clean(value);
     if (!raw) return undefined;
     const number = Number(raw);
     return Number.isInteger(number) && number > 0 ? number : NaN;
   };
-  const safeURL = (value) => {
+  const safeURL = (value: any) => {
     try {
       const url = new URL(clean(value));
       if (!/^https?:$/.test(url.protocol)) return "";
@@ -23,7 +23,7 @@
     } catch { return ""; }
   };
 
-  const validateDraft = (draft) => {
+  const validateDraft = (draft: any) => {
     const id = clean(draft.providerID);
     if (!PROVIDER_ID.test(id)) return "Provider ID must use lowercase letters, numbers, dashes, or underscores.";
     if (!clean(draft.name)) return "Display name is required.";
@@ -37,11 +37,11 @@
     return "";
   };
 
-  const buildProviderDefinition = (draft, existing = {}) => {
+  const buildProviderDefinition = (draft: any, existing = {}) => {
     const modelID = clean(draft.modelID);
     const context = positiveInt(draft.contextLimit);
     const output = positiveInt(draft.outputLimit);
-    const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model) => model?.id && model.id !== modelID) : [];
+    const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model: any) => model?.id && model.id !== modelID) : [];
     const model = {
       id: modelID,
       name: clean(draft.modelName) || modelID,
@@ -59,14 +59,14 @@
     };
   };
 
-  const customProviderEntries = (config) => Array.isArray(config?.providers)
+  const customProviderEntries = (config: any) => Array.isArray(config?.providers)
     ? [...config.providers].sort((a, b) => String(a?.name || a?.id || "").localeCompare(String(b?.name || b?.id || "")))
     : [];
 
-  const withoutProvider = (config, providerID) => ({
+  const withoutProvider = (config: any, providerID: any) => ({
     ...(config && typeof config === "object" ? config : {}),
     providers: Array.isArray(config?.providers)
-      ? config.providers.filter((provider) => provider?.id !== providerID)
+      ? config.providers.filter((provider: any) => provider?.id !== providerID)
       : [],
   });
 
@@ -143,7 +143,7 @@
   `;
   document.head.appendChild(style);
 
-  const $ = (id) => document.getElementById(id);
+  const $ = (id: any) => document.getElementById(id);
   const els = {
     add: $("providerAddButton"), notice: $("providerNotice"), list: $("providerList"), form: $("providerForm"),
     title: $("providerFormTitle"), cancel: $("providerFormCancel"), cancelTop: $("providerFormCancelTop"), save: $("providerFormSave"),
@@ -156,7 +156,7 @@
   let editingID = "";
   let saving = false;
 
-  const setBusy = (value) => {
+  const setBusy = (value: any) => {
     saving = value;
     panel.classList.toggle("busy", value);
     if (els.save) els.save.disabled = value;
@@ -213,7 +213,7 @@
   };
   K.__providersUi.resetTransientForm = resetTransientForm;
 
-  const fillForm = (value, existingID = "") => {
+  const fillForm = (value: any, existingID = "") => {
     editingID = existingID;
     els.id.value = value.providerID || "";
     els.name.value = value.name || "";
@@ -232,7 +232,7 @@
     els.form.scrollIntoView?.({ block: "nearest" });
   };
 
-  const modelCount = (provider) => Array.isArray(provider?.models) ? provider.models.length : 0;
+  const modelCount = (provider: any) => Array.isArray(provider?.models) ? provider.models.length : 0;
   const renderList = () => {
     els.list.textContent = "";
     const entries = customProviderEntries(providerConfig);
@@ -290,7 +290,7 @@
     }
   };
 
-  const editEntry = (entry) => {
+  const editEntry = (entry: any) => {
     const first = Array.isArray(entry?.models) && entry.models.length ? entry.models[0] : {};
     fillForm({
       providerID: entry.id,
@@ -306,7 +306,7 @@
     }, entry.id);
   };
 
-  const save = async (event) => {
+  const save = async (event: any) => {
     event?.preventDefault();
     if (saving) return;
     const value = draft();
@@ -339,7 +339,7 @@
     }
   };
 
-  const deleteEntry = async (entry) => {
+  const deleteEntry = async (entry: any) => {
     if (saving) return;
     if (!window.confirm(`Delete provider “${entry.name || entry.id}”? Stored credentials for this provider will also be removed.`)) return;
     setBusy(true);
