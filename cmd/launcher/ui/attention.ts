@@ -2,7 +2,7 @@
   "use strict";
   const K = window.KLU;
 
-  const parseDeviceCode = (input) => input?.match(/code:\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase()
+  const parseDeviceCode = (input: any) => input?.match(/code:\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase()
     || input?.match(/\b[A-Z0-9]{4,}(?:-[A-Z0-9]{3,})+\b/i)?.[0]?.toUpperCase() || "";
 
   K.applyHostedAuthStatus = (status) => {
@@ -76,7 +76,7 @@
     catch {}
   };
 
-  const actionButton = (label, className, fn) => {
+  const actionButton = (label: any, className: any, fn: any) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
@@ -85,7 +85,7 @@
     return button;
   };
 
-  const reset = (title) => {
+  const reset = (title: any) => {
     K.els.attentionTitle.textContent = title;
     K.els.attentionBody.textContent = "";
     K.els.attentionActions.textContent = "";
@@ -107,7 +107,7 @@
     }
   };
 
-  const showPermission = (item) => {
+  const showPermission = (item: any) => {
     const key = `permission:${item.id}`;
     if (K.state.attentionKey === key && K.els.attentionDialog.open) return;
     K.state.attentionKey = key;
@@ -142,7 +142,7 @@
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
   };
 
-  const replyPermission = async (item, reply) => {
+  const replyPermission = async (item: any, reply: any) => {
     try {
       await K.api.permissions.reply(K.state.session.id, item.id, reply);
       if (reply === "always") await K.refreshPermissionRules?.();
@@ -152,7 +152,7 @@
     } catch (err) { K.showError(err.message || String(err)); }
   };
 
-  const showQuestion = (item) => {
+  const showQuestion = (item: any) => {
     const key = `question:${item.id}`;
     if (K.state.attentionKey === key && K.els.attentionDialog.open) return;
     K.state.attentionKey = key;
@@ -204,14 +204,14 @@
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
   };
 
-  const answerQuestion = async (item, blocks) => {
+  const answerQuestion = async (item: any, blocks: any) => {
     const answers = blocks.map(({ controls, custom }) => {
-      const selected = controls.filter((input) => input.checked).map((input) => input.value);
+      const selected = controls.filter((input: any) => input.checked).map((input) => input.value);
       const typed = custom?.value.trim();
       if (typed) selected.push(typed);
       return selected;
     });
-    if (answers.some((answer) => !answer.length)) return K.showError("Answer every agent question before continuing.");
+    if (answers.some((answer: any) => !answer.length)) return K.showError("Answer every agent question before continuing.");
 
     try {
       await K.api.questions.reply(K.state.session.id, item.id, answers);
@@ -221,7 +221,7 @@
     } catch (err) { K.showError(err.message || String(err)); }
   };
 
-  const rejectQuestion = async (item) => {
+  const rejectQuestion = async (item: any) => {
     try {
       await K.api.questions.reject(K.state.session.id, item.id);
       K.state.attentionKey = "";
