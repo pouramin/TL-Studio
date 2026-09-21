@@ -202,8 +202,6 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 
 	repeated := map[string]int{}
 	toolRounds := 0
-	var totalUsage sessionUsage
-
 	for iteration := 1; iteration <= nativeAgentMaxIterations; iteration++ {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -227,8 +225,6 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		if err != nil {
 			return err
 		}
-		addSessionUsage(&totalUsage, response.Usage)
-
 		if len(response.ToolCalls) == 0 {
 			now := time.Now().UnixMilli()
 			messageID, _ := randomSecret(10)
@@ -243,7 +239,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				Text:        strings.TrimSpace(response.Text),
 				Activities:  []sessionActivityView{},
 				Attachments: []sessionAttachmentView{},
-				Usage:       totalUsage,
+				Usage:       response.Usage,
 				Changes:     []sessionChangeView{},
 			}); err != nil {
 				return err
