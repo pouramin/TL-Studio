@@ -55,10 +55,16 @@ func newNativeAgentRuntime(
 }
 
 func (r *nativeAgentRuntime) supports(input sessionRunInput) bool {
-	return input.Model != nil &&
-		strings.TrimSpace(input.Model.ProviderID) != "" &&
-		strings.TrimSpace(input.Model.ID) != "" &&
-		strings.TrimSpace(input.Model.ProviderID) != runtimeHostedProviderID
+	if r == nil || r.resolver == nil || input.Model == nil {
+		return false
+	}
+	providerID := strings.TrimSpace(input.Model.ProviderID)
+	modelID := strings.TrimSpace(input.Model.ID)
+	if providerID == "" || modelID == "" || providerID == runtimeHostedProviderID {
+		return false
+	}
+	_, _, _, err := r.resolver.resolveNativeModel(providerID, modelID)
+	return err == nil
 }
 
 func (r *nativeAgentRuntime) Start(directory, sessionID string, input sessionRunInput) error {
