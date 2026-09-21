@@ -20,7 +20,7 @@ func TestBrowserQuestionsUseTLStudioSemanticContract(t *testing.T) {
 	}
 	for _, forbidden := range []string{
 		`route("/question")`,
-		`route(`/question/${enc(requestID)}`,
+		"route(`/question/${enc(requestID)}",
 	} {
 		if strings.Contains(source, forbidden) {
 			t.Fatalf("Browser question adapter leaked raw runtime question route %q", forbidden)
