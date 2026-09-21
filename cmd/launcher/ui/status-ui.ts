@@ -517,7 +517,7 @@
     const entries = assistantEntries();
 
     for (const row of rows) {
-      const error = row.querySelector(".message-error-text");
+      const error = row.querySelector<HTMLElement>(".message-error-text");
       const raw = String(error?.textContent || "").trim();
       const kind = timeoutKind(raw);
       if (!error || !kind) continue;
