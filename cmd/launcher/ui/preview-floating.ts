@@ -18,7 +18,7 @@
   const KEY = "tl-studio.preview-window";
   const MIN_WIDTH = 340;
   const MIN_HEIGHT = 300;
-  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+  const clamp = (v: any, min: any, max: any) => Math.min(Math.max(v, min), max);
   const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 
   const read = () => {
@@ -66,7 +66,7 @@
   apply();
 
   let edgeResize = null;
-  const startResize = (event) => {
+  const startResize = (event: any) => {
     if (event.button !== 0) return;
     const handle = event.currentTarget;
     const direction = String(handle?.dataset?.direction || "");
@@ -88,7 +88,7 @@
     event.stopPropagation();
   };
 
-  const moveResize = (event) => {
+  const moveResize = (event: any) => {
     if (!edgeResize || edgeResize.id !== event.pointerId) return;
     const vp = viewport();
     const dx = event.clientX - edgeResize.startX;
@@ -118,7 +118,7 @@
     panel.style.height = `${Math.max(MIN_HEIGHT, bottom - top)}px`;
   };
 
-  const endEdgeResize = (event) => {
+  const endEdgeResize = (event: any) => {
     if (!edgeResize || edgeResize.id !== event.pointerId) return;
     edgeResize = null;
     panel.classList.remove("preview-resizing");
@@ -152,7 +152,7 @@
     panel.style.top = `${top}px`;
   });
 
-  const endDrag = (event) => {
+  const endDrag = (event: any) => {
     if (!drag || drag.id !== event.pointerId) return;
     drag = null;
     panel.classList.remove("preview-dragging");
