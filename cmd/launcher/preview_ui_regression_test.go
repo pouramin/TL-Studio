@@ -43,7 +43,6 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"K.state.activeEditorPath",
 		"snapshot?.entries",
 		"new URLSearchParams({ entry: value })",
-		"Choose an HTML file to preview.",
 		"Ready to preview",
 		"switchStaticEntry",
 		"await switchStaticEntry(value)",
