@@ -18,7 +18,7 @@ func TestDetectPreviewCapability(t *testing.T) {
 		t.Fatal(err)
 	}
 	static := detectPreviewCapability(staticProject, "")
-	if !static.Available || static.Kind != "static" || static.Entry != "index.html" {
+	if !static.Available || static.Kind != "file" || static.Entry != "index.html" {
 		t.Fatalf("unexpected static capability: %#v", static)
 	}
 
@@ -47,7 +47,7 @@ func TestDetectPreviewCapabilityUsesNonIndexHTML(t *testing.T) {
 		t.Fatal(err)
 	}
 	capability := detectPreviewCapability(project, "")
-	if !capability.Available || capability.Kind != "static" || capability.Entry != "hello.html" {
+	if !capability.Available || capability.Kind != "file" || capability.Entry != "hello.html" {
 		t.Fatalf("unexpected single HTML capability: %#v", capability)
 	}
 
@@ -73,7 +73,7 @@ func TestDetectPreviewCapabilityPrefersOpenHTMLWhenMultipleExist(t *testing.T) {
 	}
 
 	choice := detectPreviewCapability(project, "")
-	if !choice.Available || choice.Kind != "static" || choice.Entry != "" || len(choice.Entries) != 2 {
+	if !choice.Available || choice.Kind != "file" || choice.Entry != "" || len(choice.Entries) != 2 {
 		t.Fatalf("multiple HTML files should require a choice: %#v", choice)
 	}
 
@@ -107,6 +107,76 @@ func TestDetectPreviewCapabilityPrefersRequestedHTMLOverRootIndex(t *testing.T) 
 	}
 }
 
+func TestPreviewCapabilityRegistryCoversSupportedFileTypes(t *testing.T) {
+	cases := map[string]string{
+		"index.html":   "html",
+		"diagram.svg":  "svg",
+		"photo.png":    "image",
+		"photo.avif":   "image",
+		"manual.pdf":   "pdf",
+		"clip.mp4":     "video",
+		"sound.mp3":    "audio",
+		"README.md":    "markdown",
+		"notes.txt":    "",
+		"styles.css":   "",
+	}
+	for path, wantKind := range cases {
+		got, ok := previewCapabilityForPath(path)
+		if wantKind == "" {
+			if ok {
+				t.Fatalf("%s should not be previewable, got %#v", path, got)
+			}
+			continue
+		}
+		if !ok || got.Kind != wantKind {
+			t.Fatalf("%s preview kind=%q ok=%v want %q", path, got.Kind, ok, wantKind)
+		}
+	}
+	registry := previewRegistry()
+	if registry.Version != 1 || len(registry.Capabilities) < 7 {
+		t.Fatalf("unexpected preview registry: %#v", registry)
+	}
+}
+
+func TestDevProjectPrefersDevServerForHTMLButDirectPreviewForAssets(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "package.json"), []byte(`{"scripts":{"dev":"vite"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "index.html"), []byte("<h1>app</h1>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "logo.svg"), []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	html := detectPreviewCapability(project, "index.html")
+	if !html.Available || html.Kind != "dev-server" || html.Command != "npm run dev" {
+		t.Fatalf("active HTML in a dev project should use its dev server: %#v", html)
+	}
+
+	asset := detectPreviewCapability(project, "logo.svg")
+	if !asset.Available || asset.Kind != "file" || asset.Entry != "logo.svg" || asset.EntryMeta == nil || asset.EntryMeta.Kind != "svg" {
+		t.Fatalf("active previewable asset should bypass the dev server: %#v", asset)
+	}
+}
+
+func TestMarkdownPreviewEscapesRawHTML(t *testing.T) {
+	doc := markdownPreviewDocument("docs/README.md", "# Title\n\n<script>alert(1)</script>\n\n**bold** and `code`")
+	if !strings.Contains(doc, "<h1>Title</h1>") {
+		t.Fatalf("markdown heading was not rendered: %s", doc)
+	}
+	if strings.Contains(doc, "<script>alert(1)</script>") || !strings.Contains(doc, "&lt;script&gt;alert(1)&lt;/script&gt;") {
+		t.Fatalf("markdown raw HTML was not escaped: %s", doc)
+	}
+	if !strings.Contains(doc, "<strong>bold</strong>") || !strings.Contains(doc, "<code>code</code>") {
+		t.Fatalf("markdown inline formatting missing: %s", doc)
+	}
+	if !strings.Contains(doc, "<base href=\"/docs/\">") {
+		t.Fatalf("markdown relative base href missing: %s", doc)
+	}
+}
+
 func TestDetectPreviewURLAcceptsLoopbackOnly(t *testing.T) {
 	cases := map[string]string{
 		"Local: http://localhost:5173/":  "http://localhost:5173/",
@@ -120,6 +190,51 @@ func TestDetectPreviewURLAcceptsLoopbackOnly(t *testing.T) {
 		if got := detectPreviewURL(input); got != want {
 			t.Fatalf("detectPreviewURL(%q)=%q want %q", input, got, want)
 		}
+	}
+}
+
+func TestRunningPreviewSnapshotReportsActualMode(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "package.json"), []byte(`{"scripts":{"dev":"vite"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "logo.svg"), []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := &appState{project: project}
+	manager := newPreviewManager(state)
+	manager.project = project
+	manager.kind = "dev-server"
+	manager.command = "npm run dev"
+
+	snapshot := manager.snapshot("logo.svg")
+	if snapshot.Kind != "dev-server" || snapshot.Entry != "" {
+		t.Fatalf("running snapshot must describe the actual dev-server mode before switching: %#v", snapshot)
+	}
+}
+
+func TestPreviewCapabilityRoute(t *testing.T) {
+	project := t.TempDir()
+	state := &appState{project: project}
+	mux := http.NewServeMux()
+	registerLocalProcessRoutes(mux, state)
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	response, err := http.Get(server.URL + "/local/preview/capabilities")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("preview capability route status=%d", response.StatusCode)
+	}
+	var registry previewCapabilityRegistry
+	if err := json.NewDecoder(response.Body).Decode(&registry); err != nil {
+		t.Fatal(err)
+	}
+	if registry.Version != 1 || len(registry.Capabilities) < 7 {
+		t.Fatalf("unexpected preview capability registry response: %#v", registry)
 	}
 }
 
@@ -143,7 +258,7 @@ func TestStaticPreviewRoutesAndCSP(t *testing.T) {
 		t.Fatal(err)
 	}
 	statusRes.Body.Close()
-	if !before.Available || before.Kind != "static" || before.Running {
+	if !before.Available || before.Kind != "file" || before.Running {
 		t.Fatalf("before=%#v", before)
 	}
 
@@ -274,6 +389,62 @@ func TestStaticPreviewCanSwitchEntriesWithoutRestartingServer(t *testing.T) {
 	}
 	if len(second.Entries) != 2 {
 		t.Fatalf("running static preview should still expose all HTML choices: %#v", second)
+	}
+}
+
+func TestFilePreviewCanSwitchBetweenDifferentPreviewKindsOnOneServer(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "hello.html"), []byte("<h1>hello</h1>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "logo.svg"), []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "README.md"), []byte("# Preview"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	state := &appState{project: project}
+	manager := newPreviewManager(state)
+	defer manager.stop()
+
+	html, err := manager.start("hello.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	htmlURL, err := url.Parse(html.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if html.EntryMeta == nil || html.EntryMeta.Kind != "html" {
+		t.Fatalf("unexpected HTML entry metadata: %#v", html)
+	}
+
+	svg, err := manager.start("logo.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	svgURL, err := url.Parse(svg.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if svg.EntryMeta == nil || svg.EntryMeta.Kind != "svg" || !strings.HasSuffix(svg.URL, "/logo.svg") {
+		t.Fatalf("SVG preview did not switch correctly: %#v", svg)
+	}
+	if htmlURL.Host != svgURL.Host {
+		t.Fatalf("file preview should reuse one loopback server: %q -> %q", htmlURL.Host, svgURL.Host)
+	}
+
+	md, err := manager.start("README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mdURL, err := url.Parse(md.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if md.EntryMeta == nil || md.EntryMeta.Kind != "markdown" || mdURL.Host != htmlURL.Host || mdURL.Path != "/.tl-preview/markdown" {
+		t.Fatalf("Markdown preview did not use the generic renderer route: %#v", md)
 	}
 }
 

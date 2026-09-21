@@ -52,16 +52,31 @@ This process layer is also reused by higher-level features such as Live Preview 
 
 ## Live Web Preview
 
-Live Preview has two supported paths:
+Live Preview is now capability-driven rather than HTML-specific. The launcher owns a versioned Preview Capability Registry exposed at:
 
-1. static HTML is served by a TL Studio-owned loopback-only preview server. An explicitly active HTML file from the Editor takes priority; otherwise a root `index.html` is the default, a single discovered `.html`/`.htm` file is selected automatically, and multiple HTML entries are exposed through a Browser-side selector that remains available while Preview is live;
-2. supported Node projects with a `package.json` `dev` script run that dev server through the process manager and TL Studio discovers its reported loopback URL.
+- `GET /local/preview/capabilities`
 
-Static entry discovery stays project-scoped, does not follow symlink entries, and skips `.git` and `node_modules`. While a static Preview is open, Editor tab activation events automatically switch the preview entry when the newly active tab is an HTML file; non-HTML tabs leave the current entry unchanged. Switching static entries reuses the same loopback server and only changes the iframe entry URL, so relative assets keep working without restarting the server. The floating Preview window persists its geometry and exposes a dedicated left-edge width resize handle for side-by-side editing.
+The registry maps supported file extensions to TL Studio preview concepts. Current capabilities are:
 
-Preview content intentionally runs on a **separate loopback origin** from the TL Studio control origin. Project JavaScript must not share an origin with TL Studio's `/local/*` control APIs.
+- HTML: `.html`, `.htm`
+- SVG
+- raster/browser-native images: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.avif`, `.ico`, `.bmp`, `.apng`
+- PDF
+- video: `.mp4`, `.webm`, `.ogv`, `.m4v`
+- audio: `.mp3`, `.wav`, `.ogg`, `.oga`, `.m4a`, `.aac`, `.flac`
+- Markdown: `.md`, `.markdown`, `.mdown`
 
-Only loopback preview URLs are accepted. Static preview file serving remains project-boundary checked and rejects traversal/symlink escapes. The browser Preview window is only a view/controller for that isolated local preview origin.
+Browser-native file previews are served by the same TL Studio-owned loopback-only file preview server. Markdown uses a TL Studio-owned safe renderer on that preview origin: raw HTML is escaped, common headings/lists/blockquote/code/strong/emphasis are rendered, and a `<base>` path keeps relative project resources anchored to the Markdown file's directory.
+
+The Browser does not hard-code preview extensions. It loads the Preview Capability Registry and uses it to decide whether the active Editor tab can replace the current Preview entry. While Preview is open, activating a previewable file automatically switches to that file. Activating a non-previewable code/text file leaves the current Preview unchanged. File mutations continue to reload the active file Preview.
+
+Node projects keep project-aware behavior: when the active previewable file is HTML and a `package.json` `dev` script exists, TL Studio runs the project's dev server instead of serving the raw HTML file. Activating a standalone previewable asset such as an image, PDF, audio/video file, or Markdown document temporarily switches to file Preview; returning to HTML restores the dev-server path.
+
+File discovery stays project-scoped, does not follow symlink entries, skips `.git` and `node_modules`, and is bounded. Switching between file previews reuses the same loopback server whenever possible. The floating Preview window persists its geometry and exposes a dedicated left-edge width resize handle for side-by-side editing.
+
+Preview content intentionally runs on a **separate loopback origin** from the TL Studio control origin. Project content must not share an origin with TL Studio's `/local/*` control APIs.
+
+Only loopback preview URLs are accepted. File serving remains project-boundary checked and rejects traversal/symlink escapes. The Browser Preview window is only a view/controller for that isolated local preview origin.
 
 ## Request flow
 
