@@ -62,15 +62,16 @@ func TestBrowserSessionReadsUseTLStudioSemanticContract(t *testing.T) {
 	}
 }
 
-func TestSessionContractKeepsExecutionAndPermissionOutsideReadModel(t *testing.T) {
+func TestSessionContractSeparatesReadModelFromCommandAndPermissionContracts(t *testing.T) {
 	source := readBrowserSource(t, "runtime-api.ts")
 	for _, expected := range []string{
-		"promptAsync:",
+		"sessionCommands: {",
+		"run:",
 		"abort:",
 		"/local/permissions",
 	} {
 		if !strings.Contains(source, expected) {
-			t.Fatalf("execution/permission boundary unexpectedly changed: missing %q", expected)
+			t.Fatalf("session/permission boundary unexpectedly changed: missing %q", expected)
 		}
 	}
 

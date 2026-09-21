@@ -148,8 +148,8 @@ import { K } from "./kernel";
     try {
       // Abort defensively even when the session belongs to a different project;
       // active-session status is scoped to the currently open directory.
-      await K.api.sessions.abort(session.id, { scope: "tree", directory }).catch(() => {});
-      await K.api.sessions.remove(session.id, { directory });
+      await K.api.sessionCommands.abort(session.id, { scope: "tree", directory }).catch(() => {});
+      await K.api.sessionCommands.remove(session.id, { directory });
       if (K.state.session?.id === session.id) {
         K.state.changes = [];
         K.newSession();

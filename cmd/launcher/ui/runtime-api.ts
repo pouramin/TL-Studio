@@ -9,7 +9,6 @@ import { K } from "./kernel";
   const body = (value: any) => ({ body: json(value) });
   const unwrapData = (payload: any) => payload && typeof payload === "object" && "data" in payload ? payload.data : payload;
   const request = (path: string, options: RequestInit = {}) => K.request(`/runtime${path}`, options);
-  const wrapData = (data: any) => ({ data });
   const hostedMeta = { providerID: "", preferredModels: [] };
   const applyHostedMeta = (value: any) => {
     if (value?.providerID) hostedMeta.providerID = String(value.providerID);
@@ -113,28 +112,27 @@ import { K } from "./kernel";
       changes: (sessionID: any, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/changes`, { directory })),
     },
 
-    sessions: {
-      create: async (input: any = {}) => {
-        const payload: any = {};
-        if (input.parentID) payload.parentID = input.parentID;
-        if (input.title) payload.title = input.title;
-        return wrapData(unwrapData(await request(route("/session"), { method: "POST", ...body(payload) })));
-      },
-      update: async (sessionID: any, input: any = {}, { directory }: any = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), {
-        method: "PATCH", ...body(input),
-      }))),
-      remove: async (sessionID: any, { directory }: any = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), { method: "DELETE" }))),
-      promptAsync: (sessionID: any, { text, parts, agent, model, variant, messageID, directory }: any = {}) => {
-        const payload = {
-          parts: Array.isArray(parts) && parts.length ? parts : [{ type: "text", text: text || "" }],
-          ...(messageID ? { messageID } : {}),
-          ...(agent ? { agent } : {}),
-          ...(model ? { model: wireModel(model) } : {}),
-          ...(variant ? { variant } : {}),
-        };
-        return request(route(`/session/${enc(sessionID)}/prompt_async`, {}, directory), { method: "POST", ...body(payload) });
-      },
-      abort: (sessionID: any, { scope, directory }: any = {}) => request(route(`/session/${enc(sessionID)}/abort`, { scope }, directory), { method: "POST" }),
+    sessionCommands: {
+      create: (input: TLStudioSessionCreateInput = {}, { directory = projectDirectory() } = {}) => K.request(
+        withQuery("/local/sessions", { directory }),
+        { method: "POST", ...body(input) },
+      ),
+      update: (sessionID: string, input: TLStudioSessionUpdateInput, { directory = projectDirectory() } = {}) => K.request(
+        withQuery(`/local/sessions/${enc(sessionID)}`, { directory }),
+        { method: "PATCH", ...body(input) },
+      ),
+      remove: (sessionID: string, { directory = projectDirectory() } = {}) => K.request(
+        withQuery(`/local/sessions/${enc(sessionID)}`, { directory }),
+        { method: "DELETE" },
+      ),
+      run: (sessionID: string, input: TLStudioSessionRunInput = {}, { directory = projectDirectory() } = {}) => K.request(
+        withQuery(`/local/sessions/${enc(sessionID)}/runs`, { directory }),
+        { method: "POST", ...body(input) },
+      ),
+      abort: (sessionID: string, { scope, directory = projectDirectory() }: { scope?: string; directory?: string } = {}) => K.request(
+        withQuery(`/local/sessions/${enc(sessionID)}/abort`, { directory }),
+        { method: "POST", ...body({ ...(scope ? { scope } : {}) }) },
+      ),
     },
 
     // Read-only compatibility bridge for sessions created during TL Studio's

@@ -213,21 +213,17 @@ import { K } from "./kernel";
   };
 
   K.createSession = async () => {
-    const input: any = {};
     const agent = K.els.agentSelect.value || undefined;
     const model = K.selectedModel();
-    if (agent) input.agent = agent;
-    if (model) input.model = model;
-    const created = (await K.api.sessions.create(input))?.data;
-    if (!created?.id) throw new Error("Runtime did not return a session ID");
-    const session = await K.api.sessionView.get(created.id).catch(() => null);
-    K.state.session = session || { id: created.id, title: created.title || "", directory: K.state.local?.project || "" };
+    const created = await K.api.sessionCommands.create();
+    if (!created?.id) throw new Error("TL Studio did not return a session ID");
+    K.state.session = created;
     if (agent) K.state.session.agent = agent;
     if (model) K.state.session.model = model;
     K.showConversation();
     K.renderSessionHeader();
     await K.loadSessions().catch(() => {});
-    return session;
+    return K.state.session;
   };
 
   K.ensureSessionSelection = () => {
@@ -358,7 +354,7 @@ import { K } from "./kernel";
       });
       K.renderMessages();
 
-      await K.api.sessions.promptAsync(K.state.session!.id, { text, agent, model, variant: model?.variant });
+      await K.api.sessionCommands.run(K.state.session!.id, { text, agent, model, variant: model?.variant });
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       K.renderMessages();
       K.startSessionPolling(startedAt);
