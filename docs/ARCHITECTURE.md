@@ -20,7 +20,7 @@ Implementation-specific API compatibility details are documented in [`KILO_API_C
 
 Static HTML/CSS and compiled JavaScript are embedded in the launcher at build time. Browser application source is maintained in TypeScript under `cmd/launcher/ui`; `cmd/launcher/web/*.js` is build output. The normal TL Studio control surface talks only to the launcher origin.
 
-The browser IDE keeps one in-memory buffer per open editor tab. User-initiated reads, saves, creates, renames, and deletes go through launcher-owned `/local/*` routes. File previews include a SHA-256 revision token; normal saves send that token back so an external edit by the agent, Git, or another process cannot be silently overwritten. A deliberate force-save is a separate explicit action after a conflict.
+The browser IDE keeps one in-memory buffer per open editor tab. User-initiated reads, saves, creates, renames, and deletes go through launcher-owned `/local/*` routes. **Show in Folder** uses the launcher-owned `POST /local/reveal` route; the launcher resolves the requested path through the same project boundary before invoking the native file manager (`explorer.exe /select` on Windows, `open -R` on macOS, parent-folder `xdg-open` on Linux). File previews include a SHA-256 revision token; normal saves send that token back so an external edit by the agent, Git, or another process cannot be silently overwritten.
 
 Runtime file/session events trigger workspace reconciliation. Clean open buffers follow disk changes automatically, while dirty buffers are preserved and marked when the disk version changes or disappears.
 
@@ -67,7 +67,7 @@ The registry maps supported file extensions to TL Studio preview concepts. Curre
 - Markdown: `.md`, `.markdown`, `.mdown`
 - plain text: `.txt`, `.text`, `.log`
 
-Browser-native image/video/audio previews are served by the same TL Studio-owned loopback-only file preview server. Markdown and plain text use TL Studio-owned safe HTML renderers on that preview origin; raw text/HTML is escaped before presentation. PDF uses a TL Studio-owned wrapper document containing an inline `object/embed`, while the underlying PDF response explicitly sends `Content-Type: application/pdf` and `Content-Disposition: inline`.
+Browser-native image/video/audio previews are served by the same TL Studio-owned loopback-only file preview server. Markdown and plain text use TL Studio-owned safe HTML renderers on that preview origin; raw text/HTML is escaped before presentation. PDF is served directly from a dedicated TL Studio preview route with `Content-Type: application/pdf`, `Content-Disposition: inline`, and byte-range support so the browser's native PDF viewer receives the document as the top-level content of the Preview iframe.
 
 The Browser does not hard-code preview extensions. It loads the Preview Capability Registry and uses it to decide whether the active Workspace tab can replace the current Preview entry. Text-editable preview types such as HTML, SVG, Markdown, and plain text stay normal editor tabs. Binary media capabilities such as raster images, PDF, video, and audio open as read-only Workspace tabs: they carry path/type metadata, publish the same active-tab event, and never create a Monaco text model. While Preview is open, activating any previewable tab automatically switches to that file. Activating a non-previewable code file leaves the current Preview unchanged.
 
