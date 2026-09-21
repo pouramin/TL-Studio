@@ -29,6 +29,7 @@ type sessionView struct {
 	ParentID  string           `json:"parentID,omitempty"`
 	Agent     string           `json:"agent,omitempty"`
 	Model     *sessionModelRef `json:"model,omitempty"`
+	Execution string           `json:"execution,omitempty"`
 	CreatedAt int64            `json:"createdAt,omitempty"`
 	UpdatedAt int64            `json:"updatedAt,omitempty"`
 }
@@ -161,9 +162,7 @@ func (c *sessionReadContract) setNativeStatusProvider(provider nativeSessionStat
 }
 
 func sessionUsesNativeExecution(session sessionView) bool {
-	return session.Model != nil &&
-		strings.TrimSpace(session.Model.ProviderID) != "" &&
-		strings.TrimSpace(session.Model.ProviderID) != runtimeHostedProviderID
+	return strings.TrimSpace(session.Execution) == "native"
 }
 
 func (c *sessionReadContract) runtimeGet(ctx context.Context, route, directory string, query url.Values) (json.RawMessage, error) {
