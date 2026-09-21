@@ -244,4 +244,29 @@ The browser must not call implementation-specific runtime routes directly. `/run
 
 The current engine remains replaceable. The launcher now expresses the active backend through a TL Studio-owned `runtimeEngine` interface plus a shared `runtimeBackend`. Generic launcher, provider, session, permission, and live-event code delegates binary discovery, subprocess construction, authentication, project request scoping, and request decoration to the selected engine adapter. Kilo-specific lifecycle and `x-kilo-directory` behavior are isolated in `runtime_kilo.go`; the current default adapter remains Kilo Code 7.6.2. New browser features must depend on TL Studio concepts such as sessions, messages, providers, permissions, questions, tools, and events rather than on the bundled engine's product name.
 
-The lightweight ownership portion of Phase 2 is now complete: provider/model definitions, custom-provider credentials, tool semantics, permission policy, session read/presentation, session commands, semantic session persistence, interactive-question semantics, and Browser-facing live-event projection are TL Studio-owned. The two remaining heavy Phase 2 milestones are tool-execution ownership and the Agent execution loop. Until those move inward, the current engine remains the execution authority behind the adapters.
+Phase 2 ownership is complete for the supported native coding path. TL Studio owns provider/model definitions, custom-provider credentials, tool semantics and executable handlers, permission policy/enforcement, session read/commands/persistence, interactive-question semantics, Browser-facing live events, direct model clients, and the model/tool/model Agent loop. The native tool executor reuses TL Studio's existing file, search, and process subsystems and rejects unknown tools, path escapes, unsafe remembered permissions, and unbounded execution.\n\nSupported custom providers use TL Studio native execution by default. The bundled Kilo adapter remains a compatibility path for hosted Kilo authentication/models and capabilities that are not yet implemented by the native executor. Generic product code must continue to use capability/product boundaries rather than Kilo-specific routes.
+
+
+## Native Agent runtime
+
+The native coding path is owned by TL Studio and follows this execution flow:
+
+```text
+semantic session
+→ resolve TL Studio provider/model + credential
+→ direct provider request
+→ normalized streamed model response
+→ TL Studio tool call
+→ TL Studio permission policy / user approval
+→ TL Studio Tool Executor
+→ semantic tool result
+→ next provider request
+→ final assistant response
+→ TL Studio session persistence + live events
+```
+
+The initial native executable set covers project file read/list/write/edit, project content search, and project-scoped terminal commands. File operations reuse the existing project-boundary and symlink protections. Terminal execution reuses the local process manager and propagates timeout/cancellation to process termination.
+
+Explicit guards cap Agent iterations, consecutive tool rounds, tools per round, and repeated identical calls. Abort cancels model requests and tool/process execution, and native run state is projected through the existing semantic session status/event contracts.
+
+Direct provider execution is isolated behind the native model interface. Current supported protocols are OpenAI-compatible Chat Completions, OpenAI Responses, and Anthropic Messages. Hosted Kilo authentication remains engine-specific and therefore stays behind the Kilo compatibility adapter.
