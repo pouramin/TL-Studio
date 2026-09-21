@@ -119,6 +119,7 @@ func TestSessionCommandRoutesUseEngineAdapterAndSemanticSurface(t *testing.T) {
 	}
 	read := newSessionReadContractWithBackend(state, backend)
 	read.history = newProjectHistoryStoreForTest(t.TempDir() + "/projects.json")
+	read.store = newSessionPersistenceStore(t.TempDir()+"/sessions", engine.ID())
 	read.history.remember(project)
 	commands := newSessionCommandContract(state, backend, read)
 
@@ -193,6 +194,7 @@ func TestSessionCommandRoutesRejectInvalidRun(t *testing.T) {
 	}
 	read := newSessionReadContractWithBackend(state, backend)
 	read.history = newProjectHistoryStoreForTest(t.TempDir() + "/projects.json")
+	read.store = newSessionPersistenceStore(t.TempDir()+"/sessions", engine.ID())
 	commands := newSessionCommandContract(state, backend, read)
 	mux := http.NewServeMux()
 	registerSessionCommandRoutes(mux, commands)

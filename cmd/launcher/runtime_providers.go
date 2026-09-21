@@ -317,6 +317,7 @@ type runtimeProviderManager struct {
 	state        *appState
 	backend      *runtimeBackend
 	store        *providerRegistryStore
+	credentials  providerCredentialStore
 	bootstrapMu  sync.Mutex
 	bootstrapped bool
 }
@@ -336,9 +337,10 @@ func newRuntimeProviderManager(state *appState, backendURL, username, password s
 
 func newRuntimeProviderManagerWithBackend(state *appState, backend *runtimeBackend) *runtimeProviderManager {
 	return &runtimeProviderManager{
-		state:   state,
-		backend: backend,
-		store:   newProviderRegistryStore(providerRegistryPath()),
+		state:       state,
+		backend:     backend,
+		store:       newProviderRegistryStore(providerRegistryPath()),
+		credentials: newProviderCredentialStore(),
 	}
 }
 
@@ -646,6 +648,30 @@ func (m *runtimeProviderManager) ensureBootstrapped(ctx context.Context) error {
 	if err := m.syncAll(ctx, providers); err != nil {
 		return err
 	}
+
+	restoredCredential := false
+	for _, provider := range providers {
+		if m.credentials == nil {
+			break
+		}
+		key, credentialErr := m.credentials.Get(provider.ID)
+		if errors.Is(credentialErr, errCredentialNotFound) {
+			continue
+		}
+		if credentialErr != nil {
+			return credentialErr
+		}
+		if err := m.setCredential(ctx, provider.ID, key); err != nil {
+			return err
+		}
+		restoredCredential = true
+	}
+	if restoredCredential {
+		if err := m.dispose(ctx); err != nil {
+			return err
+		}
+	}
+
 	m.bootstrapped = true
 	return nil
 }
@@ -887,13 +913,31 @@ func registerRuntimeProviderRoutes(mux *http.ServeMux, manager *runtimeProviderM
 			writeProviderManagerError(w, err)
 			return
 		}
+		if strings.TrimSpace(input.APIKey) != "" {
+			if manager.credentials == nil {
+				writeProviderManagerError(w, errors.New("TL Studio credential store is unavailable"))
+				return
+			}
+			if err := manager.credentials.Put(provider.ID, input.APIKey); err != nil {
+				writeProviderManagerError(w, err)
+				return
+			}
+		}
 		if err := manager.syncProvider(r.Context(), provider); err != nil {
 			writeProviderManagerError(w, err)
 			return
 		}
-		if err := manager.setCredential(r.Context(), provider.ID, input.APIKey); err != nil {
-			writeProviderManagerError(w, err)
-			return
+		if manager.credentials != nil {
+			key, credentialErr := manager.credentials.Get(provider.ID)
+			if credentialErr == nil {
+				if err := manager.setCredential(r.Context(), provider.ID, key); err != nil {
+					writeProviderManagerError(w, err)
+					return
+				}
+			} else if !errors.Is(credentialErr, errCredentialNotFound) {
+				writeProviderManagerError(w, credentialErr)
+				return
+			}
 		}
 		if err := manager.dispose(r.Context()); err != nil {
 			writeProviderManagerError(w, err)
@@ -922,6 +966,12 @@ func registerRuntimeProviderRoutes(mux *http.ServeMux, manager *runtimeProviderM
 		if err := manager.deleteRuntimeProvider(r.Context(), id); err != nil {
 			writeProviderManagerError(w, err)
 			return
+		}
+		if manager.credentials != nil {
+			if err := manager.credentials.Delete(id); err != nil {
+				writeProviderManagerError(w, err)
+				return
+			}
 		}
 		if err := manager.store.remove(id); err != nil {
 			writeProviderManagerError(w, err)

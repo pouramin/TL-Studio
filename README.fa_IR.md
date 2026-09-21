@@ -8,7 +8,7 @@
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.21</strong> · نسخه Stable همچنان v0.2.1 است.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.22</strong> · نسخه Stable همچنان v0.2.1 است.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -44,10 +44,12 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **File attachment** — ارسال تصویر، PDF و فایل‌های متنی/کد؛ همراه با Multi-select، Drag & Drop و Paste از Clipboard.
 - **Tool Registry خود TL Studio** — Toolهای شناخته‌شده‌ی Runtime به نام، Category، Capability، Permission class و Presentation metadata متعلق به TL Studio نگاشت می‌شوند.
 - **نمایش زنده‌ی فعالیت Agent** — نمایش Reasoning و Toolها همراه با وضعیت Run و semantic metadata خود TL Studio.
-- **Permission Policy خود TL Studio و Question** — Allow یک‌باره، ذخیره‌ی Ruleهای غیرحساس به‌صورت Project-scoped داخل TL Studio، Forget از Settings، Reject و پاسخ به سؤال‌های تعاملی.
+- **Permission Policy و Question متعلق به TL Studio** — Allow یک‌باره، ذخیره‌ی Ruleهای غیرحساس به‌صورت Project-scoped، Reject و پاسخ به سؤال‌های تعاملی؛ Questionها از قرارداد `/local/questions*` خود TL Studio عبور می‌کنند و UI به Route خام Runtime وابسته نیست.
 - **Stop و Recovery** — توقف Run فعال و بازیابی Sessionهای گیرکرده یا خطاهای Retryable.
 - **Session Read Model خود TL Studio** — Session، Message، Activity، Status، Usage metadata و Changes از Routeهای semantic متعلق به Launcher در `/local/sessions*` خوانده می‌شوند و UI دیگر برای Sessionهای فعلی به envelope خام Runtime وابسته نیست.
 - **Session Command Contract خود TL Studio** — ساخت، تغییر نام، حذف، اجرای Prompt/Run و توقف Session از Routeهای semantic متعلق به Launcher در `/local/sessions*` انجام می‌شود و Adapter موتور فعال آن‌ها را به API خصوصی همان موتور ترجمه می‌کند.
+- **Session Persistence متعلق به TL Studio** — metadata، transcript، activity/usage و changes نشست‌ها در State محلی TL Studio mirror می‌شوند؛ اگر history موتور از بین برود، تاریخچه همچنان قابل خواندن است و Session ذخیره‌شده را می‌توان محلی Rename یا Delete کرد.
+- **Credential Vault متعلق به TL Studio** — API Key مربوط به Custom Provider داخل `providers.json` یا Browser storage ذخیره نمی‌شود. روی Windows از DPAPI، روی macOS از Keychain و روی Linux از Secret Service در صورت وجود استفاده می‌شود؛ fallback محلی نیز به‌صورت رمز‌شده نگه‌داری می‌شود.
 - **مدیریت Session** — ساخت، ادامه، تغییر نام، حذف و جابه‌جایی Sessionها بین Projectهای اخیر.
 - **Project Usage** — نمایش مصرف هر Turn و مجموع Project شامل Token، Request، Time، Reasoning و Cache.
 - **Changes panel** — مشاهده‌ی فایل‌های تغییرکرده، تعداد خطوط اضافه/حذف‌شده و Patch.
@@ -85,7 +87,7 @@ TL Studio launcher (Go)
 
 TL Studio مالک لایه‌ی محصول است: Workspace، رابط کاربری، Launcher محلی، تعریف Provider و Model، semantic metadata مربوط به Toolها، semantic read model مربوط به Session، semantic projection مربوط به Live Eventها، Permission Policy در Scope هر Project، تجربه‌ی Project و Session، Recovery و Release packaging.
 
-تعریف Custom Providerها داخل State محلی خود TL Studio ذخیره می‌شود و Launcher آن‌ها را برای Runtime فعال ترجمه می‌کند. Credentialها فعلاً به Credential Store محلی Runtime سپرده می‌شوند و داخل Provider Registry خود TL Studio ذخیره نمی‌شوند.
+تعریف Custom Providerها و API Keyهای آن‌ها اکنون تحت مالکیت TL Studio هستند. تعریف Provider داخل Registry خود TL Studio می‌ماند و Credential در Vault جداگانه نگه‌داری می‌شود؛ Launcher در زمان لازم آن را برای اجرای مدل به Runtime فعال sync می‌کند.
 
 Runtime به‌عنوان یک لایه‌ی زیرساختی جدا پشت این مرز قرار می‌گیرد.
 

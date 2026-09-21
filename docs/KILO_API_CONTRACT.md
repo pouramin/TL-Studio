@@ -82,7 +82,7 @@ Normal Browser reads no longer consume the engine's session/message shapes direc
 
 The projection owns cross-project aggregation, flat session timestamps, semantic message roles/text, activity classification, usage, normalized status, and Changes fallback. Runtime-specific `info`, `parts`, `busy`, and `retry` shapes therefore stay on this compatibility side of the boundary.
 
-TL Studio now owns the Browser-facing mutation and run/abort semantics, but this does not yet move persistence or execution ownership. The engine still persists transcripts, executes models and tools, emits execution events, and runs the agent loop. The launcher translates semantic session commands through the active engine adapter. Browser-facing event semantics are projected by the launcher.
+TL Studio owns the Browser-facing mutation/run/abort semantics and now persists its own semantic session snapshots. Kilo still maintains its execution-side session state, executes models and tools, emits execution events, and runs the agent loop. Launcher reads refresh the TL Studio snapshot; if Kilo later loses a historical session, TL Studio can still present, rename, and delete its persisted semantic history. Resuming execution still requires a live runtime execution binding.
 
 ### Events
 
@@ -113,9 +113,19 @@ This registry does not replace Kilo's execution engine. Tool parts still arrive 
 
 ### Questions
 
-- `GET /runtime/question?directory=...`
-- `POST /runtime/question/:requestID/reply?directory=...`
-- `POST /runtime/question/:requestID/reject?directory=...`
+The current engine implementation still provides these private compatibility routes:
+
+- `GET /question?directory=...`
+- `POST /question/:requestID/reply?directory=...`
+- `POST /question/:requestID/reject?directory=...`
+
+Normal Browser code no longer calls those routes through `/runtime/*`. TL Studio exposes semantic question operations through:
+
+- `GET /local/questions?sessionID=...`
+- `POST /local/questions/:requestID/reply`
+- `POST /local/questions/:requestID/reject`
+
+The Kilo-specific route mapping is isolated in `runtime_kilo_questions.go`.
 
 ## Provider and model ownership
 
@@ -140,7 +150,7 @@ The browser uses TL Studio semantic routes:
 
 The launcher translates those definitions to the currently bundled engine internally. Current engine package identifiers such as `@ai-sdk/*`, overlay config shapes, and auth routes are not part of the browser contract.
 
-Credentials are intentionally excluded from `providers.json` and browser storage. Credential ownership is still delegated to the current engine's local credential store and can move later as a separate security milestone.
+Credentials remain intentionally excluded from `providers.json` and browser storage. Custom-provider API keys are now owned by TL Studio's credential vault and synchronized into Kilo's auth store only as an execution copy. Kilo's existing pre-migration secrets are not reverse-readable, so a legacy provider keeps working through the runtime store until the user saves a credential through TL Studio. Hosted Kilo OAuth remains an engine-specific account integration behind the hosted-provider adapter rather than part of the custom-provider API-key vault.
 
 ## Hosted provider mapping
 
@@ -176,7 +186,7 @@ The adapter owns browser-side runtime concerns such as:
 - response normalization
 - session/message access
 - model selection representation
-- question access
+- semantic question access through launcher-owned `/local/questions*` routes
 
 Permission policy is intentionally not a browser-to-engine adapter concern anymore; it is owned by the launcher-side TL Studio permission engine.
 - tool presentation resolves through the launcher-owned `/local/tools` semantic registry rather than raw runtime labels

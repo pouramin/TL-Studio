@@ -10,7 +10,7 @@ The launcher is also the filesystem trust boundary for browser IDE operations. B
 
 ### Bundled coding runtime
 
-The current implementation starts the bundled runtime on loopback with a random per-launch password. The runtime remains responsible for sessions, agents, actual tool execution, provider integrations, model execution, and filesystem operations initiated by the agent. TL Studio owns the semantic identity and presentation metadata for known tools through its Tool Registry.
+The current implementation starts the bundled runtime on loopback with a random per-launch password. The runtime remains responsible for active agent execution, actual tool execution, provider execution, model inference, and filesystem operations initiated by the agent. TL Studio owns semantic session persistence/history, product-facing session commands, interactive-question semantics, custom-provider credentials, and the semantic identity/presentation metadata for known tools.
 
 The runtime is behind TL Studio's product boundary. The browser never connects to it directly and never receives its server password.
 
@@ -123,7 +123,7 @@ TL Studio now owns both the Browser-facing **read model** and the Browser-facing
 - `POST /local/sessions/{sessionID}/runs`
 - `POST /local/sessions/{sessionID}/abort`
 
-The generic command contract does not contain engine-specific route names. The active runtime adapter translates these operations to its private implementation API. Session persistence, transcript storage, model execution, tool execution, and the Agent loop still remain in the runtime; TL Studio owns the product semantics and routing boundary, not yet the underlying execution engine. Live runtime events are consumed by the launcher and projected through TL Studio's semantic SSE boundary described below.
+The generic command contract does not contain engine-specific route names. The active runtime adapter translates these operations to its private implementation API. TL Studio now mirrors semantic session metadata, transcripts, activity/usage history, and changes into its own local persistence. Persisted history remains readable if the runtime loses its copy, and persisted-only sessions remain locally renameable/deletable. Model execution, tool execution, and the Agent loop still remain in the runtime. Live runtime events are consumed by the launcher and projected through TL Studio's semantic SSE boundary described below.
 
 A narrow read-only compatibility bridge remains for sessions created during an older TL Studio alpha protocol window. Legacy parsing is isolated to that compatibility path rather than defining the current session contract.
 
@@ -147,6 +147,19 @@ The event stream is intentionally a responsiveness signal rather than transcript
 
 The runtime remains the source of execution events. TL Studio owns their translation and Browser-facing meaning.
 
+
+## Interactive question ownership
+
+Interactive Agent questions now use a TL Studio-owned semantic contract:
+
+- `GET /local/questions?sessionID=...`
+- `POST /local/questions/{requestID}/reply`
+- `POST /local/questions/{requestID}/reject`
+
+The launcher validates session/request association, normalizes question headers, prompts, options, multiple-choice/custom-answer behavior, and answer payloads. The active engine adapter translates those semantic operations to the engine's private question API. Raw question routes and engine envelopes do not cross into Browser code.
+
+The runtime still decides *when* an executing Agent needs a question and blocks execution while waiting. TL Studio owns the product-facing question shape and reply/reject semantics.
+
 ## Provider and model ownership
 
 Provider/model configuration is the first Phase 2 capability moved behind a TL Studio-owned domain contract.
@@ -168,9 +181,9 @@ The browser uses only TL Studio routes for this surface:
 
 The launcher translates managed definitions to the current engine's provider config internally. Hosted provider IDs and preferred hosted models (including the current Auto Free route) are returned as runtime metadata rather than hard-coded by the browser.
 
-API keys are deliberately excluded from TL Studio's provider registry and browser storage. In this phase, credentials are still delegated to the bundled runtime's local credential store. Moving credential ownership to a TL Studio-controlled secure store is a separate future security milestone.
+API keys are deliberately excluded from TL Studio's provider registry and browser storage. TL Studio now owns custom-provider credentials in a separate local credential vault. Windows uses user-scoped DPAPI; macOS uses Keychain; Linux uses Secret Service when available; environments without a usable keyring use an AES-GCM encrypted private-file fallback with a separate `0600` local master key. The launcher restores owned credentials into the active runtime's execution store when needed. Existing legacy runtime-only credentials cannot be reverse-read or silently imported because the engine does not expose their plaintext; saving that provider again moves the credential under TL Studio ownership.
 
-Session persistence and execution remain in the runtime for now, while TL Studio owns the current session read/presentation contract and tool semantics. Permission request generation and enforcement also still happen in the runtime, but permission policy and remembered approval semantics are owned by TL Studio as described below.
+Semantic session persistence is now TL Studio-owned. The runtime remains the active execution binding for resumable Agent work, while TL Studio retains its own semantic history independently. Permission request generation and enforcement still happen in the runtime, but permission policy and remembered approval semantics are owned by TL Studio as described below.
 
 ## Tool Registry ownership
 
@@ -231,4 +244,4 @@ The browser must not call implementation-specific runtime routes directly. `/run
 
 The current engine remains replaceable. The launcher now expresses the active backend through a TL Studio-owned `runtimeEngine` interface plus a shared `runtimeBackend`. Generic launcher, provider, session, permission, and live-event code delegates binary discovery, subprocess construction, authentication, project request scoping, and request decoration to the selected engine adapter. Kilo-specific lifecycle and `x-kilo-directory` behavior are isolated in `runtime_kilo.go`; the current default adapter remains Kilo Code 7.6.2. New browser features must depend on TL Studio concepts such as sessions, messages, providers, permissions, questions, tools, and events rather than on the bundled engine's product name.
 
-Phase 1 established the runtime independence boundary. Provider/model definitions, tool semantics, permission policy, the current session read/presentation model, session command semantics, and Browser-facing live-event projection are now TL Studio-owned. Session persistence, question semantics, credential ownership, tool execution, and the Agent execution loop remain follow-up work behind the same boundary; future work should continue to move semantics inward without exposing engine-specific contracts to the browser.
+The lightweight ownership portion of Phase 2 is now complete: provider/model definitions, custom-provider credentials, tool semantics, permission policy, session read/presentation, session commands, semantic session persistence, interactive-question semantics, and Browser-facing live-event projection are TL Studio-owned. The two remaining heavy Phase 2 milestones are tool-execution ownership and the Agent execution loop. Until those move inward, the current engine remains the execution authority behind the adapters.
