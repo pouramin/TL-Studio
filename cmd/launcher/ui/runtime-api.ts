@@ -98,8 +98,8 @@
 
     tools: {
       registry: async () => {
-        const payload = await K.request("/local/tools");
-        return payload && typeof payload === "object" ? payload : { version: 0, tools: [] };
+        const payload = await K.request<any>("/local/tools");
+        return payload && typeof payload === "object" ? payload : { version: 0, tools: [], unknown: null };
       },
     },
 
@@ -113,7 +113,7 @@
 
     sessions: {
       create: async (input: any = {}) => {
-        const payload = {};
+        const payload: any = {};
         if (input.parentID) payload.parentID = input.parentID;
         if (input.title) payload.title = input.title;
         return wrapData(unwrapData(await request(route("/session"), { method: "POST", ...body(payload) })));
