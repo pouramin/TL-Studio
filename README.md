@@ -50,10 +50,10 @@ The release already includes the pinned local agent runtime.
 - **Session management** — create, resume, rename, delete, and switch sessions across recent projects.
 - **Project-scoped usage** — per-turn and project totals for tokens, requests, time, reasoning, and cache usage.
 - **Changes panel** — inspect changed files, addition/deletion counts, and patches.
-- **Project workspace** — writable local file explorer plus a locally bundled, lazy-loaded Monaco editor with multi-tab editing, find/replace, multi-cursor editing, save/create/rename/delete actions, and external-change reconciliation.
+- **Project workspace** — writable local file explorer plus a locally bundled, lazy-loaded Monaco editor with multi-tab editing, find/replace, multi-cursor editing, save/create/rename/delete actions, external-change reconciliation, and **Show in Folder** for revealing the active file in the native system file manager.
 - **Project Search** — fast project-wide text search with include/exclude filters and click-to-open results.
 - **Integrated terminal** — project-scoped command execution, output history, stop controls, and process-tree termination.
-- **Live Preview** — capability-driven local preview in a movable/resizable browser window. TL Studio follows the active previewable file across HTML, SVG/raster images, inline PDF, video, audio, rendered Markdown, and rendered plain text; Node projects still use their `package.json` dev server for HTML/app preview. Previewable binary media opens as a real read-only Workspace tab, while the floating Preview can be resized from all four edges and all four corners.
+- **Live Preview** — capability-driven local preview in a movable/resizable browser window. TL Studio follows the active previewable file across HTML, SVG/raster images, PDF, video, audio, rendered Markdown, and rendered plain text; PDF is served directly with inline MIME/disposition and HTTP range support for the browser's native PDF viewer. Previewable binary media opens as a real read-only Workspace tab, while the floating Preview can be resized from all four edges and all four corners.
 - **Appearance & editor settings** — System, Dark, and Light themes plus editor theme and separate UI/code/terminal font controls.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
 - **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
