@@ -1,11 +1,7 @@
 (() => {
   "use strict";
 
-  const $ = (id: string): HTMLElement => {
-    const element = document.getElementById(id);
-    if (!element) throw new Error(`Missing required UI element #${id}`);
-    return element;
-  };
+  const $ = (id: string): HTMLElement => document.getElementById(id)!;
   const K = window.KLU = {
     els: {
       projectName: $("projectName"), projectPath: $("projectPath"), pickProject: $("pickProject"), manualProject: $("manualProject"),
