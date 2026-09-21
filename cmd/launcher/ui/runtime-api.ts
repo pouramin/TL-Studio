@@ -3,26 +3,26 @@
 
   const K = window.KLU;
   const enc = encodeURIComponent;
-  const json = (value) => JSON.stringify(value);
-  const body = (value) => ({ body: json(value) });
-  const unwrapData = (payload) => payload && typeof payload === "object" && "data" in payload ? payload.data : payload;
-  const request = (path, options) => K.request(`/runtime${path}`, options);
-  const wrapData = (data) => ({ data });
+  const json = (value: any) => JSON.stringify(value);
+  const body = (value: any) => ({ body: json(value) });
+  const unwrapData = (payload: any) => payload && typeof payload === "object" && "data" in payload ? payload.data : payload;
+  const request = (path: any, options: any) => K.request(`/runtime${path}`, options);
+  const wrapData = (data: any) => ({ data });
   const hostedMeta = { providerID: "", preferredModels: [] };
-  const applyHostedMeta = (value) => {
+  const applyHostedMeta = (value: any) => {
     if (value?.providerID) hostedMeta.providerID = String(value.providerID);
     if (Array.isArray(value?.preferredModels)) hostedMeta.preferredModels = value.preferredModels.map(String);
   };
 
   const projectDirectory = () => K.state?.local?.project || "";
-  const withQuery = (path, params = {}) => {
+  const withQuery = (path: any, params = {}) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
     }
     return query.size ? `${path}?${query}` : path;
   };
-  const route = (path, params = {}, directory = projectDirectory()) => withQuery(path, {
+  const route = (path: any, params = {}, directory = projectDirectory()) => withQuery(path, {
     ...(directory ? { directory } : {}),
     ...params,
   });
@@ -35,12 +35,12 @@
     return query;
   };
 
-  const wireModel = (model) => model ? {
+  const wireModel = (model: any) => model ? {
     providerID: model.providerID,
     modelID: model.modelID || model.id,
   } : undefined;
 
-  const parseSSE = (handler) => (event) => {
+  const parseSSE = (handler: any) => (event) => {
     if (!event?.data) return;
     try {
       const decoded = JSON.parse(event.data);
@@ -50,7 +50,7 @@
     }
   };
 
-  const openLocalEventSource = (path, { onEvent, onOpen, onError } = {}) => {
+  const openLocalEventSource = (path: any, { onEvent, onOpen, onError } = {}) => {
     const source = new EventSource(path);
     if (onOpen) source.addEventListener("open", onOpen);
     if (onError) source.addEventListener("error", onError);
@@ -89,11 +89,11 @@
         const payload = unwrapData(await request("/providers/config")) || {};
         return { providers: Array.isArray(payload.providers) ? payload.providers : [] };
       },
-      upsert: async (providerID, { provider, apiKey } = {}) => unwrapData(await request(`/providers/config/${enc(providerID)}`, {
+      upsert: async (providerID: any, { provider, apiKey } = {}) => unwrapData(await request(`/providers/config/${enc(providerID)}`, {
         method: "PUT",
         ...body({ provider, ...(apiKey ? { apiKey } : {}) }),
       })),
-      remove: async (providerID) => unwrapData(await request(`/providers/config/${enc(providerID)}`, { method: "DELETE" })),
+      remove: async (providerID: any) => unwrapData(await request(`/providers/config/${enc(providerID)}`, { method: "DELETE" })),
     },
 
     tools: {
@@ -106,9 +106,9 @@
     sessionView: {
       list: ({ limit = 150 } = {}) => K.request(withQuery("/local/sessions", { limit })),
       status: ({ directory = projectDirectory() } = {}) => K.request(withQuery("/local/sessions/status", { directory })),
-      get: (sessionID, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}`, { directory })),
-      messages: (sessionID, { limit = 200, directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/messages`, { limit, directory })),
-      changes: (sessionID, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/changes`, { directory })),
+      get: (sessionID: any, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}`, { directory })),
+      messages: (sessionID: any, { limit = 200, directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/messages`, { limit, directory })),
+      changes: (sessionID: any, { directory = projectDirectory() } = {}) => K.request(withQuery(`/local/sessions/${enc(sessionID)}/changes`, { directory })),
     },
 
     sessions: {
@@ -118,11 +118,11 @@
         if (input.title) payload.title = input.title;
         return wrapData(unwrapData(await request(route("/session"), { method: "POST", ...body(payload) })));
       },
-      update: async (sessionID, input = {}, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), {
+      update: async (sessionID: any, input = {}, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), {
         method: "PATCH", ...body(input),
       }))),
-      remove: async (sessionID, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), { method: "DELETE" }))),
-      promptAsync: (sessionID, { text, parts, agent, model, variant, messageID, directory } = {}) => {
+      remove: async (sessionID: any, { directory } = {}) => wrapData(unwrapData(await request(route(`/session/${enc(sessionID)}`, {}, directory), { method: "DELETE" }))),
+      promptAsync: (sessionID: any, { text, parts, agent, model, variant, messageID, directory } = {}) => {
         const payload = {
           parts: Array.isArray(parts) && parts.length ? parts : [{ type: "text", text: text || "" }],
           ...(messageID ? { messageID } : {}),
@@ -132,7 +132,7 @@
         };
         return request(route(`/session/${enc(sessionID)}/prompt_async`, {}, directory), { method: "POST", ...body(payload) });
       },
-      abort: (sessionID, { scope, directory } = {}) => request(route(`/session/${enc(sessionID)}/abort`, { scope }, directory), { method: "POST" }),
+      abort: (sessionID: any, { scope, directory } = {}) => request(route(`/session/${enc(sessionID)}/abort`, { scope }, directory), { method: "POST" }),
     },
 
     // Read-only compatibility bridge for sessions created during TL Studio's
@@ -143,20 +143,20 @@
         const query = legacyPageQuery({ order, limit, cursor });
         return request(`/api/session${query.size ? `?${query}` : ""}`);
       },
-      messages: (sessionID, { order = "asc", limit = 500, cursor } = {}) => {
+      messages: (sessionID: any, { order = "asc", limit = 500, cursor } = {}) => {
         const query = legacyPageQuery({ order, limit, cursor });
         return request(`/api/session/${enc(sessionID)}/message${query.size ? `?${query}` : ""}`);
       },
     },
 
     permissions: {
-      list: async (sessionID) => {
+      list: async (sessionID: any) => {
         const query = new URLSearchParams();
         if (sessionID) query.set("sessionID", sessionID);
         const payload = await K.request(`/local/permissions${query.size ? `?${query}` : ""}`);
         return Array.isArray(payload) ? payload : [];
       },
-      reply: (sessionID, requestID, reply, message) => K.request(`/local/permissions/${enc(requestID)}/reply`, {
+      reply: (sessionID: any, requestID: any, reply: any, message: any) => K.request(`/local/permissions/${enc(requestID)}/reply`, {
         method: "POST",
         ...body({ sessionID, reply, ...(message ? { message } : {}) }),
       }),
@@ -164,18 +164,18 @@
         const payload = await K.request("/local/permissions/rules");
         return Array.isArray(payload) ? payload : [];
       },
-      removeRule: (ruleID) => K.request(`/local/permissions/rules/${enc(ruleID)}`, { method: "DELETE" }),
+      removeRule: (ruleID: any) => K.request(`/local/permissions/rules/${enc(ruleID)}`, { method: "DELETE" }),
     },
 
     questions: {
-      list: async (sessionID) => {
+      list: async (sessionID: any) => {
         const payload = unwrapData(await request(route("/question")));
         return (Array.isArray(payload) ? payload : []).filter((item) => !sessionID || item?.sessionID === sessionID);
       },
-      reply: (sessionID, requestID, answers) => request(route(`/question/${enc(requestID)}/reply`), {
+      reply: (sessionID: any, requestID: any, answers: any) => request(route(`/question/${enc(requestID)}/reply`), {
         method: "POST", ...body({ answers }),
       }),
-      reject: (sessionID, requestID) => request(route(`/question/${enc(requestID)}/reject`), { method: "POST" }),
+      reject: (sessionID: any, requestID: any) => request(route(`/question/${enc(requestID)}/reject`), { method: "POST" }),
     },
 
     hosted: {
@@ -191,7 +191,7 @@
         };
       },
       authorize: async () => unwrapData(await request(route("/hosted/authorize"), { method: "POST" })),
-      callback: async (signal) => unwrapData(await request(route("/hosted/callback"), { method: "POST", signal })),
+      callback: async (signal: any) => unwrapData(await request(route("/hosted/callback"), { method: "POST", signal })),
       disconnect: async () => unwrapData(await request("/hosted", { method: "DELETE" })),
     },
 
