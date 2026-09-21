@@ -9,29 +9,6 @@ import (
 	"strings"
 )
 
-func previewEscapedPath(value string) string {
-	parts := strings.Split(filepath.ToSlash(strings.TrimSpace(value)), "/")
-	for index, part := range parts {
-		parts[index] = urlPathEscape(part)
-	}
-	return "/" + strings.Join(parts, "/")
-}
-
-func urlPathEscape(value string) string {
-	var b strings.Builder
-	for _, r := range []byte(value) {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || strings.ContainsRune("-._~", rune(r)) {
-			b.WriteByte(r)
-			continue
-		}
-		const hex = "0123456789ABCDEF"
-		b.WriteByte('%')
-		b.WriteByte(hex[r>>4])
-		b.WriteByte(hex[r&15])
-	}
-	return b.String()
-}
-
 func previewDocumentShell(title, body string) string {
 	return "<!doctype html><html><head><meta charset=\"utf-8\">" +
 		"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
