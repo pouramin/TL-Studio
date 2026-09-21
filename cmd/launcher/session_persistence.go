@@ -262,7 +262,9 @@ func (s *sessionPersistenceStore) putMessages(session sessionView, messages []se
 		return err
 	}
 	snapshot.Session = session
-	snapshot.Messages = append([]sessionMessageView(nil), messages...)
+	if len(messages) > 0 || len(snapshot.Messages) == 0 {
+		snapshot.Messages = append([]sessionMessageView(nil), messages...)
+	}
 	if err := s.saveSnapshotLocked(snapshot); err != nil {
 		return err
 	}
