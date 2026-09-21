@@ -10,7 +10,7 @@ Current engine:
 - pinned version: `v7.6.2`
 - pinned version file: `/KILO_VERSION`
 - browser runtime adapter source: `cmd/launcher/ui/runtime-api.ts`
-- generated browser adapter: `cmd/launcher/web/runtime-api.js`
+- bundled Browser output: `cmd/launcher/web/browser.js`
 - launcher provider/hosted translation: `cmd/launcher/runtime_providers.go`
 
 TL Studio owns the browser-facing runtime namespace, provider/model registry, workspace APIs, release packaging, and product identity. Kilo-specific routes, environment variables, authentication, and provider implementation details stay behind that boundary.
@@ -53,16 +53,22 @@ The current engine's product layer exposes the visible `code` agent rather than 
 
 ### Sessions and messages
 
-- `GET /runtime/session?directory=...`
-- `POST /runtime/session?directory=...`
-- `GET /runtime/session/status?directory=...`
-- `GET /runtime/session/:sessionID?directory=...`
-- `GET /runtime/session/:sessionID/message?directory=...`
-- `POST /runtime/session/:sessionID/prompt_async?directory=...`
-- `POST /runtime/session/:sessionID/abort?directory=...`
-- `GET /runtime/session/:sessionID/diff?directory=...`
+The current engine implementation still provides these private session routes behind the launcher adapter:
 
-The pinned engine returns product messages in its current `info + parts` envelope. That envelope is now implementation-only for current sessions: the launcher projects it into TL Studio's `/local/sessions*` semantic read contract before the browser consumes it.
+- `GET /session?directory=...`
+- `POST /session?directory=...`
+- `GET /session/status?directory=...`
+- `GET /session/:sessionID?directory=...`
+- `PATCH /session/:sessionID?directory=...`
+- `DELETE /session/:sessionID?directory=...`
+- `GET /session/:sessionID/message?directory=...`
+- `POST /session/:sessionID/prompt_async?directory=...`
+- `POST /session/:sessionID/abort?directory=...`
+- `GET /session/:sessionID/diff?directory=...`
+
+The Browser no longer uses the mutation/execution routes above directly. TL Studio's launcher-owned session command contract exposes create, update, delete, run, and abort through `/local/sessions*`, while `runtime_kilo_sessions.go` owns translation to these Kilo-specific routes.
+
+The pinned engine returns product messages in its current `info + parts` envelope. That envelope is implementation-only for current sessions: the launcher projects it into TL Studio's `/local/sessions*` semantic read contract before the browser consumes it.
 
 ### TL Studio session read projection
 
@@ -76,7 +82,7 @@ Normal Browser reads no longer consume the engine's session/message shapes direc
 
 The projection owns cross-project aggregation, flat session timestamps, semantic message roles/text, activity classification, usage, normalized status, and Changes fallback. Runtime-specific `info`, `parts`, `busy`, and `retry` shapes therefore stay on this compatibility side of the boundary.
 
-This does not move mutation or execution ownership. Session create/update/delete, prompt/abort, persisted transcript storage, the event source, and the agent loop still use the engine through the runtime adapter. Browser-facing event semantics are now projected by the launcher.
+TL Studio now owns the Browser-facing mutation and run/abort semantics, but this does not yet move persistence or execution ownership. The engine still persists transcripts, executes models and tools, emits execution events, and runs the agent loop. The launcher translates semantic session commands through the active engine adapter. Browser-facing event semantics are projected by the launcher.
 
 ### Events
 
@@ -157,11 +163,11 @@ Authored browser runtime code lives in:
 
 `cmd/launcher/ui/runtime-api.ts`
 
-Generated browser JavaScript lives in:
+The Browser module graph is bundled into:
 
-`cmd/launcher/web/runtime-api.js`
+`cmd/launcher/web/browser.js`
 
-UI modules must use this TL Studio adapter and must not construct engine-specific routes directly.
+UI modules must use TL Studio-owned semantic contracts and must not construct engine-specific session mutation routes directly.
 
 The adapter owns browser-side runtime concerns such as:
 
