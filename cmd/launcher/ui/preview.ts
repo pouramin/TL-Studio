@@ -43,6 +43,10 @@
       <span id="previewKind">Web preview</span>
       <code id="previewURL">No preview URL yet</code>
     </div>
+    <div id="previewEntryRow" class="preview-entry-row hidden">
+      <span>HTML file</span>
+      <select id="previewEntry" aria-label="HTML file to preview"></select>
+    </div>
     <div id="previewEmpty" class="preview-empty">
       <strong>Preview this project</strong>
       <span id="previewHint">TL Studio can preview a root index.html or run a package.json dev script.</span>
@@ -62,13 +66,15 @@
     status: document.getElementById("previewStatus"),
     kind: document.getElementById("previewKind"),
     url: document.getElementById("previewURL"),
+    entryRow: document.getElementById("previewEntryRow"),
+    entry: document.getElementById("previewEntry"),
     empty: document.getElementById("previewEmpty"),
     hint: document.getElementById("previewHint"),
     logs: document.getElementById("previewLogs"),
     frame: document.getElementById("previewFrame"),
   };
 
-  K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null };
+  K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "" };
 
   const request = async (path, options = {}) => {
     const response = await fetch(path, {
@@ -102,6 +108,33 @@
   };
 
   const kindLabel = (kind) => kind === "dev-server" ? "Dev server" : kind === "static" ? "Static HTML" : "Web preview";
+  const isHTMLPath = (value) => /\.html?$/i.test(String(value || "").trim());
+  const activeHTMLEntry = () => isHTMLPath(K.state.activeEditorPath) ? String(K.state.activeEditorPath) : "";
+
+  const previewPath = (base = "/local/preview", entry = "") => {
+    const value = String(entry || "").trim();
+    return value ? `${base}?${new URLSearchParams({ entry: value })}` : base;
+  };
+
+  const renderEntryChoices = (snapshot) => {
+    const entries = Array.isArray(snapshot?.entries) ? snapshot.entries.filter(isHTMLPath) : [];
+    const signature = entries.join("\n");
+    const preferred = String(snapshot?.entry || activeHTMLEntry() || ui.entry?.value || "");
+    if (ui.entry && K.state.preview.entrySignature !== signature) {
+      K.state.preview.entrySignature = signature;
+      ui.entry.textContent = "";
+      for (const entry of entries) {
+        const option = document.createElement("option");
+        option.value = entry;
+        option.textContent = entry;
+        ui.entry.appendChild(option);
+      }
+    }
+    if (ui.entry && entries.includes(preferred)) ui.entry.value = preferred;
+    else if (ui.entry && entries.length && !entries.includes(ui.entry.value)) ui.entry.value = entries[0];
+    ui.entryRow?.classList.toggle("hidden", entries.length <= 1 || !!snapshot?.running);
+    return entries;
+  };
 
   const render = (snapshot) => {
     K.state.preview.snapshot = snapshot || null;
@@ -109,12 +142,14 @@
     const running = !!snapshot?.running;
     const url = snapshot?.url || "";
     const starting = running && snapshot?.kind === "dev-server" && !url;
+    const entries = renderEntryChoices(snapshot);
+    const needsChoice = snapshot?.kind === "static" && entries.length > 1 && !snapshot?.entry;
 
     ui.kind.textContent = kindLabel(snapshot?.kind);
     ui.status.textContent = url ? "Live" : starting ? "Starting…" : running ? "Running" : available ? "Ready" : "Unavailable";
     ui.url.textContent = url || "No preview URL yet";
     ui.url.title = url;
-    ui.start.disabled = !available || running;
+    ui.start.disabled = !available || running || (needsChoice && !ui.entry?.value);
     ui.stop.disabled = !running;
     ui.reload.disabled = !url;
     ui.external.disabled = !url;
@@ -150,7 +185,7 @@
   };
 
   const refreshStatus = async () => {
-    const snapshot = await request("/local/preview");
+    const snapshot = await request(previewPath("/local/preview", activeHTMLEntry()));
     render(snapshot);
     return snapshot;
   };
@@ -160,7 +195,8 @@
     setOpen(true);
     ui.start.disabled = true;
     try {
-      const snapshot = await request("/local/preview", { method: "POST" });
+      const requestedEntry = String(ui.entry?.value || activeHTMLEntry() || "").trim();
+      const snapshot = await request(previewPath("/local/preview", requestedEntry), { method: "POST" });
       render(snapshot);
       if (snapshot?.running && !snapshot?.url && !K.state.preview.poll) {
         K.state.preview.poll = window.setInterval(() => refreshStatus().catch(() => {}), 500);
@@ -200,10 +236,17 @@
     setOpen(opening);
     if (opening) {
       const snapshot = await refreshStatus().catch(() => null);
-      if (snapshot?.available && !snapshot?.running) await start();
+      const needsChoice = snapshot?.kind === "static" && Array.isArray(snapshot?.entries) && snapshot.entries.length > 1 && !snapshot?.entry;
+      if (snapshot?.available && !snapshot?.running && !needsChoice) await start();
     }
   });
   ui.close.addEventListener("click", () => setOpen(false));
+  ui.entry?.addEventListener("change", () => {
+    if (!K.state.preview.snapshot?.running) {
+      ui.start.disabled = !ui.entry.value;
+      ui.hint.textContent = ui.entry.value ? `Ready to preview ${ui.entry.value}.` : "Choose an HTML file to preview.";
+    }
+  });
   ui.start.addEventListener("click", start);
   ui.stop.addEventListener("click", () => stop());
   ui.reload.addEventListener("click", reload);
