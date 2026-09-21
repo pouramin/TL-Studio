@@ -12,7 +12,7 @@
   }
 
   const panel = document.getElementById("previewPanel");
-  const head = panel?.querySelector(".preview-head");
+  const head = panel?.querySelector<HTMLElement>(".preview-head");
   if (!panel || !head) return;
 
   const KEY = "tl-studio.preview-window";
@@ -65,7 +65,7 @@
 
   apply();
 
-  let edgeResize = null;
+  let edgeResize: { id: number; direction: string; startX: number; startY: number; left: number; top: number; right: number; bottom: number } | null = null;
   const startResize = (event: any) => {
     if (event.button !== 0) return;
     const handle = event.currentTarget;
@@ -132,9 +132,9 @@
     handle.addEventListener("pointercancel", endEdgeResize);
   }
 
-  let drag = null;
-  head.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 || event.target.closest("button, a, input, select")) return;
+  let drag: { id: number; dx: number; dy: number } | null = null;
+  head.addEventListener("pointerdown", (event: PointerEvent) => {
+    if (event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select")) return;
     const r = panel.getBoundingClientRect();
     drag = { id: event.pointerId, dx: event.clientX - r.left, dy: event.clientY - r.top };
     head.setPointerCapture?.(event.pointerId);
@@ -142,7 +142,7 @@
     event.preventDefault();
   });
 
-  head.addEventListener("pointermove", (event) => {
+  head.addEventListener("pointermove", (event: PointerEvent) => {
     if (!drag || drag.id !== event.pointerId) return;
     const r = panel.getBoundingClientRect();
     const vp = viewport();
@@ -161,7 +161,7 @@
   head.addEventListener("pointerup", endDrag);
   head.addEventListener("pointercancel", endDrag);
 
-  let resizeTimer = null;
+  let resizeTimer: number | null = null;
   if ("ResizeObserver" in window) {
     new ResizeObserver(() => {
       clearTimeout(resizeTimer);
