@@ -1,6 +1,7 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
 
   K.refreshAll = async () => {
     K.showError("");
@@ -61,86 +62,5 @@
     } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
-  const loadScript = (src: any, ready: any, warning: any) => new Promise<void>((resolve) => {
-    if (ready?.()) return resolve();
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = false;
-    script.onload = () => resolve();
-    script.onerror = () => {
-      console.warn(warning);
-      resolve();
-    };
-    document.head.appendChild(script);
-  });
-
-  const loadExtensions = async () => {
-    await loadScript(
-      "/ide-foundation.js",
-      () => K.__ideFoundationInstalled,
-      "[TL Studio] Browser IDE reconciliation extension failed to load",
-    );
-    await loadScript(
-      "/editor-enhancements.js",
-      () => K.__editorEnhancementsInstalled,
-      "[TL Studio] Editor enhancements failed to load",
-    );
-    await loadScript(
-      "/terminal.js",
-      () => K.__terminalInstalled,
-      "[TL Studio] Integrated terminal failed to load",
-    );
-    await loadScript(
-      "/preview.js",
-      () => K.__previewInstalled,
-      "[TL Studio] Live preview failed to load",
-    );
-    await loadScript(
-      "/preview-floating.js",
-      () => K.__previewFloatingInstalled,
-      "[TL Studio] Floating preview layout failed to load",
-    );
-    await loadScript(
-      "/search.js",
-      () => K.__projectSearchInstalled,
-      "[TL Studio] Project search UI failed to load",
-    );
-    await loadScript(
-      "/settings-enhancements.js",
-      () => K.__settingsEnhancementsInstalled,
-      "[TL Studio] Editor and font settings failed to load",
-    );
-    await loadScript(
-      "/attachments.js",
-      () => K.__attachmentsInstalled,
-      "[TL Studio] Composer attachments failed to load",
-    );
-    await loadScript(
-      "/diagnostics-ui.js",
-      () => K.__diagnosticsUiInstalled,
-      "[TL Studio] Session diagnostics UI failed to load",
-    );
-    await loadScript(
-      "/provider-recovery-ui.js",
-      () => K.__providerRecoveryInstalled,
-      "[TL Studio] Provider recovery UI failed to load",
-    );
-    await loadScript(
-      "/providers-ui.js",
-      () => K.__providersUiInstalled,
-      "[TL Studio] Custom provider settings UI failed to load",
-    );
-    await loadScript(
-      "/providers-settings-bridge.js",
-      () => K.__providersSettingsBridgeInstalled,
-      "[TL Studio] Custom provider settings bridge failed to load",
-    );
-    await loadScript(
-      "/legacy-sessions.js",
-      () => K.__legacySessionsInstalled,
-      "[TL Studio] Legacy session recovery failed to load",
-    );
-  };
-
-  loadExtensions().finally(init);
+  init();
 })();
