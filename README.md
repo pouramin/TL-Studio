@@ -8,7 +8,7 @@
   A fast local development workspace with AI built in.
 </p>
 
-<p align="center"><strong>Development branch: 0.3.0-alpha.21</strong> · Stable release remains v0.2.1.</p>
+<p align="center"><strong>Development branch: 0.3.0-alpha.22</strong> · Stable release remains v0.2.1.</p>
 
 <p align="center">
   <a href="https://github.com/pouramin/TL-Studio/releases"><img src="https://img.shields.io/github/v/release/pouramin/TL-Studio?sort=semver" alt="Release"></a>
@@ -44,10 +44,12 @@ The release already includes the pinned local agent runtime.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
 - **TL Studio Tool Registry** — known runtime tools are mapped to TL Studio-owned names, categories, capability metadata, permission classes, and presentation hints.
 - **Live agent activity** — compact Reasoning and Tool cards with live status updates using TL Studio tool semantics.
-- **TL Studio permission policies & questions** — approve one-time actions, remember project-scoped non-sensitive rules in TL Studio, forget saved rules from Settings, reject actions, and answer interactive questions.
+- **TL Studio permission policies & questions** — approve one-time actions, remember project-scoped non-sensitive rules in TL Studio, forget saved rules from Settings, reject actions, and answer interactive questions through launcher-owned `/local/questions*` semantics rather than raw runtime question routes.
 - **Stop & recovery** — interrupt active work and recover from stalled or retryable upstream failures.
 - **TL Studio session read model** — current sessions, messages, activity, status, usage metadata, and session changes are projected through launcher-owned semantic `/local/sessions*` contracts instead of exposing the runtime's raw message envelope to the product UI.
 - **TL Studio session command contract** — session create, rename, delete, run/prompt, and abort now use launcher-owned semantic `/local/sessions*` routes; the active engine adapter translates those commands to its private implementation API.
+- **TL Studio session persistence** — semantic session metadata, transcripts, usage/activity history, and changes are mirrored into TL Studio-owned local storage. History remains readable after runtime history loss, and persisted-only sessions can still be renamed or deleted locally.
+- **TL Studio credential vault** — custom-provider API keys are owned by TL Studio, never written to `providers.json` or browser storage, restored into the active runtime when needed, and protected with Windows DPAPI, macOS Keychain, Linux Secret Service when available, or an encrypted private-file fallback.
 - **Session management** — create, resume, rename, delete, and switch sessions across recent projects.
 - **Project-scoped usage** — per-turn and project totals for tokens, requests, time, reasoning, and cache usage.
 - **Changes panel** — inspect changed files, addition/deletion counts, and patches.
@@ -83,13 +85,13 @@ TL Studio launcher (Go)
             └─ provider execution / model inference
 ```
 
-TL Studio owns the workspace, product UI, local launcher, provider/model definitions, tool semantics/metadata, the semantic session read model, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions are persisted in TL Studio's local state and translated to the active runtime by the launcher. Provider credentials are currently delegated to the runtime's local credential store and are not written into TL Studio's provider registry. The runtime remains a replaceable infrastructure layer behind that product boundary.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, custom-provider credentials, tool semantics/metadata, semantic session persistence/read/command models, semantic question handling, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions and semantic session history are persisted in TL Studio's local state and translated/synchronized to the active runtime as needed. The runtime remains a replaceable execution infrastructure layer behind that product boundary.
 
 The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
 ## Runtime boundary
 
-TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Current session reads and session commands use launcher-owned `/local/sessions*` semantics, including create, rename, delete, run/prompt, and abort. Live Browser updates use launcher-owned `/local/events` semantic SSE. Remaining generic runtime capabilities stay behind the local `/runtime/*` adapter. Provider/model definitions, tool semantics, session presentation/read models, live-event presentation semantics, permission policy, project files, search, terminal, preview, and related workspace behavior are owned by TL Studio. Permission prompts use launcher-owned `/local/permissions*` routes so remembered approvals are not delegated to the bundled engine.
+TL Studio's browser and product UI depend on TL Studio-owned contracts, not on an engine-specific browser API. Current session reads, persistence, and session commands use launcher-owned `/local/sessions*` semantics; interactive questions use `/local/questions*`; permissions use `/local/permissions*`; and live Browser updates use `/local/events` semantic SSE. Custom-provider credentials are stored by TL Studio and synchronized into the active runtime only for execution. Remaining generic runtime capabilities stay behind the local `/runtime/*` adapter.
 
 The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party agent engine. The launcher now selects it through a TL Studio-owned `runtimeEngine` boundary: binary discovery, process startup, credentials, project request scoping, and engine-specific request decoration live in the Kilo adapter instead of generic launcher/session/provider/permission/event code. That engine remains an implementation detail behind TL Studio's runtime adapter rather than the public product identity. Engine-specific compatibility is isolated in [`docs/KILO_API_CONTRACT.md`](./docs/KILO_API_CONTRACT.md), and required attribution is kept in [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
