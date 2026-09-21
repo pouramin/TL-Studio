@@ -13,7 +13,7 @@
     presentation: "tool",
   });
 
-  const cleanDescriptor = (value) => {
+  const cleanDescriptor = (value: any) => {
     if (!value || typeof value !== "object") return null;
     return {
       id: String(value.id || ""),
