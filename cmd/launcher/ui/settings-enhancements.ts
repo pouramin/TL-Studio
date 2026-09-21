@@ -7,11 +7,11 @@
   const panel = document.querySelector('[data-settings-panel="general"]');
   if (!panel || document.getElementById("editorThemeSelect")) return;
 
-  const read = (key, fallback) => {
+  const read = (key: any, fallback: any) => {
     try { return localStorage.getItem(key) || fallback; }
     catch { return fallback; }
   };
-  const write = (key, value) => {
+  const write = (key: any, value: any) => {
     try { localStorage.setItem(key, value); } catch {}
   };
 
@@ -115,7 +115,7 @@
   controls.resetPreview.addEventListener("click", () => K.previewWindow?.reset?.());
 
   const permissionRules = document.getElementById("permissionRules");
-  const projectName = (value) => String(value || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Project";
+  const projectName = (value: any) => String(value || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Project";
   const renderPermissionRules = async () => {
     if (!permissionRules || !K.api?.permissions?.rules) return;
     permissionRules.textContent = "Loading…";
