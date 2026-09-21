@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -24,6 +25,13 @@ func TestPrivateFileCredentialStoreKeepsSecretOutOfProviderRegistry(t *testing.T
 	}
 	if info.Mode().Perm()&0o077 != 0 {
 		t.Fatalf("fallback credential file is too permissive: %o", info.Mode().Perm())
+	}
+	raw, err := os.ReadFile(providerCredentialPath("example-provider"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "super-secret") {
+		t.Fatal("fallback credential file contains the plaintext secret")
 	}
 
 	if err := store.Delete("example-provider"); err != nil {
