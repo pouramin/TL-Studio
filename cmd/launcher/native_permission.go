@@ -94,6 +94,7 @@ func (e *permissionEngine) AuthorizeNativeTool(
 	item := map[string]any{
 		"id":         requestID,
 		"sessionID":  strings.TrimSpace(sessionID),
+		"project":    strings.TrimSpace(project),
 		"permission": descriptor.PermissionClass,
 		"action":     descriptor.Name,
 		"patterns":   nativePermissionPatterns(descriptor, input),
@@ -205,6 +206,9 @@ func (e *permissionEngine) replyNativePermission(
 	}
 }
 
-func normalizePermissionProjectFromValue(_ map[string]any, fallback string) string {
+func normalizePermissionProjectFromValue(item map[string]any, fallback string) string {
+	if project, _ := item["project"].(string); strings.TrimSpace(project) != "" {
+		return strings.TrimSpace(project)
+	}
 	return fallback
 }
