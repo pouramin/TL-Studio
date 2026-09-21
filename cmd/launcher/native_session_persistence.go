@@ -103,3 +103,41 @@ func (s *sessionPersistenceStore) putNativeMessage(sessionID, directory string, 
 	}
 	return s.persistIndexLocked()
 }
+
+func (s *sessionPersistenceStore) markSessionExecution(sessionID, directory, execution string) error {
+	sessionID = strings.TrimSpace(sessionID)
+	directory = strings.TrimSpace(directory)
+	execution = strings.TrimSpace(execution)
+	if sessionID == "" || execution == "" {
+		return errors.New("session id and execution owner are required")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return err
+	}
+	session := s.sessions[sessionID]
+	if session.ID == "" {
+		session = sessionView{ID: sessionID, Directory: directory, CreatedAt: time.Now().UnixMilli()}
+	}
+	if session.Directory == "" {
+		session.Directory = directory
+	}
+	session.Execution = execution
+	session.UpdatedAt = time.Now().UnixMilli()
+	s.sessions[sessionID] = session
+
+	snapshot, err := s.loadSnapshotLocked(sessionID)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		snapshot = persistedSessionSnapshot{}
+	}
+	snapshot.Session = session
+	if err := s.saveSnapshotLocked(snapshot); err != nil {
+		return err
+	}
+	return s.persistIndexLocked()
+}
