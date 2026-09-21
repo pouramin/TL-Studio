@@ -38,6 +38,7 @@ interface TLStudioSessionModelRef {
   providerID?: string;
   id?: string;
   modelID?: string;
+  variant?: string;
 }
 
 interface TLStudioSessionView {
@@ -307,7 +308,7 @@ interface TLStudioState {
   legacySession: boolean;
   preview: TLStudioDynamicRecord;
   terminal: TLStudioDynamicRecord;
-  toolRegistry: TLStudioToolRegistry;
+  toolRegistry: TLStudioToolRegistry | null;
   changesLoading: boolean;
   sseSettling: boolean;
 }
