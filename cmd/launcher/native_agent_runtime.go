@@ -89,6 +89,11 @@ func (r *nativeAgentRuntime) Start(directory, sessionID string, input sessionRun
 	r.runs[sessionID] = nativeRunHandle{cancel: cancel, directory: directory}
 	r.mu.Unlock()
 
+	if err := r.store.markSessionExecution(sessionID, directory, "native"); err != nil {
+		r.finishRun(sessionID)
+		cancel()
+		return err
+	}
 	if err := r.store.recordAcceptedRun(sessionID, directory, input); err != nil {
 		r.finishRun(sessionID)
 		cancel()
