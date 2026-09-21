@@ -148,7 +148,7 @@ async function testRecovery() {
   K.state.activeSessions["session-1"] = { state: "running", active: true };
   K.api = {
     hosted: { providerID: "kilo" },
-    sessions: {
+    sessionCommands: {
       abort: async (sessionID, options) => {
         abortCalls += 1;
         assert.equal(sessionID, "session-1");
