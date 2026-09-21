@@ -151,7 +151,7 @@
     }
   };
   permissionRules?.addEventListener("click", async (event) => {
-    const button = event.target.closest?.("button[data-rule-id]");
+    const button = (event.target as Element | null)?.closest<HTMLButtonElement>("button[data-rule-id]");
     const id = button?.dataset?.ruleId;
     if (!id) return;
     button.disabled = true;
