@@ -34,9 +34,9 @@
   css.href = "/attachments.css";
   document.head.appendChild(css);
 
-  const composer = document.querySelector(".composer");
-  const bottom = composer?.querySelector(".composer-bottom");
-  const controls = bottom?.querySelector(".composer-context-controls");
+  const composer = document.querySelector<HTMLElement>(".composer");
+  const bottom = composer?.querySelector<HTMLElement>(".composer-bottom");
+  const controls = bottom?.querySelector<HTMLElement>(".composer-context-controls");
   if (!composer || !bottom || !controls || !K.els.prompt) return;
 
   const tray = document.createElement("div");
