@@ -33,12 +33,20 @@ func TestMonacoEditorIsLocalLazyAndFallbackSafe(t *testing.T) {
 		t.Fatal("Monaco editor must not load from a CDN")
 	}
 
+	entry, err := os.ReadFile(filepath.Join(root, "cmd", "launcher", "ui", "browser.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(entry), `import "./monaco";`) {
+		t.Fatal("Monaco bridge is not part of the Browser module graph")
+	}
+
 	index, err := os.ReadFile(filepath.Join(root, "cmd", "launcher", "web", "index.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(index), "<script src=\"/monaco.js\" defer></script>") {
-		t.Fatal("Monaco bridge is not loaded by the workspace UI")
+	if !strings.Contains(string(index), `<script type="module" src="/browser.js"></script>`) {
+		t.Fatal("workspace UI is not loading the bundled Browser module")
 	}
 
 	filesCSS, err := os.ReadFile(filepath.Join(root, "cmd", "launcher", "web", "files.css"))
