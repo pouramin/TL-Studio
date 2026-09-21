@@ -168,14 +168,18 @@ import { K } from "./kernel";
     },
 
     questions: {
-      list: async (sessionID: any) => {
-        const payload = unwrapData(await request(route("/question")));
-        return (Array.isArray(payload) ? payload : []).filter((item) => !sessionID || item?.sessionID === sessionID);
+      list: async (sessionID?: string) => {
+        const payload = await K.request(withQuery("/local/questions", { sessionID }));
+        return Array.isArray(payload) ? payload : [];
       },
-      reply: (sessionID: any, requestID: any, answers: any) => request(route(`/question/${enc(requestID)}/reply`), {
-        method: "POST", ...body({ answers }),
+      reply: (sessionID: string, requestID: string, answers: string[][]) => K.request(`/local/questions/${enc(requestID)}/reply`, {
+        method: "POST",
+        ...body({ sessionID, answers }),
       }),
-      reject: (sessionID: any, requestID: any) => request(route(`/question/${enc(requestID)}/reject`), { method: "POST" }),
+      reject: (sessionID: string, requestID: string) => K.request(`/local/questions/${enc(requestID)}/reject`, {
+        method: "POST",
+        ...body({ sessionID }),
+      }),
     },
 
     hosted: {
