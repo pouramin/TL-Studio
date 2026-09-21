@@ -178,6 +178,66 @@ func TestMarkdownPreviewEscapesRawHTML(t *testing.T) {
 	}
 }
 
+func TestTextPreviewRendererEscapesContent(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "notes.txt"), []byte("<script>alert(1)</script>\nhello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	handler := safeStaticPreviewHandler(project)
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/.tl-preview/text?file=notes.txt", nil)
+	handler.ServeHTTP(recorder, req)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("text preview status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if got := recorder.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
+		t.Fatalf("text preview content type=%q", got)
+	}
+	body := recorder.Body.String()
+	if strings.Contains(body, "<script>alert(1)</script>") || !strings.Contains(body, "&lt;script&gt;alert(1)&lt;/script&gt;") || !strings.Contains(body, "hello") {
+		t.Fatalf("text preview did not safely render content: %s", body)
+	}
+}
+
+func TestPDFPreviewUsesInlineWrapperAndHeaders(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "document.pdf"), []byte("%PDF-1.7\n%%EOF\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	entry, ok := validPreviewEntry(project, "document.pdf")
+	if !ok || entry.Renderer != "pdf" {
+		t.Fatalf("PDF renderer metadata mismatch: %#v ok=%v", entry, ok)
+	}
+	urlValue := previewEntryURL("http://127.0.0.1:1234/", entry)
+	if !strings.Contains(urlValue, "/.tl-preview/pdf?file=document.pdf") {
+		t.Fatalf("PDF entry URL should use wrapper route: %q", urlValue)
+	}
+
+	handler := safeStaticPreviewHandler(project)
+	wrapper := httptest.NewRecorder()
+	wrapperReq := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/.tl-preview/pdf?file=document.pdf", nil)
+	handler.ServeHTTP(wrapper, wrapperReq)
+	if wrapper.Code != http.StatusOK || !strings.Contains(wrapper.Body.String(), "<object") || !strings.Contains(wrapper.Body.String(), "application/pdf") {
+		t.Fatalf("PDF wrapper mismatch: status=%d body=%s", wrapper.Code, wrapper.Body.String())
+	}
+	if got := wrapper.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
+		t.Fatalf("PDF wrapper content type=%q", got)
+	}
+
+	raw := httptest.NewRecorder()
+	rawReq := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/document.pdf", nil)
+	handler.ServeHTTP(raw, rawReq)
+	if raw.Code != http.StatusOK {
+		t.Fatalf("raw PDF status=%d", raw.Code)
+	}
+	if got := raw.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/pdf") {
+		t.Fatalf("raw PDF content type=%q", got)
+	}
+	if got := raw.Header().Get("Content-Disposition"); !strings.HasPrefix(strings.ToLower(got), "inline") {
+		t.Fatalf("raw PDF disposition=%q", got)
+	}
+}
+
 func TestDetectPreviewURLAcceptsLoopbackOnly(t *testing.T) {
 	cases := map[string]string{
 		"Local: http://localhost:5173/":  "http://localhost:5173/",
@@ -459,7 +519,7 @@ func TestFilePreviewCanSwitchBetweenDifferentPreviewKindsOnOneServer(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if textPreview.EntryMeta == nil || textPreview.EntryMeta.Kind != "text" || textURL.Host != htmlURL.Host || !strings.HasSuffix(textPreview.URL, "/notes.txt") {
+	if textPreview.EntryMeta == nil || textPreview.EntryMeta.Kind != "text" || textURL.Host != htmlURL.Host || textURL.Path != "/.tl-preview/text" {
 		t.Fatalf("plain-text preview did not use the file preview route: %#v", textPreview)
 	}
 }
