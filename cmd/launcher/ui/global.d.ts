@@ -260,6 +260,21 @@ interface TLStudioElements {
   composerAttachments: HTMLElement;
 }
 
+interface TLStudioFileTab extends TLStudioDynamicRecord {
+  path: string;
+  content: string;
+  savedContent: string;
+  sha256: string;
+  modified: string;
+  size: number;
+  mime: string;
+  viewOnly?: boolean;
+  externalChanged?: boolean;
+  previewKind?: string;
+  previewName?: string;
+  previewCapabilityID?: string;
+}
+
 interface TLStudioState {
   local: TLStudioLocalStatus | null;
   sessions: TLStudioSessionView[];
@@ -279,22 +294,22 @@ interface TLStudioState {
   authController: AbortController | null;
   authURL: string;
   attentionKey: string;
-  attachments?: TLStudioDynamicRecord[];
-  hostedAuth?: TLStudioDynamicRecord | null;
-  activeEditorPath?: string;
-  changes?: TLStudioDynamicRecord[];
-  editorTabs?: Map<string, TLStudioDynamicRecord>;
-  filesEntries?: TLStudioDynamicRecord[];
-  filesLoading?: boolean;
-  filesPath?: string;
-  filesProject?: string;
-  selectedFileEntry?: TLStudioDynamicRecord | null;
-  legacySession?: TLStudioDynamicRecord | null;
-  preview?: TLStudioDynamicRecord;
-  terminal?: TLStudioDynamicRecord;
-  toolRegistry?: TLStudioToolRegistry | null;
-  changesLoading?: boolean;
-  sseSettling?: TLStudioTimer;
+  attachments: TLStudioDynamicRecord[];
+  hostedAuth: TLStudioDynamicRecord | null;
+  activeEditorPath: string;
+  changes: TLStudioDynamicRecord[];
+  editorTabs: TLStudioFileTab[];
+  filesEntries: TLStudioDynamicRecord[];
+  filesLoading: boolean;
+  filesPath: string;
+  filesProject: string;
+  selectedFileEntry: TLStudioDynamicRecord | null;
+  legacySession: boolean;
+  preview: TLStudioDynamicRecord;
+  terminal: TLStudioDynamicRecord;
+  toolRegistry: TLStudioToolRegistry;
+  changesLoading: boolean;
+  sseSettling: boolean;
 }
 
 type TLStudioCallable = (...args: any[]) => any;
