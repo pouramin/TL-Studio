@@ -31,6 +31,12 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"previewFrame",
 		"previewReload",
 		"previewExternal",
+		"previewEntry",
+		"K.state.activeEditorPath",
+		"snapshot?.entries",
+		"new URLSearchParams({ entry: value })",
+		"Choose an HTML file to preview.",
+		"Ready to preview",
 		"tl-studio:project-file-changed",
 		"startsWith(\"file.\")",
 		"keepalive: true",
@@ -38,6 +44,9 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		if !strings.Contains(text, required) {
 			t.Fatalf("preview.js missing %q", required)
 		}
+	}
+	if strings.Contains(text, "TL Studio can preview a root index.html") {
+		t.Fatal("preview UI still advertises root index.html as the only static HTML path")
 	}
 	if strings.Contains(text, "cdn.") || strings.Contains(text, "unpkg") || strings.Contains(text, "jsdelivr") {
 		t.Fatal("preview UI must not depend on external CDN assets")
