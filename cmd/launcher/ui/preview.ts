@@ -55,7 +55,7 @@
     <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
   main.appendChild(panel);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button,
     panel,
     start: document.getElementById("previewStart"),
@@ -76,7 +76,7 @@
 
   K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "", followTimer: null, entrySwitchGeneration: 0, registry: null, registryPromise: null };
 
-  const request = async (path, options = {}) => {
+  const request = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
