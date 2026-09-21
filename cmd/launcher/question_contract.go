@@ -100,6 +100,24 @@ func (c *questionContract) list(ctx context.Context, sessionID string) ([]questi
 	return result, nil
 }
 
+func (c *questionContract) validateRequest(ctx context.Context, sessionID, requestID string) error {
+	sessionID = strings.TrimSpace(sessionID)
+	requestID = strings.TrimSpace(requestID)
+	if sessionID == "" || requestID == "" {
+		return errors.New("session id and question request id are required")
+	}
+	items, err := c.list(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		if item.ID == requestID {
+			return nil
+		}
+	}
+	return errors.New("question request is not active for this session")
+}
+
 func normalizeQuestionAnswers(answers [][]string) ([][]string, error) {
 	if len(answers) == 0 || len(answers) > 20 {
 		return nil, errors.New("question answers are required")
@@ -165,7 +183,12 @@ func registerQuestionRoutes(mux *http.ServeMux, contract *questionContract) {
 			writeQuestionError(w, err)
 			return
 		}
-		if err := adapter.ReplyQuestion(r.Context(), contract.backend, contract.directory(), strings.TrimSpace(r.PathValue("requestID")), answers); err != nil {
+		requestID := strings.TrimSpace(r.PathValue("requestID"))
+		if err := contract.validateRequest(r.Context(), input.SessionID, requestID); err != nil {
+			writeQuestionError(w, err)
+			return
+		}
+		if err := adapter.ReplyQuestion(r.Context(), contract.backend, contract.directory(), requestID, answers); err != nil {
 			writeQuestionError(w, err)
 			return
 		}
@@ -178,7 +201,17 @@ func registerQuestionRoutes(mux *http.ServeMux, contract *questionContract) {
 			writeQuestionError(w, err)
 			return
 		}
-		if err := adapter.RejectQuestion(r.Context(), contract.backend, contract.directory(), strings.TrimSpace(r.PathValue("requestID"))); err != nil {
+		var input questionRejectInput
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&input); err != nil {
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: "invalid question reject body"})
+			return
+		}
+		requestID := strings.TrimSpace(r.PathValue("requestID"))
+		if err := contract.validateRequest(r.Context(), input.SessionID, requestID); err != nil {
+			writeQuestionError(w, err)
+			return
+		}
+		if err := adapter.RejectQuestion(r.Context(), contract.backend, contract.directory(), requestID); err != nil {
 			writeQuestionError(w, err)
 			return
 		}
