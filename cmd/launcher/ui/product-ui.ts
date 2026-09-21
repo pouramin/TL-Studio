@@ -1,9 +1,9 @@
 (() => {
   "use strict";
   const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     settingsButton: $("settingsButton"),
     settingsDialog: $("settingsDialog"),
     settingsClose: $("settingsClose"),
