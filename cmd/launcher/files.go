@@ -32,14 +32,18 @@ type localFileList struct {
 }
 
 type localFilePreview struct {
-	Name     string `json:"name"`
-	Path     string `json:"path"`
-	Size     int64  `json:"size"`
-	Mime     string `json:"mime"`
-	Binary   bool   `json:"binary"`
-	Content  string `json:"content,omitempty"`
-	Modified string `json:"modified,omitempty"`
-	SHA256   string `json:"sha256,omitempty"`
+	Name                string `json:"name"`
+	Path                string `json:"path"`
+	Size                int64  `json:"size"`
+	Mime                string `json:"mime"`
+	Binary              bool   `json:"binary"`
+	Previewable         bool   `json:"previewable"`
+	PreviewKind         string `json:"previewKind,omitempty"`
+	PreviewCapabilityID string `json:"previewCapabilityID,omitempty"`
+	PreviewName         string `json:"previewName,omitempty"`
+	Content             string `json:"content,omitempty"`
+	Modified            string `json:"modified,omitempty"`
+	SHA256              string `json:"sha256,omitempty"`
 }
 
 type localFileWriteRequest struct {
@@ -341,6 +345,12 @@ func readLocalFilePreview(project, requested string) (localFilePreview, int, err
 		Binary:   binary,
 		Modified: info.ModTime().UTC().Format("2006-01-02T15:04:05Z"),
 		SHA256:   fileSHA256(data),
+	}
+	if capability, ok := previewCapabilityForPath(rel); ok {
+		preview.Previewable = true
+		preview.PreviewKind = capability.Kind
+		preview.PreviewCapabilityID = capability.ID
+		preview.PreviewName = capability.Name
 	}
 	if !binary {
 		preview.Content = string(data)
