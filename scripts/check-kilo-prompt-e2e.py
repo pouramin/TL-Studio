@@ -60,7 +60,7 @@ def routed(path: str, project: str, **params) -> str:
 def sse_events(base: str, project: str, sink: list[dict], ready: threading.Event, stop: threading.Event):
     try:
         req = urllib.request.Request(
-            base.rstrip("/") + routed("/runtime/global/event", project),
+            base.rstrip("/") + "/local/events",
             headers={"Accept": "text/event-stream", "Cache-Control": "no-cache"},
         )
         with urllib.request.urlopen(req, timeout=60) as res:
@@ -77,8 +77,7 @@ def sse_events(base: str, project: str, sink: list[dict], ready: threading.Event
                         envelope = json.loads("\n".join(data_lines))
                         if isinstance(envelope, dict):
                             sink.append(envelope)
-                            payload = envelope.get("payload", envelope)
-                            if isinstance(payload, dict) and payload.get("type") == "server.connected":
+                            if envelope.get("type") == "stream.ready":
                                 ready.set()
                     finally:
                         data_lines = []
@@ -235,7 +234,7 @@ def main() -> int:
     stop = threading.Event()
     thread = threading.Thread(target=sse_events, args=(base, project, events, ready, stop), daemon=True)
     thread.start()
-    require(ready.wait(5), f"global SSE did not connect: {events!r}")
+    require(ready.wait(5), f"TL Studio semantic SSE did not connect: {events!r}")
     require(not any(event.get("type") == "test.sse.error" for event in events), f"SSE failed: {events!r}")
 
     request(
@@ -347,19 +346,19 @@ def main() -> int:
     require(hello_diff is not None, f"hello.txt missing from TL Studio change projection: {visible_changes!r}")
     require(int(hello_diff.get("additions") or 0) >= 1, f"hello.txt change additions missing: {hello_diff!r}")
 
-    interesting = []
-    for envelope in events:
-        payload = envelope.get("payload", envelope) if isinstance(envelope, dict) else {}
-        if isinstance(payload, dict):
-            props = payload.get("properties") if isinstance(payload.get("properties"), dict) else {}
-            info = props.get("info") if isinstance(props.get("info"), dict) else {}
-            part = props.get("part") if isinstance(props.get("part"), dict) else {}
-            sid_from_event = props.get("sessionID") or info.get("sessionID") or part.get("sessionID")
-            if sid_from_event == session_id:
-                interesting.append(payload.get("type"))
-    require(any(t in {"message.updated", "message.part.updated", "session.status", "session.idle"} for t in interesting),
-            f"no production session/message event observed for session: {interesting!r}")
-    require("permission.asked" in interesting, f"permission.asked event missing: {interesting!r}")
+    semantic_events = [
+        event for event in events
+        if isinstance(event, dict) and event.get("sessionID") == session_id
+    ]
+    interesting = [event.get("type") for event in semantic_events]
+    require(any(t in {"message.changed", "session.changed"} for t in interesting),
+            f"no TL Studio semantic session/message event observed for session: {semantic_events!r}")
+    require(any(
+        event.get("type") == "attention.changed" and event.get("attentionKind") == "permission"
+        for event in semantic_events
+    ), f"semantic permission attention event missing: {semantic_events!r}")
+    require(all("properties" not in event and "payload" not in event for event in semantic_events),
+            f"raw runtime event envelope leaked into semantic SSE: {semantic_events!r}")
 
     print(json.dumps({
         "ok": True,
@@ -368,6 +367,7 @@ def main() -> int:
         "model": "test/test-model",
         "messages": len(messages),
         "events": interesting,
+        "live_event_contract": "semantic /local/events",
         "saw_running": saw_running,
         "tool_registry": "files.write",
         "session_contract": "semantic write activity + changes",
