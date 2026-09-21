@@ -132,7 +132,7 @@
     }
     if (ui.entry && entries.includes(preferred)) ui.entry.value = preferred;
     else if (ui.entry && entries.length && !entries.includes(ui.entry.value)) ui.entry.value = entries[0];
-    ui.entryRow?.classList.toggle("hidden", entries.length <= 1 || !!snapshot?.running);
+    ui.entryRow?.classList.toggle("hidden", entries.length <= 1);
     return entries;
   };
 
@@ -206,6 +206,20 @@
     }
   };
 
+  const switchStaticEntry = async (entry) => {
+    const value = String(entry || "").trim();
+    if (!value || K.state.preview.snapshot?.kind !== "static") return K.state.preview.snapshot;
+    K.showError?.("");
+    try {
+      const snapshot = await request(previewPath("/local/preview", value), { method: "POST" });
+      render(snapshot);
+      return snapshot;
+    } catch (error) {
+      render(error.payload || { available: false, error: error.message || String(error) });
+      return null;
+    }
+  };
+
   const stop = async ({ silent = false } = {}) => {
     stopPolling();
     try {
@@ -236,16 +250,25 @@
     setOpen(opening);
     if (opening) {
       const snapshot = await refreshStatus().catch(() => null);
+      const activeEntry = activeHTMLEntry();
+      if (snapshot?.running && snapshot?.kind === "static" && activeEntry && activeEntry !== snapshot?.entry) {
+        await switchStaticEntry(activeEntry);
+        return;
+      }
       const needsChoice = snapshot?.kind === "static" && Array.isArray(snapshot?.entries) && snapshot.entries.length > 1 && !snapshot?.entry;
       if (snapshot?.available && !snapshot?.running && !needsChoice) await start();
     }
   });
   ui.close.addEventListener("click", () => setOpen(false));
-  ui.entry?.addEventListener("change", () => {
-    if (!K.state.preview.snapshot?.running) {
-      ui.start.disabled = !ui.entry.value;
-      ui.hint.textContent = ui.entry.value ? `Ready to preview ${ui.entry.value}.` : "Choose an HTML file to preview.";
+  ui.entry?.addEventListener("change", async () => {
+    const value = String(ui.entry.value || "").trim();
+    if (!value) return;
+    if (K.state.preview.snapshot?.running && K.state.preview.snapshot?.kind === "static") {
+      await switchStaticEntry(value);
+      return;
     }
+    ui.start.disabled = false;
+    ui.hint.textContent = `Ready to preview ${value}.`;
   });
   ui.start.addEventListener("click", start);
   ui.stop.addEventListener("click", () => stop());
@@ -298,5 +321,5 @@
     try { fetch("/local/preview", { method: "DELETE", keepalive: true }); } catch {}
   });
 
-  K.preview = Object.freeze({ open: () => setOpen(true), start, stop, reload, refresh: refreshStatus });
+  K.preview = Object.freeze({ open: () => setOpen(true), start, stop, reload, refresh: refreshStatus, selectEntry: switchStaticEntry });
 })();
