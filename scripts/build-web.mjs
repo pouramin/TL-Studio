@@ -12,10 +12,17 @@ const webDir = path.join(root, "cmd", "launcher", "web");
 process.chdir(root);
 
 const tsc = require.resolve("typescript/bin/tsc");
+
+// The product Browser build is an ES-module graph bundled by esbuild.
 execFileSync(process.execPath, [tsc, "-p", "tsconfig.json"], { stdio: "inherit" });
+
+// Transitional compatibility output for existing source-level regression tests.
+// These files are generated locally/CI and are intentionally not tracked in Git.
+execFileSync(process.execPath, [tsc, "-p", "tsconfig.legacy.json"], { stdio: "inherit" });
 
 for (const name of await readdir(webDir)) {
   if (
+    name === "browser.js" ||
     name === "monaco-editor.js" ||
     name === "monaco-editor.css" ||
     /^monaco-.+-worker\.js$/.test(name) ||
@@ -24,6 +31,18 @@ for (const name of await readdir(webDir)) {
     await rm(path.join(webDir, name), { force: true });
   }
 }
+
+await build({
+  entryPoints: { browser: path.join(root, "cmd", "launcher", "ui", "browser.ts") },
+  outdir: webDir,
+  bundle: true,
+  minify: false,
+  sourcemap: false,
+  format: "esm",
+  platform: "browser",
+  target: ["es2020"],
+  logLevel: "warning",
+});
 
 const resolvedMonaco = require.resolve("monaco-editor");
 const packageRoot = path.resolve(path.dirname(resolvedMonaco), "..", "..");
@@ -62,6 +81,7 @@ await build({
 });
 
 const required = [
+  "browser.js",
   "monaco-editor.js",
   "monaco-editor.css",
   "monaco-editor-worker.js",
@@ -77,4 +97,4 @@ for (const name of required) {
   const info = await stat(path.join(webDir, name));
   sizes.push(`${name}=${Math.ceil(info.size / 1024)}KB`);
 }
-console.log(`TL Studio local Monaco bundle ready: ${sizes.join(" · ")}`);
+console.log(`TL Studio Browser bundle ready: ${sizes.join(" · ")}`);
