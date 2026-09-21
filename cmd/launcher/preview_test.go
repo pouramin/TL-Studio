@@ -199,9 +199,10 @@ func TestTextPreviewRendererEscapesContent(t *testing.T) {
 	}
 }
 
-func TestPDFPreviewUsesInlineWrapperAndHeaders(t *testing.T) {
+func TestPDFPreviewServesInlineDocumentWithRangeSupport(t *testing.T) {
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "document.pdf"), []byte("%PDF-1.7\n%%EOF\n"), 0o600); err != nil {
+	pdf := []byte("%PDF-1.7\n0123456789\n%%EOF\n")
+	if err := os.WriteFile(filepath.Join(project, "document.pdf"), pdf, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	entry, ok := validPreviewEntry(project, "document.pdf")
@@ -210,31 +211,32 @@ func TestPDFPreviewUsesInlineWrapperAndHeaders(t *testing.T) {
 	}
 	urlValue := previewEntryURL("http://127.0.0.1:1234/", entry)
 	if !strings.Contains(urlValue, "/.tl-preview/pdf?file=document.pdf") {
-		t.Fatalf("PDF entry URL should use wrapper route: %q", urlValue)
+		t.Fatalf("PDF entry URL should use dedicated inline route: %q", urlValue)
 	}
 
 	handler := safeStaticPreviewHandler(project)
-	wrapper := httptest.NewRecorder()
-	wrapperReq := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/.tl-preview/pdf?file=document.pdf", nil)
-	handler.ServeHTTP(wrapper, wrapperReq)
-	if wrapper.Code != http.StatusOK || !strings.Contains(wrapper.Body.String(), "<object") || !strings.Contains(wrapper.Body.String(), "application/pdf") {
-		t.Fatalf("PDF wrapper mismatch: status=%d body=%s", wrapper.Code, wrapper.Body.String())
+	full := httptest.NewRecorder()
+	fullReq := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/.tl-preview/pdf?file=document.pdf", nil)
+	handler.ServeHTTP(full, fullReq)
+	if full.Code != http.StatusOK || full.Body.String() != string(pdf) {
+		t.Fatalf("PDF inline response mismatch: status=%d body=%q", full.Code, full.Body.String())
 	}
-	if got := wrapper.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
-		t.Fatalf("PDF wrapper content type=%q", got)
+	if got := full.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/pdf") {
+		t.Fatalf("PDF content type=%q", got)
+	}
+	if got := full.Header().Get("Content-Disposition"); !strings.HasPrefix(strings.ToLower(got), "inline") {
+		t.Fatalf("PDF disposition=%q", got)
+	}
+	if got := full.Header().Get("Accept-Ranges"); got != "bytes" {
+		t.Fatalf("PDF range support header=%q", got)
 	}
 
-	raw := httptest.NewRecorder()
-	rawReq := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/document.pdf", nil)
-	handler.ServeHTTP(raw, rawReq)
-	if raw.Code != http.StatusOK {
-		t.Fatalf("raw PDF status=%d", raw.Code)
-	}
-	if got := raw.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/pdf") {
-		t.Fatalf("raw PDF content type=%q", got)
-	}
-	if got := raw.Header().Get("Content-Disposition"); !strings.HasPrefix(strings.ToLower(got), "inline") {
-		t.Fatalf("raw PDF disposition=%q", got)
+	partial := httptest.NewRecorder()
+	partialReq := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/.tl-preview/pdf?file=document.pdf", nil)
+	partialReq.Header.Set("Range", "bytes=0-3")
+	handler.ServeHTTP(partial, partialReq)
+	if partial.Code != http.StatusPartialContent || partial.Body.String() != "%PDF" {
+		t.Fatalf("PDF range response mismatch: status=%d body=%q", partial.Code, partial.Body.String())
 	}
 }
 
