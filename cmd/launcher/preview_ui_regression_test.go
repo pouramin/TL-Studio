@@ -15,7 +15,15 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	floatingJS, err := fs.ReadFile(assets, "preview-floating.js")
+	if err != nil {
+		t.Fatal(err)
+	}
 	css, err := fs.ReadFile(assets, "preview.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	floatingCSS, err := fs.ReadFile(assets, "preview-floating.css")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,6 +45,9 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"new URLSearchParams({ entry: value })",
 		"Choose an HTML file to preview.",
 		"Ready to preview",
+		"switchStaticEntry",
+		"await switchStaticEntry(value)",
+		"activeEntry !== snapshot?.entry",
 		"tl-studio:project-file-changed",
 		"startsWith(\"file.\")",
 		"keepalive: true",
@@ -53,6 +64,15 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 	}
 	if !strings.Contains(string(css), ".preview-panel") || !strings.Contains(string(css), ".preview-frame") || !strings.Contains(string(css), ".preview-entry-row") {
 		t.Fatal("preview.css missing preview panel/frame/entry selector styles")
+	}
+	floatingText := string(floatingJS)
+	for _, required := range []string{"preview-resize-left", "Drag to resize preview width", "MIN_WIDTH = 340", "panel.style.width"} {
+		if !strings.Contains(floatingText, required) {
+			t.Fatalf("preview-floating.js missing width resize behavior %q", required)
+		}
+	}
+	if !strings.Contains(string(floatingCSS), ".preview-resize-left") || !strings.Contains(string(floatingCSS), "cursor: ew-resize") {
+		t.Fatal("preview-floating.css missing left-edge resize affordance")
 	}
 	if !strings.Contains(string(app), `"/preview.js"`) {
 		t.Fatal("app.js does not load preview.js")
