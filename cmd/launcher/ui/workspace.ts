@@ -23,13 +23,13 @@
   K.state.changesLoading = false;
   K.state.sseSettling = false;
 
-  const escapeText = (value) => String(value ?? "");
-  const basename = (path) => {
+  const escapeText = (value: any) => String(value ?? "");
+  const basename = (path: any) => {
     const bits = escapeText(path).split(/[\\/]/);
     return bits[bits.length - 1] || escapeText(path) || "Unknown file";
   };
 
-  const normalizeChange = (candidate, fallbackPath = "") => {
+  const normalizeChange = (candidate: any, fallbackPath = "") => {
     if (!candidate || typeof candidate !== "object") return null;
     const file = candidate.file || candidate.filePath || candidate.path || fallbackPath;
     if (!file) return null;
@@ -41,7 +41,7 @@
     };
   };
 
-  const mergeChanges = (items) => {
+  const mergeChanges = (items: any) => {
     const merged = new Map();
     for (const raw of Array.isArray(items) ? items : []) {
       const item = normalizeChange(raw);
@@ -296,7 +296,7 @@
   ui.sessionCancel?.addEventListener("click", () => ui.sessionDialog.close());
   ui.sessionSave?.addEventListener("click", saveSessionTitle);
   ui.sessionDelete?.addEventListener("click", deleteSession);
-  ui.sessionTitleInput?.addEventListener("keydown", (event) => {
+  ui.sessionTitleInput?.addEventListener("keydown", (event: any) => {
     if (event.key === "Enter") { event.preventDefault(); saveSessionTitle(); }
   });
 
