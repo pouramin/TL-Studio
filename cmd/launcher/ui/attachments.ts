@@ -157,12 +157,12 @@
     K.renderAttachments();
   };
 
-  K.addAttachments = async (files) => {
-    const incoming = Array.from(files || []);
+  K.addAttachments = async (files: FileList | File[] | null) => {
+    const incoming: File[] = Array.from(files || []);
     if (!incoming.length) return;
 
-    const accepted = [];
-    const errors = [];
+    const accepted: TLStudioDynamicRecord[] = [];
+    const errors: string[] = [];
     let total = K.state.attachments.reduce((sum, item) => sum + Number(item.size || 0), 0);
 
     for (const file of incoming) {
@@ -188,7 +188,7 @@
         accepted.push({ id: attachmentID(), name: file.name || "attachment", size: file.size, mime, url });
         total += file.size;
       } catch (error) {
-        errors.push(`${file.name}: ${error.message || error}`);
+        errors.push(`${file.name}: ${(error as any).message || error}`);
       }
     }
 
@@ -205,23 +205,23 @@
   attachmentInput.addEventListener("change", () => K.addAttachments(attachmentInput.files));
 
   let dragDepth = 0;
-  composer.addEventListener("dragenter", (event) => {
+  composer.addEventListener("dragenter", (event: DragEvent) => {
     if (!event.dataTransfer?.types?.includes("Files")) return;
     event.preventDefault();
     dragDepth += 1;
     composer.classList.add("attachment-dragover");
   });
-  composer.addEventListener("dragover", (event) => {
+  composer.addEventListener("dragover", (event: DragEvent) => {
     if (!event.dataTransfer?.types?.includes("Files")) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
   });
-  composer.addEventListener("dragleave", (event) => {
+  composer.addEventListener("dragleave", (event: DragEvent) => {
     if (!event.dataTransfer?.types?.includes("Files")) return;
     dragDepth = Math.max(0, dragDepth - 1);
     if (!dragDepth) composer.classList.remove("attachment-dragover");
   });
-  composer.addEventListener("drop", (event) => {
+  composer.addEventListener("drop", (event: DragEvent) => {
     if (!event.dataTransfer?.files?.length) return;
     event.preventDefault();
     dragDepth = 0;
@@ -239,7 +239,7 @@
   const messageAttachments = (message: any) => {
     if (Array.isArray(message?.attachments)) return message.attachments;
     const parts = Array.isArray(message?.parts) ? message.parts : Array.isArray(message?.content) ? message.content : [];
-    return parts.filter((part: any) => part?.type === "file").map((part) => ({
+    return parts.filter((part: any) => part?.type === "file").map((part: any) => ({
       name: part.filename || part.name || "Attachment",
       mime: part.mime || "text/plain",
       url: part.url || "",
@@ -319,14 +319,14 @@
       });
       K.renderMessages();
 
-      await K.api.sessions.promptAsync(K.state.session.id, { text, parts, agent, model, variant: model?.variant });
+      await K.api.sessions.promptAsync(K.state.session!.id, { text, parts, agent, model, variant: model?.variant });
       K.clearAttachments();
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       K.renderMessages();
       K.startSessionPolling(startedAt);
     } catch (err) {
       K.state.sending = false;
-      K.showError(err.message || String(err));
+      K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {
       K.els.sendButton.disabled = false;
