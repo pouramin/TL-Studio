@@ -1,18 +1,17 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
+const { loadBrowserModule, readBrowserTypeScript } = require("./browser-source-harness.cjs");
 
-const repoRoot = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "providers-ui.js"), "utf8");
-const productSource = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "product-ui.js"), "utf8");
-const providerTsSource = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "ui", "providers-ui.ts"), "utf8");
+const source = loadBrowserModule("providers-ui.ts");
+const productSource = readBrowserTypeScript("product-ui.ts");
+const providerTsSource = readBrowserTypeScript("providers-ui.ts");
 
 const K = { __providersUiInstalled: false };
 const context = vm.createContext({
-  window: { KLU: K },
+  K,
+  window: {},
   document: { getElementById: () => null },
   console,
   URL,
@@ -21,7 +20,7 @@ const context = vm.createContext({
   String,
   Set,
 });
-vm.runInContext(source, context, { filename: "providers-ui.js" });
+vm.runInContext(source, context, { filename: "providers-ui.ts" });
 
 const hooks = K.__providersUi;
 assert.ok(hooks, "provider UI hooks should be installed even when settings DOM is unavailable");
