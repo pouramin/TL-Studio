@@ -74,7 +74,7 @@
     frame: document.getElementById("previewFrame"),
   };
 
-  K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "" };
+  K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "", followTimer: null, entrySwitchGeneration: 0 };
 
   const request = async (path, options = {}) => {
     const response = await fetch(path, {
@@ -209,15 +209,34 @@
   const switchStaticEntry = async (entry) => {
     const value = String(entry || "").trim();
     if (!value || K.state.preview.snapshot?.kind !== "static") return K.state.preview.snapshot;
+    const generation = ++K.state.preview.entrySwitchGeneration;
     K.showError?.("");
     try {
       const snapshot = await request(previewPath("/local/preview", value), { method: "POST" });
-      render(snapshot);
+      if (generation === K.state.preview.entrySwitchGeneration) render(snapshot);
       return snapshot;
     } catch (error) {
-      render(error.payload || { available: false, error: error.message || String(error) });
+      if (generation === K.state.preview.entrySwitchGeneration) {
+        render(error.payload || { available: false, error: error.message || String(error) });
+      }
       return null;
     }
+  };
+
+  const followActiveHTMLEntry = (path) => {
+    const entry = String(path || "").trim();
+    if (!isHTMLPath(entry)) return;
+    const snapshot = K.state.preview.snapshot;
+    if (!K.state.preview.open || !snapshot?.running || snapshot?.kind !== "static" || snapshot?.entry === entry) return;
+    if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
+    K.state.preview.followTimer = window.setTimeout(() => {
+      K.state.preview.followTimer = null;
+      const activeEntry = activeHTMLEntry();
+      const current = K.state.preview.snapshot;
+      if (!K.state.preview.open || !current?.running || current?.kind !== "static") return;
+      if (!activeEntry || activeEntry !== entry || current?.entry === activeEntry) return;
+      switchStaticEntry(activeEntry);
+    }, 50);
   };
 
   const stop = async ({ silent = false } = {}) => {
@@ -296,6 +315,7 @@
     return response;
   };
   window.addEventListener("tl-studio:project-file-changed", scheduleStaticReload);
+  window.addEventListener("tl-studio:editor-render", (event) => followActiveHTMLEntry(event.detail?.path));
 
   const baseHandleRuntimeEvent = K.handleRuntimeEvent;
   if (typeof baseHandleRuntimeEvent === "function") {
@@ -318,6 +338,7 @@
 
   window.addEventListener("beforeunload", () => {
     stopPolling();
+    if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
     try { fetch("/local/preview", { method: "DELETE", keepalive: true }); } catch {}
   });
 
