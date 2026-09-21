@@ -10,7 +10,7 @@ func TestBrowserIDEFoundationIsEmbeddedAndWired(t *testing.T) {
 	for _, expected := range []string{
 		`K.state.editorTabs = []`,
 		`expectedSha256: tab.sha256`,
-		`error.status === 409`,
+		`(error as any).status === 409`,
 		`method: "POST"`,
 		`method: "PATCH"`,
 		`method: "DELETE"`,
