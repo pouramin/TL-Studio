@@ -6,7 +6,7 @@
   const PROJECT_MESSAGE_LIMIT = 1000;
   const projectUsageCache = new Map();
   let projectUsageLoading = false;
-  let projectUsageTimer = null;
+  let projectUsageTimer: number | null = null;
 
   const partsOf = (message: any) => Array.isArray(message?.activities)
     ? message.activities
@@ -39,9 +39,9 @@
   };
 
   const normalizeCancellation = () => {
-    const rows = K.els.conversation?.querySelectorAll(".message.error") || [];
+    const rows = K.els.conversation?.querySelectorAll<HTMLElement>(".message.error") || [];
     for (const row of rows) {
-      const error = row.querySelector(".message-error-text");
+      const error = row.querySelector<HTMLElement>(".message-error-text");
       const text = String(error?.textContent || "").trim();
       if (!/\b(aborted|cancelled|canceled|interrupted)\b/i.test(text)) continue;
       row.classList.remove("error");
@@ -55,7 +55,7 @@
   };
 
   const normalizeRetryableToolErrors = () => {
-    const cards = K.els.conversation?.querySelectorAll('.activity-card[data-status="failed"]') || [];
+    const cards = K.els.conversation?.querySelectorAll<HTMLDetailsElement>('.activity-card[data-status="failed"]') || [];
     const running = !!K.state.session && (K.state.sending || K.isSessionRunning(K.state.session.id));
     for (const card of cards) {
       const text = String(card.textContent || "");
@@ -104,7 +104,7 @@
         button.title = previous;
       }, 1300);
     } catch (error) {
-      K.showError?.(`Could not copy prompt: ${error.message || String(error)}`);
+      K.showError?.(`Could not copy prompt: ${(error as any).message || String(error)}`);
     }
   };
 
@@ -313,7 +313,7 @@
 
   const modelRouteSummary = (message: any) => {
     const steps = routedModelSteps(message);
-    const groups = [];
+    const groups: Array<{ label: string; count: number }> = [];
     for (const step of steps) {
       const label = modelLabel(step);
       if (!label) continue;
@@ -359,7 +359,7 @@
   const renderRoutedModels = () => {
     const view = K.els.conversation;
     if (!view) return;
-    const rows = [...view.querySelectorAll(".message.assistant:not(.working-message)")];
+    const rows = [...view.querySelectorAll<HTMLElement>(".message.assistant:not(.working-message)")];
     const entries = assistantEntries();
     rows.forEach((row, rowIndex) => {
       const entry = entries[rowIndex];
