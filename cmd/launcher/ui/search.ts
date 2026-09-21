@@ -156,8 +156,8 @@
       if (!response.ok) throw new Error(payload?.error || `${response.status} ${response.statusText}`);
       renderResults(payload || {});
     } catch (error) {
-      if (error?.name === "AbortError" || currentGeneration !== generation) return;
-      clearResults(error?.message || String(error));
+      if ((error as any)?.name === "AbortError" || currentGeneration !== generation) return;
+      clearResults((error as any)?.message || String(error));
     }
   };
 
