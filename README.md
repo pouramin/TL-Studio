@@ -4,6 +4,8 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
+<p align="center"><strong>Development branch: 0.4.0-alpha.1</strong> · Stable release: v0.3.0.</p>
+
 <p align="center">
   <a href="https://www.npmjs.com/package/tl-studio"><img src="https://img.shields.io/npm/v/tl-studio" alt="npm"></a>
   A fast local development workspace with AI built in.
