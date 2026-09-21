@@ -78,7 +78,7 @@
     count.textContent = "";
   };
 
-  const renderResults = (payload) => {
+  const renderResults = (payload: any) => {
     results.textContent = "";
     const files = Array.isArray(payload?.files) ? payload.files : [];
     const matchCount = Number(payload?.matchCount || 0);
