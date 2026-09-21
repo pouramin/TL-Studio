@@ -1,12 +1,10 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
+const { loadBrowserModule } = require("./browser-source-harness.cjs");
 
-const repoRoot = path.resolve(__dirname, "..");
-const source = fs.readFileSync(path.join(repoRoot, "cmd", "launcher", "web", "provider-recovery-ui.js"), "utf8");
+const source = loadBrowserModule("provider-recovery-ui.ts");
 const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
 const K = {
@@ -23,13 +21,14 @@ const K = {
 };
 
 const context = vm.createContext({
-  window: { KLU: K },
+  K,
+  window: {},
   document: {},
   console,
   JSON,
   Promise,
 });
-vm.runInContext(source, context, { filename: "provider-recovery-ui.js" });
+vm.runInContext(source, context, { filename: "provider-recovery-ui.ts" });
 
 const hooks = K.__providerRecovery;
 assert.ok(hooks, "provider recovery hooks should be installed");
