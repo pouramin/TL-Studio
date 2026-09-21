@@ -416,7 +416,3 @@ interface TLStudioKernel {
   __terminalInstalled?: boolean;
   __toolRegistryInstalled?: boolean;
 }
-
-interface Window {
-  KLU: TLStudioKernel;
-}

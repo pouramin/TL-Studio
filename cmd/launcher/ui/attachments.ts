@@ -1,7 +1,9 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
 
-  const K = window.KLU;
+  
   if (!K || K.__attachmentsInstalled) return;
 
   const MAX_FILE_BYTES = 10 * 1024 * 1024;

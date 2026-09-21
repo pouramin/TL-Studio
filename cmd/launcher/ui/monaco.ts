@@ -1,7 +1,9 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
 
-  const K = window.KLU;
+  
   if (!K) return;
 
   const state: TLStudioDynamicRecord = {

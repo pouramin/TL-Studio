@@ -1,47 +1,34 @@
 package main
 
 import (
-	"io/fs"
 	"strings"
 	"testing"
 )
 
 func TestBrowserUsesTLStudioLiveEventContract(t *testing.T) {
-	assets, err := fs.Sub(webFS, "web")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtimeAPIBytes, err := fs.ReadFile(assets, "runtime-api.js")
-	if err != nil {
-		t.Fatal(err)
-	}
-	chatBytes, err := fs.ReadFile(assets, "chat.js")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtimeAPI := string(runtimeAPIBytes)
-	chat := string(chatBytes)
+	runtimeAPI := readBrowserSource(t, "runtime-api.ts")
+	chat := readBrowserSource(t, "chat.ts")
 
 	for _, required := range []string{
 		"new EventSource(path)",
-		"\"/local/events\"",
+		`"/local/events"`,
 	} {
 		if !strings.Contains(runtimeAPI, required) {
-			t.Fatalf("runtime-api.js missing TL Studio live event behavior %q", required)
+			t.Fatalf("runtime-api.ts missing TL Studio live event behavior %q", required)
 		}
 	}
 
 	for _, required := range []string{
 		"handleLiveEvent",
-		"type === \"stream.ready\"",
-		"type === \"attention.changed\"",
-		"type === \"session.changed\"",
-		"type === \"message.changed\"",
-		"type === \"workspace.changed\"",
+		`type === "stream.ready"`,
+		`type === "attention.changed"`,
+		`type === "session.changed"`,
+		`type === "message.changed"`,
+		`type === "workspace.changed"`,
 		"event?.sessionID",
 	} {
 		if !strings.Contains(chat, required) {
-			t.Fatalf("chat.js missing semantic live event behavior %q", required)
+			t.Fatalf("chat.ts missing semantic live event behavior %q", required)
 		}
 	}
 

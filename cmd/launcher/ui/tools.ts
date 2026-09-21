@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
 
   const fallbackUnknown = Object.freeze({
     id: "runtime.unknown",

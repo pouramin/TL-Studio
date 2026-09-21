@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   if (!K || K.__terminalInstalled) return;
   K.__terminalInstalled = true;
 

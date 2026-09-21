@@ -8,11 +8,7 @@ import (
 )
 
 func TestBrowserPermissionsUseTLStudioEngine(t *testing.T) {
-	js, err := webFS.ReadFile("web/runtime-api.js")
-	if err != nil {
-		t.Fatalf("read embedded runtime-api.js: %v", err)
-	}
-	text := string(js)
+	text := readBrowserSource(t, "runtime-api.ts")
 	for _, expected := range []string{
 		`/local/permissions`,
 		`/local/permissions/rules`,
@@ -45,11 +41,7 @@ func TestBrowserPermissionsUseTLStudioEngine(t *testing.T) {
 }
 
 func TestPermissionUIExplainsScopedAlwaysRules(t *testing.T) {
-	js, err := webFS.ReadFile("web/attention.js")
-	if err != nil {
-		t.Fatalf("read embedded attention.js: %v", err)
-	}
-	text := string(js)
+	text := readBrowserSource(t, "attention.ts")
 	for _, expected := range []string{
 		`Agent wants permission to`,
 		`Always allow in this project`,
@@ -60,7 +52,7 @@ func TestPermissionUIExplainsScopedAlwaysRules(t *testing.T) {
 		`alwaysRules.length > 0`,
 	} {
 		if !strings.Contains(text, expected) {
-			t.Fatalf("attention.js is missing expected permission behavior %q", expected)
+			t.Fatalf("attention.ts is missing expected permission behavior %q", expected)
 		}
 	}
 	if strings.Contains(text, `Kilo wants permission to`) {

@@ -5,6 +5,7 @@
 // esbuild follows this module graph and emits the single Browser bundle loaded
 // by index.html.
 
+import "./kernel";
 import "./core";
 import "./runtime-api";
 import "./tools";

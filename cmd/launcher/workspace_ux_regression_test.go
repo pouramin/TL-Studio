@@ -1,47 +1,38 @@
 package main
 
 import (
-	"io/fs"
 	"strings"
 	"testing"
 )
 
 func TestWorkspaceUXEnhancementsContract(t *testing.T) {
-	assets, err := fs.Sub(webFS, "web")
-	if err != nil { t.Fatal(err) }
-
-	read := func(name string) string {
-		data, err := fs.ReadFile(assets, name)
-		if err != nil { t.Fatalf("read %s: %v", name, err) }
-		return string(data)
-	}
-
-	floating := read("preview-floating.js")
+	floating := readBrowserSource(t, "preview-floating.ts")
 	for _, required := range []string{"tl-studio.preview-window", "pointerdown", "ResizeObserver", "previewWindow", "localStorage"} {
-		if !strings.Contains(floating, required) { t.Fatalf("preview-floating.js missing %q", required) }
+		if !strings.Contains(floating, required) { t.Fatalf("preview-floating.ts missing %q", required) }
 	}
 
-	editor := read("editor-enhancements.js")
+	editor := readBrowserSource(t, "editor-enhancements.ts")
 	for _, required := range []string{"file-editor-highlight", "tok-keyword", "tok-string", "MutationObserver", "refreshEditorHighlight", "monaco-ready"} {
-		if !strings.Contains(editor, required) { t.Fatalf("editor-enhancements.js missing %q", required) }
+		if !strings.Contains(editor, required) { t.Fatalf("editor-enhancements.ts missing %q", required) }
 	}
 
-	editorCSS := read("editor-enhancements.css")
-	if !strings.Contains(editorCSS, ".file-editor-surface.monaco-ready .file-editor-highlight") {
+	editorCSS, err := webFS.ReadFile("web/editor-enhancements.css")
+	if err != nil { t.Fatalf("read editor-enhancements.css: %v", err) }
+	if !strings.Contains(string(editorCSS), ".file-editor-surface.monaco-ready .file-editor-highlight") {
 		t.Fatal("legacy syntax layer is not hidden when Monaco is active")
 	}
-	if strings.Contains(editorCSS, ".file-editor-surface { position: relative; }") {
+	if strings.Contains(string(editorCSS), ".file-editor-surface { position: relative; }") {
 		t.Fatal("editor enhancements must not override the workspace surface positioning")
 	}
 
-	settings := read("settings-enhancements.js")
+	settings := readBrowserSource(t, "settings-enhancements.ts")
 	for _, required := range []string{"Editor color theme", "UI Font", "Code Font", "Terminal Font", "resetPreviewWindow", "tl-studio.editor-theme"} {
-		if !strings.Contains(settings, required) { t.Fatalf("settings-enhancements.js missing %q", required) }
+		if !strings.Contains(settings, required) { t.Fatalf("settings-enhancements.ts missing %q", required) }
 	}
 
-	app := read("app.js")
-	for _, required := range []string{`"/editor-enhancements.js"`, `"/preview-floating.js"`, `"/settings-enhancements.js"`} {
-		if !strings.Contains(app, required) { t.Fatalf("app.js missing loader %s", required) }
+	entry := readBrowserSource(t, "browser.ts")
+	for _, required := range []string{`import "./editor-enhancements";`, `import "./preview-floating";`, `import "./settings-enhancements";`} {
+		if !strings.Contains(entry, required) { t.Fatalf("Browser module graph missing %s", required) }
 	}
 
 	combined := floating + editor + settings

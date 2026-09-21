@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -54,23 +55,21 @@ func TestTypeScriptHardeningPhase1Contract(t *testing.T) {
 		t.Fatalf("strict Browser check must cover the complete UI TypeScript surface: %#v", checkIncludes)
 	}
 
-	if strings.Contains(global, "KLU: any") {
-		t.Fatal("global Browser kernel regressed to any")
-	}
 	for _, required := range []string{
 		"interface TLStudioKernel",
 		"interface TLStudioState",
 		"interface TLStudioElements",
 		"interface TLStudioRuntimeContract",
 		"interface TLStudioLiveEvent",
-		"KLU: TLStudioKernel",
 	} {
 		if !strings.Contains(global, required) {
 			t.Fatalf("global TypeScript contract missing %q", required)
 		}
 	}
+	if strings.Contains(global, "KLU:") {
+		t.Fatal("Browser declarations must not expose a global KLU kernel")
+	}
 }
-
 
 func TestTypeScriptHardeningPhase2ModuleBuildContract(t *testing.T) {
 	read := func(path string) string {
@@ -83,7 +82,6 @@ func TestTypeScriptHardeningPhase2ModuleBuildContract(t *testing.T) {
 
 	tsconfig := read("../../tsconfig.json")
 	check := read("../../tsconfig.check.json")
-	legacy := read("../../tsconfig.legacy.json")
 	entry := read("ui/browser.ts")
 	build := read("../../scripts/build-web.mjs")
 	index := read("web/index.html")
@@ -109,11 +107,8 @@ func TestTypeScriptHardeningPhase2ModuleBuildContract(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(legacy, `"module": "none"`) || !strings.Contains(legacy, `"outDir": "cmd/launcher/web"`) {
-		t.Fatal("legacy compatibility config must remain isolated from the product module build")
-	}
-
 	requiredImports := []string{
+		`import "./kernel";`,
 		`import "./core";`,
 		`import "./runtime-api";`,
 		`import "./workspace";`,
@@ -140,11 +135,17 @@ func TestTypeScriptHardeningPhase2ModuleBuildContract(t *testing.T) {
 		`bundle: true`,
 		`format: "esm"`,
 		`"browser.js"`,
-		`"tsconfig.legacy.json"`,
+		`name.endsWith(".js")`,
 	} {
 		if !strings.Contains(build, required) {
 			t.Fatalf("Browser build missing %q", required)
 		}
+	}
+	if strings.Contains(build, "tsconfig.legacy") {
+		t.Fatal("Browser build must not use the removed legacy TypeScript emit")
+	}
+	if _, err := os.Stat("../../tsconfig.legacy.json"); !os.IsNotExist(err) {
+		t.Fatal("tsconfig.legacy.json must be removed")
 	}
 
 	if !strings.Contains(index, `<script type="module" src="/browser.js"></script>`) {
@@ -155,5 +156,41 @@ func TestTypeScriptHardeningPhase2ModuleBuildContract(t *testing.T) {
 	}
 	if !strings.Contains(ignore, "/cmd/launcher/web/*.js") {
 		t.Fatal("generated Browser JavaScript must remain untracked")
+	}
+}
+
+func TestTypeScriptHardeningPhase3ModuleKernelContract(t *testing.T) {
+	kernel := readBrowserSource(t, "kernel.ts")
+	if !strings.Contains(kernel, "export const K =") {
+		t.Fatal("module-owned Browser kernel must export K")
+	}
+	if strings.Contains(kernel, "window.KLU") {
+		t.Fatal("module kernel must not publish itself through window.KLU")
+	}
+
+	app := readBrowserSource(t, "app.ts")
+	for _, forbidden := range []string{"loadScript", "loadExtensions", "document.createElement(\"script\")"} {
+		if strings.Contains(app, forbidden) {
+			t.Fatalf("app.ts still contains legacy script loading behavior %q", forbidden)
+		}
+	}
+
+	files, err := filepath.Glob("ui/*.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range files {
+		sourceBytes, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		source := string(sourceBytes)
+		name := filepath.Base(path)
+		if strings.Contains(source, "window.KLU") {
+			t.Fatalf("%s still depends on window.KLU", name)
+		}
+		if name != "kernel.ts" && strings.Contains(source, "K.") && !strings.Contains(source, `import { K } from "./kernel";`) {
+			t.Fatalf("%s uses K without importing the module-owned kernel", name)
+		}
 	}
 }

@@ -1,6 +1,8 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
-  const K = window.KLU;
+  
   if (!K || K.__projectSearchInstalled) return;
   K.__projectSearchInstalled = true;
 

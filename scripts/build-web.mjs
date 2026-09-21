@@ -16,16 +16,10 @@ const tsc = require.resolve("typescript/bin/tsc");
 // The product Browser build is an ES-module graph bundled by esbuild.
 execFileSync(process.execPath, [tsc, "-p", "tsconfig.json"], { stdio: "inherit" });
 
-// Transitional compatibility output for existing source-level regression tests.
-// These files are generated locally/CI and are intentionally not tracked in Git.
-execFileSync(process.execPath, [tsc, "-p", "tsconfig.legacy.json"], { stdio: "inherit" });
-
 for (const name of await readdir(webDir)) {
   if (
-    name === "browser.js" ||
-    name === "monaco-editor.js" ||
+    name.endsWith(".js") ||
     name === "monaco-editor.css" ||
-    /^monaco-.+-worker\.js$/.test(name) ||
     /^monaco-.+\.ttf$/.test(name)
   ) {
     await rm(path.join(webDir, name), { force: true });

@@ -1,7 +1,9 @@
+import { K } from "./kernel";
+
 (() => {
   "use strict";
 
-  const K = window.KLU;
+  
   const enc = encodeURIComponent;
   const json = (value: any) => JSON.stringify(value);
   const body = (value: any) => ({ body: json(value) });
