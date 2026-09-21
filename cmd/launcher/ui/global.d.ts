@@ -45,6 +45,7 @@ interface TLStudioSessionView {
   id: string;
   title: string;
   directory: string;
+  time?: { created?: number; updated?: number };
   parentID?: string;
   agent?: string;
   model?: TLStudioSessionModelRef;
@@ -54,8 +55,9 @@ interface TLStudioSessionView {
 }
 
 interface TLStudioSessionStatus {
-  state: "idle" | "running" | "retrying" | "unknown";
-  active: boolean;
+  state?: "idle" | "running" | "retrying" | "unknown";
+  type?: string;
+  active?: boolean;
   attempt?: number;
   nextAt?: number;
   message?: string;
@@ -125,8 +127,9 @@ interface TLStudioToolDescriptor {
 
 interface TLStudioToolRegistry {
   version: number;
-  tools: TLStudioToolDescriptor[];
-  unknown: TLStudioToolDescriptor;
+  tools?: TLStudioToolDescriptor[];
+  byRuntimeID?: Map<string, TLStudioToolDescriptor>;
+  unknown: TLStudioToolDescriptor | null;
 }
 
 interface TLStudioPermissionRule {
