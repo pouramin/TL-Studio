@@ -33,6 +33,22 @@
       authController: null,
       authURL: "",
       attentionKey: "",
+      attachments: [],
+      hostedAuth: null,
+      activeEditorPath: "",
+      changes: [],
+      editorTabs: [],
+      filesEntries: [],
+      filesLoading: false,
+      filesPath: "",
+      filesProject: "",
+      selectedFileEntry: null,
+      legacySession: false,
+      preview: {},
+      terminal: {},
+      toolRegistry: null,
+      changesLoading: false,
+      sseSettling: false,
     } as TLStudioState,
   } as TLStudioKernel;
 
@@ -118,11 +134,12 @@
 
   K.loadLocalStatus = async () => {
     const { els, state } = K;
-    state.local = await K.request("/local/status");
-    els.projectName.textContent = K.basename(state.local.project);
-    els.projectPath.textContent = state.local.project || "Choose a folder";
-    els.projectPath.title = state.local.project || "";
-    els.versionLabel.textContent = `v${state.local.version} · ${state.local.platform}/${state.local.arch}`;
+    const local = await K.request<TLStudioLocalStatus>("/local/status");
+    state.local = local;
+    els.projectName.textContent = K.basename(local.project);
+    els.projectPath.textContent = local.project || "Choose a folder";
+    els.projectPath.title = local.project || "";
+    els.versionLabel.textContent = `v${local.version} · ${local.platform}/${local.arch}`;
   };
 
   K.checkBackend = async () => {
@@ -191,7 +208,7 @@
       option.value = K.modelValue(model);
       option.textContent = model.name || model.id;
       option.title = `${model.providerID}/${model.id}`;
-      group.appendChild(option);
+      group!.appendChild(option);
     }
     const values = [...select.querySelectorAll("option")].map((option) => option.value);
     if (current && values.includes(current)) {
