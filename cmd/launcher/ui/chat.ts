@@ -2,12 +2,12 @@
   "use strict";
   const K = window.KLU;
 
-  const safeJSON = (value) => {
+  const safeJSON = (value: any) => {
     try { return JSON.stringify(value, null, 2); }
     catch { return String(value); }
   };
 
-  const errorText = (error) => {
+  const errorText = (error: any) => {
     if (!error) return "";
     if (typeof error === "string") return error;
     const message = error.message || error.data?.message || error.error?.message || "";
@@ -16,21 +16,21 @@
     return safeJSON(error);
   };
 
-  const partsOf = (message) => Array.isArray(message?.parts)
+  const partsOf = (message: any) => Array.isArray(message?.parts)
     ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const textOf = (message) => {
+  const textOf = (message: any) => {
     if (typeof message?.text === "string" && message.text) return message.text;
     return partsOf(message)
-      .filter((item) => item?.type === "text" && !item.ignored)
-      .map((item) => item.text || "")
+      .filter((item: any) => item?.type === "text" && !item.ignored)
+      .map((item: any) => item.text || "")
       .filter(Boolean)
       .join("\n")
       .trim();
   };
 
-  const toolSummary = (item) => {
+  const toolSummary = (item: any) => {
     const state = item?.state || {};
     const status = state.status || item.status || "pending";
     const details = [];
@@ -45,13 +45,13 @@
     return { status, detail: details.filter(Boolean).join("\n\n") };
   };
 
-  const toolDescriptor = (item) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
+  const toolDescriptor = (item: any) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
     name: "Runtime tool",
     category: "runtime",
     permissionClass: "runtime",
   };
 
-  const messageNode = (kind, author, text, time, error) => {
+  const messageNode = (kind: any, author: any, text: any, time: any, error: any) => {
     const row = document.createElement("article");
     const avatar = document.createElement("div");
     const content = document.createElement("div");
@@ -75,7 +75,7 @@
     return row;
   };
 
-  const toolNode = (name, status, detail) => {
+  const toolNode = (name: any, status: any, detail: any) => {
     const card = document.createElement("div");
     const head = document.createElement("div");
     const title = document.createElement("strong");
@@ -95,7 +95,7 @@
     return card;
   };
 
-  const appendParts = (node, message) => {
+  const appendParts = (node: any, message: any) => {
     const content = node.querySelector(".message-content");
     for (const item of partsOf(message)) {
       if (item?.type === "reasoning" && item.text) content.appendChild(toolNode("Reasoning", "completed", item.text));
@@ -110,7 +110,7 @@
     }
   };
 
-  const renderEnvelope = (view, message) => {
+  const renderEnvelope = (view: any, message: any) => {
     if (!message?.info || !Array.isArray(message.parts)) return false;
     const info = message.info;
     const time = info.time?.created ?? info.time?.completed;
@@ -290,7 +290,7 @@
     });
   };
 
-  const assistantAfter = (timestamp) => K.state.messages.some((message) => {
+  const assistantAfter = (timestamp: any) => K.state.messages.some((message) => {
     if (message?.role !== "assistant") return false;
     const created = Number(message.createdAt || 0);
     return created >= timestamp - 1000 && (message.text || message.error || (message.activities || []).some((activity) => activity?.kind === "tool"));
