@@ -76,13 +76,19 @@ Normal Browser reads no longer consume the engine's session/message shapes direc
 
 The projection owns cross-project aggregation, flat session timestamps, semantic message roles/text, activity classification, usage, normalized status, and Changes fallback. Runtime-specific `info`, `parts`, `busy`, and `retry` shapes therefore stay on this compatibility side of the boundary.
 
-This does not move mutation or execution ownership. Session create/update/delete, prompt/abort, live events, persisted transcript storage, and the agent loop still use the engine through the runtime adapter.
+This does not move mutation or execution ownership. Session create/update/delete, prompt/abort, persisted transcript storage, the event source, and the agent loop still use the engine through the runtime adapter. Browser-facing event semantics are now projected by the launcher.
 
 ### Events
 
+Implementation compatibility still consumes:
+
 - `GET /runtime/global/event?directory=...` (SSE)
 
-TL Studio uses events for responsive updates and projected runtime state, while persisted/current session messages remain the reconnect-safe rendering source of truth.
+The Browser no longer consumes this engine-specific stream directly. The launcher projects it to:
+
+- `GET /local/events` (SSE)
+
+Current runtime event names and nested `properties` envelopes are therefore implementation details. TL Studio maps relevant runtime events into `stream.ready`, `session.changed`, `message.changed`, `attention.changed`, and `workspace.changed`. Persisted/current semantic session reads remain the reconnect-safe rendering source of truth.
 
 ### Permissions
 
@@ -168,7 +174,7 @@ The adapter owns browser-side runtime concerns such as:
 
 Permission policy is intentionally not a browser-to-engine adapter concern anymore; it is owned by the launcher-side TL Studio permission engine.
 - tool presentation resolves through the launcher-owned `/local/tools` semantic registry rather than raw runtime labels
-- live-event handling
+- raw live-event compatibility and launcher-side semantic projection
 
 Engine-specific provider/config/auth translation belongs in the launcher, not in browser modules.
 
