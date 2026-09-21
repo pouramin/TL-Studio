@@ -8,13 +8,13 @@
   const promptPlaceholder = K.els.prompt?.placeholder || "";
   const legacyCache = new Map();
 
-  const normalizePath = (value) => {
+  const normalizePath = (value: any) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
     if (K.state.local?.platform === "windows") path = path.toLowerCase();
     return path;
   };
 
-  const sessionDirectory = (session) => session?.directory
+  const sessionDirectory = (session: any) => session?.directory
     || session?.location?.directory
     || session?.location?.project?.directory
     || session?.path
@@ -23,7 +23,7 @@
   const legacyKey = () => normalizePath(K.state.local?.project || "");
   const isLegacy = (session = K.state.session) => !!session?.__legacy;
 
-  const setLegacyMode = (enabled) => {
+  const setLegacyMode = (enabled: any) => {
     K.state.legacySession = !!enabled;
     if (K.els.prompt) {
       K.els.prompt.disabled = !!enabled;
@@ -46,12 +46,12 @@
       const payload = await K.api.legacySessions.list({ order: "desc", limit: 100 });
       const rows = Array.isArray(payload?.data) ? payload.data : [];
       const sessions = rows
-        .filter((session) => session?.id)
-        .map((session) => {
+        .filter((session: any) => session?.id)
+        .map((session: any) => {
           const directory = sessionDirectory(session);
           return { ...session, directory, __legacy: true };
         })
-        .filter((session) => !!session.directory && normalizePath(session.directory) === key);
+        .filter((session: any) => !!session.directory && normalizePath(session.directory) === key);
       legacyCache.set(key, sessions);
       return sessions;
     } catch (error) {
@@ -129,7 +129,7 @@
     };
   }
 
-  const openLegacySession = async (session) => {
+  const openLegacySession = async (session: any) => {
     K.stopSessionPolling?.();
     K.clearAttachments?.();
     K.state.session = session;
