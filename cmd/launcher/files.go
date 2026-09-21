@@ -38,6 +38,7 @@ type localFilePreview struct {
 	Mime                string `json:"mime"`
 	Binary              bool   `json:"binary"`
 	Previewable         bool   `json:"previewable"`
+	ViewOnly            bool   `json:"viewOnly"`
 	PreviewKind         string `json:"previewKind,omitempty"`
 	PreviewCapabilityID string `json:"previewCapabilityID,omitempty"`
 	PreviewName         string `json:"previewName,omitempty"`
@@ -321,6 +322,7 @@ func applyLocalPreviewCapability(preview *localFilePreview, rel string) {
 	}
 	if capability, ok := previewCapabilityForPath(rel); ok {
 		preview.Previewable = true
+		preview.ViewOnly = binaryPreviewKind(capability.Kind)
 		preview.PreviewKind = capability.Kind
 		preview.PreviewCapabilityID = capability.ID
 		preview.PreviewName = capability.Name
