@@ -15,7 +15,7 @@ func TestProjectSearchUIContract(t *testing.T) {
 		"projectSearchCase",
 		"event.ctrlKey || event.metaKey",
 		"event.shiftKey",
-		"event.key.toLowerCase() === "f"",
+		`event.key.toLowerCase() === "f"`,
 		"AbortController",
 		"K.openWorkspaceFileAt",
 		"match.line",
