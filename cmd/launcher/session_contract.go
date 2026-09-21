@@ -114,6 +114,7 @@ type sessionReadContract struct {
 	state   *appState
 	backend *runtimeBackend
 	history *projectHistoryStore
+	store   *sessionPersistenceStore
 }
 
 type sessionRuntimeError struct {
@@ -146,6 +147,7 @@ func newSessionReadContractWithBackend(state *appState, backend *runtimeBackend)
 		state:   state,
 		backend: backend,
 		history: recentProjects,
+		store:   newSessionPersistenceStore(sessionPersistenceRoot(), backend.engine.ID()),
 	}
 }
 
@@ -679,6 +681,23 @@ func (c *sessionReadContract) listProjectSessions(ctx context.Context, directory
 	query.Set("roots", "true")
 	raw, err := c.runtimeGet(ctx, "/session", directory, query)
 	if err != nil {
+		if c.store != nil {
+			persisted, storeErr := c.store.list(maxPersistedSessions)
+			if storeErr == nil {
+				result := make([]sessionView, 0, len(persisted))
+				for _, session := range persisted {
+					if sameProjectPath(session.Directory, directory) {
+						result = append(result, session)
+						if limit > 0 && len(result) >= limit {
+							break
+						}
+					}
+				}
+				if len(result) > 0 {
+					return result, nil
+				}
+			}
+		}
 		return nil, err
 	}
 	var rows []map[string]any
@@ -690,6 +709,9 @@ func (c *sessionReadContract) listProjectSessions(ctx context.Context, directory
 		session := normalizeSession(row, directory)
 		if session.ID != "" {
 			result = append(result, session)
+			if c.store != nil {
+				_ = c.store.upsertSession(session)
+			}
 		}
 	}
 	return result, nil
@@ -749,7 +771,17 @@ func (c *sessionReadContract) listSessions(ctx context.Context, limit int) ([]se
 			}
 		}
 	}
-	if successes == 0 && lastErr != nil {
+	if c.store != nil {
+		if persisted, storeErr := c.store.list(maxPersistedSessions); storeErr == nil {
+			for _, session := range persisted {
+				previous, exists := merged[session.ID]
+				if !exists || session.UpdatedAt >= previous.UpdatedAt {
+					merged[session.ID] = session
+				}
+			}
+		}
+	}
+	if len(merged) == 0 && successes == 0 && lastErr != nil {
 		return nil, lastErr
 	}
 	list := make([]sessionView, 0, len(merged))
@@ -771,6 +803,11 @@ func (c *sessionReadContract) listSessions(ctx context.Context, limit int) ([]se
 func (c *sessionReadContract) getSession(ctx context.Context, sessionID, directory string) (sessionView, error) {
 	raw, err := c.runtimeGet(ctx, "/session/"+url.PathEscape(sessionID), directory, nil)
 	if err != nil {
+		if c.store != nil {
+			if persisted, ok, storeErr := c.store.getSession(sessionID); storeErr == nil && ok {
+				return persisted, nil
+			}
+		}
 		return sessionView{}, err
 	}
 	var row map[string]any
@@ -780,6 +817,9 @@ func (c *sessionReadContract) getSession(ctx context.Context, sessionID, directo
 	result := normalizeSession(row, directory)
 	if result.ID == "" {
 		return sessionView{}, errors.New("runtime session is missing an id")
+	}
+	if c.store != nil {
+		_ = c.store.upsertSession(result)
 	}
 	return result, nil
 }
@@ -792,6 +832,14 @@ func (c *sessionReadContract) getMessages(ctx context.Context, sessionID, direct
 	query.Set("limit", strconv.Itoa(limit))
 	raw, err := c.runtimeGet(ctx, "/session/"+url.PathEscape(sessionID)+"/message", directory, query)
 	if err != nil {
+		if c.store != nil {
+			if persisted, ok, storeErr := c.store.getMessages(sessionID); storeErr == nil && ok {
+				if len(persisted) > limit {
+					persisted = persisted[len(persisted)-limit:]
+				}
+				return persisted, nil
+			}
+		}
 		return nil, err
 	}
 	var rows []map[string]any
@@ -804,6 +852,13 @@ func (c *sessionReadContract) getMessages(ctx context.Context, sessionID, direct
 		if message.Role != "" {
 			result = append(result, message)
 		}
+	}
+	if c.store != nil {
+		session, _, _ := c.store.getSession(sessionID)
+		if session.ID == "" {
+			session = sessionView{ID: sessionID, Directory: directory}
+		}
+		_ = c.store.putMessages(session, result)
 	}
 	return result, nil
 }
@@ -836,13 +891,26 @@ func (c *sessionReadContract) getChanges(ctx context.Context, sessionID, directo
 				}
 			}
 			if len(changes) > 0 {
-				return mergeSessionChanges(changes), nil
+				changes = mergeSessionChanges(changes)
+				if c.store != nil {
+					session, _, _ := c.store.getSession(sessionID)
+					if session.ID == "" {
+						session = sessionView{ID: sessionID, Directory: directory}
+					}
+					_ = c.store.putChanges(session, changes)
+				}
+				return changes, nil
 			}
 		}
 	}
 
 	messages, messageErr := c.getMessages(ctx, sessionID, directory, 1000)
 	if messageErr != nil {
+		if c.store != nil {
+			if persisted, ok, storeErr := c.store.getChanges(sessionID); storeErr == nil && ok {
+				return persisted, nil
+			}
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -852,7 +920,15 @@ func (c *sessionReadContract) getChanges(ctx context.Context, sessionID, directo
 	for _, message := range messages {
 		changes = append(changes, message.Changes...)
 	}
-	return mergeSessionChanges(changes), nil
+	changes = mergeSessionChanges(changes)
+	if c.store != nil {
+		session, _, _ := c.store.getSession(sessionID)
+		if session.ID == "" {
+			session = sessionView{ID: sessionID, Directory: directory}
+		}
+		_ = c.store.putChanges(session, changes)
+	}
+	return changes, nil
 }
 
 func writeSessionContractError(w http.ResponseWriter, err error) {
