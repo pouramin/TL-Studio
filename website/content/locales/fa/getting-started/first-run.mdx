@@ -1,0 +1,54 @@
+---
+title: اولین اجرا
+description: اجرای TL Studio، بازکردن Project Local و شناخت مسیرهای اجرای Stable v0.3.
+icon: Play
+---
+
+## اجرای TL Studio
+
+نسخه Portable مناسب سیستم را اجرا کنید یا داخل Folder پروژه این دستور را بزنید:
+
+```bash
+npx --yes tl-studio
+```
+
+TL Studio سطح کنترل Local خودش را روی Loopback اجرا می‌کند و Workspace را در Browser باز می‌کند.
+
+## انتخاب Project
+
+روش معمول گرافیکی است. با Folder Picker سیستم‌عامل، Directory پروژه را انتخاب کنید. اگر دستور بالا را داخل Folder پروژه اجرا کرده باشید، همان Directory به‌صورت خودکار انتخاب می‌شود.
+
+برای مشخص‌کردن Project از CLI:
+
+```bash
+tl-studio --project /path/to/project
+```
+
+در Windows:
+
+```powershell
+tl-studio.exe --project "C:\Users\you\Projects\my-project"
+```
+
+## آشنایی سریع با Workspace
+
+بعد از بازکردن Project:
+
+1. از بخش **Files** و Monaco Workspace برای Browse و Edit استفاده کنید؛
+2. برای Project-wide Search از **Search** یا `Ctrl/Cmd+Shift+F` استفاده کنید؛
+3. Commandهای Project را از **Terminal** اجرا کنید؛
+4. File قابل Preview یا Project دارای Dev Server پشتیبانی‌شده را در **Preview** باز کنید؛
+5. Agent، Provider/Model و Attachmentها را از Composer انتخاب کنید؛
+6. هنگام Run، بخش **Changes** و Live Agent Activity را بررسی کنید.
+
+## انتخاب مسیر Agent Execution
+
+اگر Custom Provider و Model پشتیبانی‌شده داخل Provider Registry و Credential Vault خود TL Studio قابل Resolve باشد، Task می‌تواند با Native Agent Loop و Core Tool Executor خود TL Studio اجرا شود.
+
+Modelهای Hosted و Capabilityهایی که هنوز Native نشده‌اند از Compatibility Engine همراه برنامه و پشت Adapter خود TL Studio عبور می‌کنند.
+
+Browser در هر دو حالت فقط با Contractهای Semantic خود TL Studio کار می‌کند و مستقیم به Compatibility Engine وصل نمی‌شود.
+
+## Lifecycle محلی
+
+Local Control Server و Compatibility Process همراه برنامه فقط روی Loopback اجرا می‌شوند. با بستن TL Studio، Child Process همراه هم متوقف می‌شود. Requestهای Native مربوط به Custom Provider مستقیماً از TL Studio به Endpoint همان Provider می‌روند.

@@ -1,0 +1,86 @@
+---
+title: Runtime Integration
+description: مرجع Maintainer برای Native Execution در TL Studio v0.3 و Compatibility Engine Boundary باقی‌مانده.
+icon: Cable
+---
+
+نسخه Stable فعلی **Kilo Code 7.6.2** را به‌عنوان Compatibility Engine شخص ثالث و تست‌شده Bundle می‌کند. این Engine هویت عمومی محصول نیست و برای Custom Providerهای پشتیبانی‌شده دیگر مالک اجباری Agent Loop یا Core Coding Tool Execution نیست.
+
+## دو Execution Path
+
+در Stable v0.3 مدل اجرا Hybrid است.
+
+### Native Path
+
+Custom Provider/Model پشتیبانی‌شده می‌تواند از این مسیر اجرا شود:
+
+```text
+TL Studio Session Command
+→ Native Agent Runtime
+→ Direct Model Client
+→ TL Studio Tool Executor
+→ Semantic Persistence / Events
+```
+
+در این مسیر، Compatibility Engine برای Agent Loop یا Core Tool Execution Native استفاده نمی‌شود.
+
+### Compatibility Path
+
+Hosted Authentication/Model، Legacy Provider Resolve‌نشده و Runtime-only Capability از Compatibility Adapter عبور می‌کنند.
+
+## Runtime Engine Boundary
+
+Launcher یک Boundary عمومی به نام `runtimeEngine` دارد.
+
+این مسئولیت‌های Implementation-specific داخل Compatibility Adapter باقی می‌مانند:
+
+- Binary Discovery؛
+- Child-process Startup؛
+- Private Credential؛
+- Project Request Scoping؛
+- Private Request Decoration؛
+- Session/Question Compatibility Translation؛
+- Runtime Event Projection.
+
+کد عمومی Product نباید Route Name خصوصی یا Protocol Quirk مخصوص Engine را وارد لایه Browser/Product کند.
+
+## Contractهای Browser
+
+Browser برای Session، Question، Permission، Tool، Event، File، Search، Process و Preview از Contractهای Semantic/Local خود TL Studio استفاده می‌کند.
+
+Routeهای `/runtime/*` فقط برای Capability عمومی Compatibility که هنوز لازم است باقی می‌مانند.
+
+Browser هیچ‌وقت Backend Password مربوط به Compatibility Engine را دریافت نمی‌کند.
+
+## Provider Synchronization
+
+Provider Definition و Credential متعلق به TL Studio هستند.
+
+در Native Execution، Direct Model Client از داده خود TL Studio استفاده می‌کند.
+
+در Compatibility Execution، Launcher فقط هنگام نیاز Provider Definition را Translate و Credential را برای Engine فعال Sync می‌کند.
+
+## Advanced Override
+
+Maintainer می‌تواند Runtime Binary سازگار را مشخص کند:
+
+```bash
+tl-studio --runtime-bin /path/to/runtime
+```
+
+User معمولی Release به این Option نیاز ندارد، چون Compatibility Engine تست‌شده داخل Package قرار دارد.
+
+## Compatibility Testing
+
+قبل از تغییر Engine همراه یا Adapter باید Regression Coverage این موارد را بررسی کند:
+
+- Project Routing؛
+- Hosted Auth/Model؛
+- Session Compatibility؛
+- Permission و Question؛
+- Semantic Live-event Projection؛
+- Provider Configuration/Credential؛
+- Compatibility Tool Execution؛
+- Prompt و Write واقعی روی File.
+
+Testهای Native Agent جداگانه ثابت می‌کنند که Coding با Custom Provider پشتیبانی‌شده می‌تواند از Direct Model + Tool Executor خود TL Studio کامل شود.

@@ -1,0 +1,46 @@
+---
+title: Project Search
+description: Search text across the selected project without leaving TL Studio.
+icon: Search
+---
+
+Project Search is implemented by TL Studio itself and scans only the currently selected local project.
+
+## Open Search
+
+Use the Search surface or the standard shortcut:
+
+```text
+Windows / Linux: Ctrl + Shift + F
+macOS:           Cmd + Shift + F
+```
+
+## Search controls
+
+The current search supports:
+
+- case-sensitive matching;
+- lightweight include patterns;
+- lightweight exclude patterns;
+- grouped results by file;
+- click-to-open navigation into the editor.
+
+Selecting a result opens or activates the matching file and selects the matching range.
+
+## Local and bounded
+
+Search does not build a shell command and does not require an external search binary. TL Studio scans the project through its own local filesystem boundary.
+
+For safety and performance it does not follow symlink entries, ignores binary/non-UTF-8 files, bounds searchable file/result sizes, and skips common generated or heavy directories by default, including:
+
+```text
+.git
+node_modules
+dist
+build
+out
+coverage
+.next
+```
+
+Use include/exclude patterns when you want to narrow a large project further.

@@ -1,0 +1,90 @@
+---
+title: Native Agent و Toolها
+description: مسیر Native Model Execution، Tool Registry، Tool Executor، Permission و Compatibility Fallback در TL Studio v0.3.
+icon: Bot
+---
+
+در نسخه Stable v0.3، Taskهای Coding مربوط به Custom Providerهای پشتیبانی‌شده می‌توانند بدون سپردن Agent Loop یا Core Tool Execution به Compatibility Engine همراه برنامه اجرا شوند.
+
+## مسیر Native Execution
+
+برای Custom Provider و Model پشتیبانی‌شده:
+
+```text
+Browser
+  ↓
+TL Studio Semantic Session Command
+  ↓
+TL Studio Native Agent Loop
+  ↓
+Direct Model Request
+  ↓
+Normalized Tool Call
+  ↓
+TL Studio Permission Policy
+  ↓
+TL Studio Tool Executor
+  ↓
+TL Studio Local Project Subsystem
+  ↓
+Structured Tool Result
+  ↓
+Next Model Turn
+  ↓
+Final Response + Session Persistence + Live Events
+```
+
+مسیر Native فقط وقتی انتخاب می‌شود که Provider و Model درخواست‌شده از Provider Definition و Credential متعلق به خود TL Studio قابل Resolve باشند.
+
+## Protocolهای مستقیم Provider
+
+Native Model Client در نسخه Stable از این مسیرها پشتیبانی می‌کند:
+
+- OpenAI-compatible Chat Completions؛
+- OpenAI Responses؛
+- Anthropic Messages compatible.
+
+ترافیک Provider مستقیم به Endpoint تنظیم‌شده توسط User می‌رود و از Cloud Service متعلق به پروژه عبور نمی‌کند.
+
+## Core Toolهای Native
+
+Tool Executor در v0.3 این Toolها را به‌صورت Native اجرا می‌کند:
+
+```text
+files.read
+files.list
+files.write
+files.edit
+search.content
+terminal.command
+```
+
+این Handlerها از همان Project Boundary، Symlink Protection، Search، Process Manager، Cancellation و Permission Infrastructure خود TL Studio استفاده می‌کنند.
+
+Tool ID ناشناخته در Native Path حدس زده نمی‌شود و Reject می‌شود.
+
+## Tool Registry
+
+مالکیت Semantic Toolهای شناخته‌شده با TL Studio است. Tool Registry محلی Descriptorهای پایدار زیر را ارائه می‌دهد:
+
+- Semantic Tool ID؛
+- Name و Description محصولی؛
+- Category؛
+- Permission Class؛
+- Capability Flagهای Read/Write/Execute/Network؛
+- Input Schema؛
+- Presentation Hint.
+
+خود Registry Permission نمی‌دهد. Enforcement نهایی در همان مسیری انجام می‌شود که Tool را واقعاً اجرا می‌کند.
+
+## Safety و Loop Guard
+
+Native Agent Runtime برای تعداد Iteration، Tool Round، Tool در هر Round و تکرار Tool Call یکسان Limit مشخص دارد. Tool Execution هم از Structured Validation، Project Confinement، Cancellation و Command Timeout محدود استفاده می‌کند.
+
+Requestهای دارای قابلیت Execute یا Network به Approval قابل‌استفاده‌ی دائمی تبدیل نمی‌شوند.
+
+## Compatibility Fallback
+
+برای Hosted Authentication/Model، Providerهای Legacy یا Resolve‌نشده و Capabilityهایی که هنوز Handler Native ندارند، Compatibility Engine همراه برنامه همچنان استفاده می‌شود.
+
+این مسیر پشت Contractهای متعلق به TL Studio قرار دارد تا Browser Product Surface به API Nameهای مخصوص Engine وابسته نباشد.

@@ -1,0 +1,162 @@
+---
+title: Architecture
+description: Understand TL Studio v0.3 ownership, native Agent execution, local product contracts, and compatibility boundary.
+icon: Network
+---
+
+Stable v0.3 moves the core coding workflow substantially into TL Studio itself.
+
+```text
+Browser Workspace
+  │
+  ├─ Files / Monaco / Search / Terminal / Preview
+  ├─ Provider + Model Registry
+  ├─ Credential Vault
+  ├─ Semantic Sessions / Questions / Permissions / Events
+  └─ Tool Registry
+        │
+        ▼
+TL Studio Launcher / Local Core
+  │
+  ├─ Native Agent Runtime
+  │    ├─ Direct model client
+  │    ├─ Permission policy
+  │    └─ Core Tool Executor
+  │          ↓
+  │      TL Studio local Project subsystems
+  │
+  ├─ supported custom providers ──► direct model APIs
+  │
+  └─ compatibility adapter ───────► bundled compatibility engine
+                                      └─ hosted / legacy / runtime-only capabilities
+
+Live Preview ─────────────────────► separate loopback origin
+```
+
+## TL Studio-owned product surface
+
+Stable v0.3 owns:
+
+- Browser IDE and Workspace;
+- locally bundled Monaco Editor plus fallback Editor;
+- Project filesystem operations and SHA-256 save conflict checks;
+- Project Search;
+- local process manager and Terminal;
+- capability-driven Preview;
+- Provider/Model definitions;
+- custom-provider credential persistence;
+- Tool semantic registry;
+- native core Tool execution;
+- Project-scoped Permission policy;
+- semantic Session read and command contracts;
+- semantic Session persistence;
+- semantic Question contract;
+- semantic live-event projection;
+- native custom-provider model execution and Agent loop;
+- cancellation, loop guards, recovery UX, packaging, releases, and branding.
+
+## Browser contract
+
+The Browser depends on TL Studio product routes rather than implementation-specific engine APIs.
+
+Important local surfaces include:
+
+```text
+/local/sessions*
+/local/questions*
+/local/permissions*
+/local/events
+/local/tools
+/local/search
+/local/process
+/local/preview*
+/runtime/*
+```
+
+`/runtime/*` remains the generic compatibility boundary for capabilities that still require the bundled engine. Product semantics that TL Studio now owns use launcher-owned `/local/*` contracts.
+
+## Native Agent runtime
+
+For supported custom Providers, TL Studio can own the complete coding loop:
+
+```text
+Session run
+→ direct model request
+→ normalized Tool calls
+→ Permission policy
+→ native Tool Executor
+→ Project filesystem/Search/process subsystem
+→ structured Tool results
+→ next model turn
+→ final response
+→ semantic persistence + live events
+```
+
+The native runtime currently executes these core Tool IDs:
+
+```text
+files.read
+files.list
+files.write
+files.edit
+search.content
+terminal.command
+```
+
+It includes limits on Agent iterations, Tool rounds, Tools per round, and repeated identical Tool calls.
+
+## Compatibility engine boundary
+
+The bundled engine remains for hosted authentication/models, unresolved legacy Provider configurations, and capabilities that do not yet have TL Studio-native handlers.
+
+Binary discovery, startup, private authentication, Project request scoping, and implementation-specific decoration stay behind the `runtimeEngine`/adapter boundary.
+
+The Browser does not receive the compatibility-engine password and does not construct its private routes.
+
+## Provider, Model, and credential ownership
+
+Provider/Model definitions live in the TL Studio versioned `providers.json` registry.
+
+API keys are separate and live in the TL Studio credential vault. The active execution path receives a credential only when it needs to execute a request.
+
+Supported native Provider protocols are OpenAI-compatible Chat Completions, OpenAI Responses, and Anthropic Messages compatible APIs.
+
+## Session ownership
+
+TL Studio projects current Session data into a semantic read model and owns semantic commands for create, rename, delete, run, and abort.
+
+Session snapshots are mirrored into TL Studio local state, including semantic transcript, usage/activity data, and Changes. Execution ownership is recorded so native Session history is not overwritten by compatibility reads.
+
+## Questions, Permissions, and Events
+
+Interactive Questions use `/local/questions*`.
+
+Remembered Permission policy uses `/local/permissions*` and Project-scoped `permissions.json`. Native write/edit/execute authorization is enforced before the Tool Executor performs the operation.
+
+Browser live updates use semantic SSE at `/local/events`. Native events and projected compatibility events share this channel.
+
+## Filesystem and process boundary
+
+The Go launcher remains the filesystem authority for Browser-side Project operations.
+
+It rejects traversal, symlink escapes, Project-root mutation, and protected Git metadata mutation. Normal saves use a revision token to avoid silently overwriting external changes.
+
+Project Search is implemented directly by TL Studio and does not shell out to an external search binary.
+
+The local process manager owns Project-scoped command execution and stop behavior. The current Terminal is a command runner, not a full PTY.
+
+## Preview isolation
+
+Preview capabilities include HTML, SVG/raster images, PDF, video, audio, Markdown, and text, plus supported Node development servers.
+
+Previewed Project code runs on a separate loopback origin from the privileged TL Studio control server. External Preview URLs are not accepted.
+
+## Browser implementation
+
+Browser source under `cmd/launcher/ui` is strict TypeScript.
+
+`kernel.ts` exports the shared typed Browser kernel, feature modules use ES imports, `browser.ts` defines the module graph, and esbuild produces the primary `browser.js` bundle. Generated Browser JavaScript is build output, not the source of truth.
+
+## No cloud control plane
+
+TL Studio has no project-owned application server, database, telemetry backend, or Model proxy. External requests are limited to services the user explicitly configures plus normal distribution/update traffic.

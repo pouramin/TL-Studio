@@ -1,0 +1,57 @@
+---
+title: Workspace و Editor
+description: کار با Project Fileها در Monaco لوکال و File Contract متعلق به TL Studio v0.3.
+icon: FolderCode
+---
+
+در Stable v0.3، **Monaco Editor 0.56.0** نقش Editor Engine پیشرفته را دارد، اما Project File، Buffer، Save، Conflict و External-change Reconciliation همچنان در مالکیت TL Studio هستند.
+
+## File Explorer
+
+از بخش **Files** می‌توانید:
+
+- File باز کنید؛
+- File و Folder بسازید؛
+- Rename کنید؛
+- Delete کنید؛
+- Project Tree را Refresh کنید؛
+- با **Show in Folder** محل File فعال را در File Manager سیستم باز کنید.
+
+همه عملیات Filesystem داخل Boundary همان Project انتخاب‌شده Resolve می‌شوند.
+
+## Monaco کاملاً Local است
+
+Monaco و Workerهایش همراه TL Studio Bundle می‌شوند و از Local Application Origin Load می‌شوند. Editor پیشرفته فقط هنگام اولین نیاز Lazy Load می‌شود و CDN برای Editor لازم نیست.
+
+اگر Monaco Load نشود، Editor سبک مبتنی بر textarea همچنان به‌عنوان Fallback کار می‌کند.
+
+## Multi-tab Editing
+
+هر File بازشده Buffer مستقل دارد. TL Studio وضعیت Clean و Dirty هر Tab را جدا نگه می‌دارد تا با جابه‌جایی بین Fileها Editهای Save‌نشده از بین نروند.
+
+برای Save از `Ctrl+S` در Windows/Linux یا `Cmd+S` در macOS استفاده کنید.
+
+قابلیت‌های استاندارد Monaco مثل Find/Replace و Multi-cursor هم در دسترس‌اند.
+
+## Conflict Protection
+
+وقتی File خوانده می‌شود، TL Studio یک SHA-256 Revision Token نگه می‌دارد. Save معمولی همان Revision را برمی‌گرداند. اگر نسخه روی Disk بعد از Open تغییر کرده باشد، Silent Overwrite انجام نمی‌شود.
+
+Force Save یک Action جدا و آگاهانه بعد از بررسی Conflict است.
+
+## تغییرات Agent، Git و برنامه‌های دیگر
+
+File ممکن است توسط Agent، Git، Build Tool یا برنامه‌ای دیگر تغییر کند.
+
+- Buffer تمیز تغییر Disk را خودکار دنبال می‌کند؛
+- Buffer کثیف حفظ می‌شود و تغییر یا حذف نسخه Disk را علامت می‌زند.
+
+## Read-only Preview Tab
+
+Fileهای Binary/Media قابل Preview می‌توانند به‌عنوان Tab واقعی و Read-only داخل Workspace باز شوند. Render محتوا از Preview System می‌آید و File به Text قابل‌ویرایش تبدیل نمی‌شود.
+
+برای فرمت‌ها، [Live Preview](./live-preview) را ببینید.
+
+## Ask Agent از Selected Code
+
+بخش انتخاب‌شده‌ی Code را می‌توانید مستقیم به Agent بدهید تا Context لازم بدون Copy/Paste دستی منتقل شود.

@@ -1,0 +1,54 @@
+---
+title: First run
+description: Start TL Studio, open a local Project, and understand the stable v0.3 execution paths.
+icon: Play
+---
+
+## Start TL Studio
+
+Run the portable executable for your platform, or start TL Studio from the Project directory:
+
+```bash
+npx --yes tl-studio
+```
+
+TL Studio starts its local control surface on loopback and opens the Browser workspace automatically.
+
+## Choose a Project
+
+The normal workflow is graphical: use the operating-system Folder Picker and choose an existing Project directory. If you launched `npx --yes tl-studio` from inside a Project, that directory is selected automatically.
+
+You can also preselect a Project:
+
+```bash
+tl-studio --project /path/to/project
+```
+
+Windows:
+
+```powershell
+tl-studio.exe --project "C:\Users\you\Projects\my-project"
+```
+
+## Get oriented
+
+After opening a Project:
+
+1. use **Files** and the Monaco workspace to browse or edit files;
+2. use **Search** or `Ctrl/Cmd+Shift+F` for Project-wide text search;
+3. use **Terminal** for Project-scoped commands;
+4. open a previewable file or supported dev-server Project in **Preview**;
+5. choose the Agent, Provider/Model, and attachments in the composer;
+6. inspect **Changes** and live Agent activity while a run progresses.
+
+## How Agent execution is selected
+
+For a supported custom Provider/Model stored in TL Studio's Provider registry and credential vault, TL Studio can run the coding task through its own native model/tool/model loop and core Tool Executor.
+
+Hosted models and capabilities that are not native yet use the bundled compatibility engine behind TL Studio's adapter boundary.
+
+The Browser uses TL Studio semantic routes either way; it does not talk directly to the compatibility engine.
+
+## Local lifecycle
+
+The local control server and the bundled compatibility process bind to loopback. Closing TL Studio stops the bundled child process. Native custom-provider requests go directly from TL Studio to the Provider endpoint you configured.

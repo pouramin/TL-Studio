@@ -1,0 +1,60 @@
+---
+title: خط Development
+description: وضعیت dev بعد از Stable v0.3.0 و Boundary فاز 3.
+icon: FlaskConical
+---
+
+نسخه Production فعلی:
+
+```text
+v0.3.0
+```
+
+Branch خصوصی Development برای نسخه بعدی با این Version باز شده است:
+
+```text
+v0.4.0-alpha.1
+```
+
+## وضعیت فعلی
+
+**پیاده‌سازی فاز 3 هنوز شروع نشده است.**
+
+این Branch فقط خط Alpha خصوصی بعدی را مشخص می‌کند؛ فاز 2 قبلاً Validate و وارد Stable v0.3.0 شده است. در حال حاضر Feature مخصوص v0.4 وجود ندارد که به‌عنوان قابلیت پیاده‌سازی‌شده مستند شود.
+
+## چیزهایی که فاز 2 کامل کرد
+
+Baseline پایدار v0.3 حالا مالک این بخش‌هاست:
+
+- Browser IDE و Workspace Local؛
+- Monaco Editor؛
+- File Management، Project Search، Terminal و Preview؛
+- Provider/Model Registry و Credential Vault؛
+- Tool Registry و Core Tool Executor در Native Path؛
+- Permission Policy در Scope Project؛
+- Session Read/Command/Persistence و Execution Ownership؛
+- Question و Live Eventهای Semantic؛
+- Direct Model Execution برای Custom Providerهای پشتیبانی‌شده؛
+- Native Model/Tool/Model Agent Loop؛
+- Cancellation و Loop Guard.
+
+## وابستگی Compatibility باقی‌مانده
+
+Engine شخص ثالث همراه برنامه هنوز برای Hosted Authentication/Model، Legacy Provider Resolve‌نشده، Runtime-only Capability و رفتار Compatibility تحت Regression Test لازم است.
+
+بنابراین هنوز درست نیست بگوییم Compatibility Engine کاملاً قابل حذف شده است.
+
+## جهت فاز 3
+
+مرحله معماری بعدی باید مشخص کند کدام Capabilityهای Compatibility-only وارد Native TL Studio شوند و آیا یا چه زمانی Startup بتواند Engine شخص ثالث را Optional کند، به‌جای اینکه همیشه Bundle/Start شود.
+
+این‌ها Goal فاز بعدی هستند، نه Feature پیاده‌سازی‌شده.
+
+## توزیع Preview
+
+Development خصوصی باقی می‌ماند:
+
+- Alpha روی npm Publish نمی‌شود؛
+- GitHub Prerelease عمومی ندارد؛
+- تست از Preview Build Artifactهای GitHub Actions انجام می‌شود؛
+- مسیر Stable با `latest` و GitHub Release تا Promotion تغییر نمی‌کند.

@@ -1,0 +1,87 @@
+---
+title: Security model
+description: Understand TL Studio v0.3 network, filesystem, credential, permission, session, and Preview boundaries.
+icon: ShieldCheck
+---
+
+TL Studio is a local application, not a remotely exposed coding service.
+
+## Loopback-only control surface
+
+The Browser-facing control server accepts loopback addresses only.
+
+The bundled compatibility process also binds to loopback and uses a fresh random per-launch backend credential. That credential stays server-side and is injected by the local adapter; Browser code never receives it.
+
+Requests with an Origin are checked against the local control origin, and the UI is served with a restrictive Content Security Policy.
+
+## Project filesystem boundary
+
+Browser file operations and native Tool file operations are constrained to the selected Project.
+
+TL Studio rejects:
+
+- path traversal;
+- symlink-parent escapes;
+- Project-root mutation where prohibited;
+- protected Git metadata mutation.
+
+Normal Editor saves use a SHA-256 revision token so a newer Agent/Git/external edit cannot be silently overwritten.
+
+## Native Tool authorization
+
+Native read-only Tools that have no write/execute/network capability can run without a human prompt.
+
+Write/edit and command execution pass through TL Studio's Permission authorizer.
+
+Execute- or network-capable native requests are sensitive and cannot be remembered as reusable rules. Unknown native Tools cannot be authorized.
+
+## Remembered Permission policy
+
+Safe reusable rules are stored in Project-scoped `permissions.json`.
+
+TL Studio uses exact matchers rather than inventing broader wildcard semantics. Compatibility requests marked sensitive or `disableAlways` remain interactive.
+
+Users can inspect and forget remembered rules from Settings.
+
+## Credential vault
+
+Custom Provider API keys are owned by TL Studio and kept out of `providers.json` and Browser storage.
+
+Credential storage uses:
+
+- Windows DPAPI;
+- macOS Keychain when available;
+- Linux Secret Service through `secret-tool` when available;
+- encrypted private-file fallback otherwise.
+
+The fallback creates a private local master key and uses authenticated encryption. Credential material is stored under the TL Studio local state directory with private file permissions where supported.
+
+## Session persistence
+
+Semantic Session snapshots are stored locally in TL Studio state. Persistence is bounded, uses private JSON files, and strips inlined `data:` attachment payloads before snapshots are written.
+
+Session state can contain prompts, assistant text, Tool activity, usage information, and Project Changes. Treat the local TL Studio state directory as sensitive user data.
+
+## Preview isolation
+
+Project web content does not run on TL Studio's privileged control origin.
+
+Preview uses a separate loopback origin; external Preview URLs are rejected. File resolution remains Project-bound and symlink/traversal escapes are rejected.
+
+## Local Editor assets
+
+Monaco and its workers are bundled locally. TL Studio does not load Editor runtime code from a CDN.
+
+## Terminal trust
+
+Commands execute locally with the current OS user's permissions. Loopback isolation does not make an arbitrary command safe.
+
+Review destructive, network, package-manager, and credential-sensitive commands before running or approving them.
+
+## Provider trust
+
+Custom Provider endpoints receive the content sent for model execution. Use endpoints you trust and never publish API keys or local state files in Issues or logs.
+
+## No TL Studio telemetry backend
+
+TL Studio does not require a project-owned telemetry or Model proxy service. Provider traffic for native custom-provider execution goes directly to the configured endpoint.

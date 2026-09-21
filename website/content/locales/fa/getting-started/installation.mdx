@@ -1,0 +1,61 @@
+---
+title: نصب
+description: نصب نسخه Stable v0.3 با npm یا Release قابل‌حمل.
+icon: Download
+---
+
+## اجرا با یک دستور
+
+اگر Node.js و npm نصب هستند، داخل Folder پروژه این دستور را اجرا کنید:
+
+```bash
+npx --yes tl-studio
+```
+
+پکیج npm یک Launcher سبک است که به Release پایدار متناظر TL Studio متصل می‌شود. سیستم‌عامل و Architecture را تشخیص می‌دهد، Archive رسمی را دانلود می‌کند، SHA-256 را Verify می‌کند، Local Cache می‌سازد و TL Studio را با Folder فعلی به‌عنوان Project اجرا می‌کند.
+
+برای جلوگیری از بازشدن خودکار Browser:
+
+```bash
+npx --yes tl-studio --no-browser
+```
+
+## نسخه Portable
+
+Archive مناسب سیستم را از GitHub Releases بگیرید، Extract کنید و اجرا کنید:
+
+```text
+Windows:  tl-studio.exe
+Linux:    ./tl-studio
+macOS:    ./tl-studio
+```
+
+Release قابل‌حمل شامل Compatibility Engine تست‌شده، Assetهای Monaco، Licenseهای TL Studio و Third-party Noticeهای لازم است.
+
+## Buildهای پشتیبانی‌شده
+
+- Windows x64
+- Linux x64
+- Linux ARM64
+- macOS Intel x64
+- macOS Apple Silicon ARM64
+
+## بررسی فایل دانلودی
+
+هر Release پایدار فایل زیر را هم منتشر می‌کند:
+
+```text
+SHA256SUMS.txt
+```
+
+در صورت نیاز می‌توانید Hash فایل دانلودی را با مقدار منتشرشده مقایسه کنید.
+
+## Buildهای Development
+
+خط خصوصی بعدی روی `dev` با این نسخه باز شده است:
+
+```text
+v0.4.0-alpha.1
+```
+
+Alphaهای Development روی npm یا GitHub Prerelease عمومی منتشر نمی‌شوند. وقتی پیاده‌سازی فاز بعدی شروع شود، Preview Buildهای GitHub Actions همچنان مسیر تست خصوصی خواهند بود.

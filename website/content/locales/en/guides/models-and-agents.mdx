@@ -1,0 +1,41 @@
+---
+title: Models and agents
+description: Understand Agent/Model selection and the stable v0.3 native versus compatibility execution paths.
+icon: Bot
+---
+
+TL Studio owns the product-facing Provider/Model and Session contracts. Stable v0.3 can also execute supported custom-provider coding runs through a native Agent path.
+
+## Agent and Model selection
+
+Agent and Model selection happens in the TL Studio composer.
+
+For a custom Provider/Model that TL Studio can resolve from its own registry and credential vault, the run can use the TL Studio-native Agent loop.
+
+Hosted models and capabilities that are not native yet remain behind the compatibility adapter.
+
+## Native model protocols
+
+The direct native model path supports:
+
+- OpenAI-compatible Chat Completions;
+- OpenAI Responses;
+- Anthropic Messages compatible APIs.
+
+See [Native Agent and tools](./native-agent-and-tools) for the model/tool/model loop and native Tool set.
+
+## Tool semantics
+
+TL Studio owns the semantic Tool Registry used by the Browser UI. Known Tool IDs resolve to TL Studio descriptors containing names, categories, Permission classes, capability metadata, schemas, and presentation hints.
+
+On the native path, the core Tool Executor runs supported coding Tools through TL Studio-owned handlers. On the compatibility path, execution remains with the bundled engine while Browser presentation stays mapped to TL Studio semantics.
+
+## Hosted account flow
+
+Hosted authentication/models remain a compatibility capability. TL Studio presents authorization through generic local product routes so the Browser does not need engine-specific auth endpoints.
+
+## Failures and recovery
+
+Upstream authentication, quota, context, or transient failures can occur while TL Studio itself remains healthy.
+
+Compatibility runs can expose **Resume** after retryable failures. Native runs preserve semantic Session state and file Changes through TL Studio persistence; cancellation and failure state are recorded locally.

@@ -1,0 +1,69 @@
+---
+title: Project و Session
+description: Project Scope، Session Contract، Persistence و Live Activity در TL Studio v0.3.
+icon: FolderCode
+---
+
+## Project Boundary
+
+Project فعال مرز کاری TL Studio است. Fileها، Editor Tabها، Search، Terminal، Preview، Session، Changes، Agent Context، Permission و Question همگی Project فعال را دنبال می‌کنند.
+
+با Project Switch، Attachmentهای Pending پاک می‌شوند و TL Studio قبل از تغییر Project از Editor Bufferهای Save‌نشده محافظت می‌کند.
+
+## Sessionهای Semantic خود TL Studio
+
+در Stable v0.3، Browser دیگر برای Sessionهای فعلی Raw Session Envelope مربوط به Engine را Product Model اصلی در نظر نمی‌گیرد.
+
+Readهای Session از Routeهای متعلق به Launcher عبور می‌کنند:
+
+```text
+/local/sessions*
+```
+
+TL Studio، Session Metadata، Message، Activity، Status، Usage و Changes را به Shapeهای Semantic متعلق به خودش Project می‌کند.
+
+Commandهای Session هم از همین Product Boundary استفاده می‌کنند:
+
+- Create؛
+- Rename؛
+- Delete؛
+- Run/Prompt؛
+- Abort.
+
+Adapter اجرای فعال این Commandها را به Native Path یا Compatibility Path ترجمه می‌کند.
+
+## Session Persistence محلی
+
+TL Studio وضعیت Semantic مربوط به Session را در Local State خودش Mirror می‌کند.
+
+Snapshot ذخیره‌شده می‌تواند شامل این موارد باشد:
+
+- Session Metadata؛
+- Transcript مربوط به User/Assistant؛
+- Agent/Model Selection؛
+- Usage و Activity History؛
+- File Changes.
+
+در نتیجه اگر History مربوط به Compatibility Engine از بین برود، نسخه Local همچنان می‌تواند قابل خواندن باشد. Session فقط‌ذخیره‌شده را هم می‌توان Local Rename یا Delete کرد.
+
+TL Studio همچنین Execution Owner هر Session را ثبت می‌کند تا History مربوط به Native Path با Readهای Compatibility به‌اشتباه Overwrite نشود.
+
+## Live Activity
+
+Updateهای Browser از SSE Semantic زیر می‌آیند:
+
+```text
+/local/events
+```
+
+Eventها به Conceptهای محصولی مثل Session State، Message Change، Workspace Change و Attention Request برای Permission یا Question تبدیل می‌شوند.
+
+Native Run و Compatibility Run از یک Event Architecture مشترک استفاده می‌کنند.
+
+## Sessionهای Legacy
+
+برای Sessionهای مربوط به Protocol قدیمی Alpha یک Bridge فقط‌خواندنی و محدود باقی مانده است. این Historyها Project-scoped هستند و از مسیر Legacy تغییر داده نمی‌شوند.
+
+## Usage
+
+هرجا داده موجود باشد، TL Studio مصرف هر Turn و مجموع Project مثل Token، Request، Time، Reasoning و Cache را نشان می‌دهد. این داده‌ها Summary لوکال Workspace هستند و به Cloud Service متعلق به TL Studio ارسال نمی‌شوند.

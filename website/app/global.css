@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+:root {
+  --landing-grid: color-mix(in oklab, var(--color-fd-border) 45%, transparent);
+  --tl-navy: #212e4e;
+  --tl-green: #008036;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(to right, var(--landing-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--landing-grid) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.arch-line {
+  border: 1px solid var(--color-fd-border);
+  background: color-mix(in oklab, var(--color-fd-card) 86%, transparent);
+}
+
+.tl-docs-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tl-docs-brand img {
+  width: 1.65rem;
+  height: 1.45rem;
+  object-fit: contain;
+  border-radius: 0.35rem;
+  background: white;
+}
+
+.tl-brand-lockup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 28rem);
+  padding: 0.6rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--color-fd-border) 75%, transparent);
+  border-radius: 1.25rem;
+  background: white;
+  box-shadow: 0 18px 60px rgb(0 0 0 / 0.08);
+}
+
+.tl-brand-lockup img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tl-capability-chip {
+  border: 1px solid var(--color-fd-border);
+  background: color-mix(in oklab, var(--color-fd-card) 82%, transparent);
+}
+
+/* Persian typography */
+html[lang='fa'],
+html[lang='fa'] body,
+[lang='fa'] {
+  font-family: var(--font-vazir), Vazirmatn, Tahoma, 'Segoe UI', Arial, sans-serif;
+}
+
+html[lang='fa'] body {
+  font-feature-settings: 'kern';
+  text-rendering: optimizeLegibility;
+}
+
+/* Persian docs navigation.
+   Fumadocs has a few nested LTR containers inside the sidebar, so explicitly
+   restore RTL at the navigation boundary instead of mirroring the whole UI. */
+html[lang='fa'] #nd-sidebar,
+html[lang='fa'] #nd-sidebar nav,
+html[lang='fa'] #nd-sidebar [data-radix-scroll-area-viewport],
+html[lang='fa'] #nd-sidebar [dir='ltr'] {
+  direction: rtl !important;
+}
+
+html[lang='fa'] #nd-sidebar a,
+html[lang='fa'] #nd-sidebar button {
+  direction: rtl;
+  text-align: right !important;
+  justify-content: flex-start;
+}
+
+html[lang='fa'] #nd-sidebar a > span,
+html[lang='fa'] #nd-sidebar button > span {
+  text-align: right;
+}
+
+/* Group chevrons belong at the far end of the row in RTL. */
+html[lang='fa'] #nd-sidebar button > svg:last-child {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+/* Keep leading menu icons visually attached to their labels. */
+html[lang='fa'] #nd-sidebar a > svg:first-child,
+html[lang='fa'] #nd-sidebar button > svg:first-child {
+  margin-inline-start: 0;
+  margin-inline-end: 0;
+  flex: 0 0 auto;
+}
+
+html[lang='fa'] #nd-toc {
+  direction: rtl;
+  text-align: right;
+}
+
+html[lang='fa'] #toc-title {
+  font-size: 0;
+}
+
+html[lang='fa'] #toc-title::after {
+  content: 'در این صفحه';
+  font-size: 0.875rem;
+}
+
+/* Code, commands and paths should remain LTR inside Persian pages. */
+[dir='rtl'] pre,
+[dir='rtl'] pre code,
+[dir='rtl'] kbd {
+  direction: ltr;
+  text-align: left;
+}
+
+[dir='rtl'] :not(pre) > code {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

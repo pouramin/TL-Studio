@@ -1,0 +1,172 @@
+---
+title: معماری
+description: مالکیت TL Studio v0.3، Native Agent Execution، Contractهای Local و Compatibility Boundary.
+icon: Network
+---
+
+در Stable v0.3 بخش بزرگی از Core Coding Workflow وارد خود TL Studio شده است.
+
+```text
+Browser Workspace
+  │
+  ├─ Files / Monaco / Search / Terminal / Preview
+  ├─ Provider + Model Registry
+  ├─ Credential Vault
+  ├─ Semantic Sessions / Questions / Permissions / Events
+  └─ Tool Registry
+        │
+        ▼
+TL Studio Launcher / Local Core
+  │
+  ├─ Native Agent Runtime
+  │    ├─ Direct Model Client
+  │    ├─ Permission Policy
+  │    └─ Core Tool Executor
+  │          ↓
+  │      TL Studio Local Project Subsystems
+  │
+  ├─ Supported Custom Providers ──► Direct Model APIs
+  │
+  └─ Compatibility Adapter ───────► Bundled Compatibility Engine
+                                      └─ Hosted / Legacy / Runtime-only
+
+Live Preview ─────────────────────► Separate Loopback Origin
+```
+
+## بخش‌هایی که TL Studio مالک آن‌هاست
+
+در Stable v0.3 این بخش‌ها داخل Product Boundary خود TL Studio قرار دارند:
+
+- Browser IDE و Workspace؛
+- Monaco Editor لوکال به‌همراه Editor Fallback؛
+- Project Filesystem و SHA-256 Save Conflict Check؛
+- Project Search؛
+- Local Process Manager و Terminal؛
+- Preview مبتنی بر Capability؛
+- Provider/Model Definition؛
+- Custom-provider Credential Persistence؛
+- Tool Semantic Registry؛
+- Core Tool Execution در Native Path؛
+- Permission Policy در Scope Project؛
+- Session Read/Command Contractهای Semantic؛
+- Semantic Session Persistence؛
+- Question Contract؛
+- Live-event Projection؛
+- Direct Model Execution و Native Agent Loop برای Custom Providerهای پشتیبانی‌شده؛
+- Cancellation، Loop Guard، Recovery UX، Packaging، Release و Brand.
+
+## Contract مربوط به Browser
+
+Browser به Product Routeهای TL Studio وابسته است، نه API خصوصی یک Engine.
+
+Surfaceهای مهم:
+
+```text
+/local/sessions*
+/local/questions*
+/local/permissions*
+/local/events
+/local/tools
+/local/search
+/local/process
+/local/preview*
+/runtime/*
+```
+
+Routeهای `/runtime/*` مرز عمومی Compatibility برای Capabilityهایی هستند که هنوز به Engine همراه نیاز دارند. Conceptهایی که TL Studio مالک آن‌ها شده از Contractهای `/local/*` عبور می‌کنند.
+
+## Native Agent Runtime
+
+برای Custom Providerهای پشتیبانی‌شده، TL Studio می‌تواند کل Coding Loop را خودش اجرا کند:
+
+```text
+Session Run
+→ Direct Model Request
+→ Normalized Tool Calls
+→ Permission Policy
+→ Native Tool Executor
+→ Project Filesystem/Search/Process
+→ Structured Tool Results
+→ Next Model Turn
+→ Final Response
+→ Semantic Persistence + Live Events
+```
+
+Core Toolهای Native فعلی:
+
+```text
+files.read
+files.list
+files.write
+files.edit
+search.content
+terminal.command
+```
+
+Runtime Native برای تعداد Agent Iteration، Tool Round، تعداد Tool در هر Round و تکرار Tool Call یکسان Guard دارد.
+
+## Compatibility Engine Boundary
+
+برای Hosted Authentication/Model، Legacy Providerهایی که از Registry خود TL Studio Resolve نمی‌شوند و Capabilityهای بدون Handler Native، Compatibility Engine همراه برنامه باقی مانده است.
+
+Binary Discovery، Startup، Authentication خصوصی، Project Request Scoping و Decoration مخصوص Implementation پشت `runtimeEngine` و Adapter قرار دارند.
+
+Browser Password مربوط به Compatibility Engine یا Route خصوصی آن را نمی‌بیند.
+
+## مالکیت Provider، Model و Credential
+
+Provider/Model Definition داخل Registry Versioned خود TL Studio ذخیره می‌شود:
+
+```text
+providers.json
+```
+
+API Key جداست و در Credential Vault خود TL Studio نگه‌داری می‌شود. Credential فقط وقتی به Execution Path فعال داده می‌شود که برای Request لازم باشد.
+
+Native Provider Protocolهای پشتیبانی‌شده شامل OpenAI-compatible Chat Completions، OpenAI Responses و Anthropic Messages compatible هستند.
+
+## مالکیت Session
+
+TL Studio داده Session فعلی را به Semantic Read Model خودش تبدیل می‌کند و Commandهای Create، Rename، Delete، Run و Abort را از Contract خودش ارائه می‌دهد.
+
+Session Snapshotها داخل Local State خود TL Studio Mirror می‌شوند و Transcript، Usage/Activity و Changes را نگه می‌دارند. Execution Owner هم ثبت می‌شود تا Native History با Read مربوط به Compatibility به‌اشتباه Overwrite نشود.
+
+## Question، Permission و Event
+
+Question تعاملی از `/local/questions*` استفاده می‌کند.
+
+Permission Policy از `/local/permissions*` و فایل Project-scoped به نام `permissions.json` استفاده می‌کند. در Native Path، Authorization قبل از اجرای Tool توسط Tool Executor انجام می‌شود.
+
+Live Updateهای Browser از SSE Semantic زیر می‌آیند:
+
+```text
+/local/events
+```
+
+Native Event و Compatibility Event Project‌شده از همین Channel مشترک استفاده می‌کنند.
+
+## Filesystem و Process Boundary
+
+Go Launcher مرجع عملیات Filesystem مربوط به Browser است.
+
+Path Traversal، Symlink Escape، Project-root Mutation و تغییر Protected Git Metadata رد می‌شوند. Save معمولی Revision Token دارد تا External Change بی‌صدا Overwrite نشود.
+
+Project Search مستقیماً توسط TL Studio اجرا می‌شود و External Search Binary لازم ندارد.
+
+Local Process Manager اجرای Command در Scope Project و Stop Behavior را مدیریت می‌کند. Terminal فعلی Command Runner است و Full PTY نیست.
+
+## Preview Isolation
+
+Preview از HTML، SVG/Raster Image، PDF، Video، Audio، Markdown، Text و Node Dev Server پشتیبانی می‌کند.
+
+Project Content روی Loopback Origin جدا از Control Server دارای دسترسی Privileged اجرا می‌شود و External Preview URL پذیرفته نمی‌شود.
+
+## Browser Implementation
+
+Source مربوط به Browser زیر `cmd/launcher/ui` با Strict TypeScript نگه‌داری می‌شود.
+
+فایل `kernel.ts` هسته تایپ‌شده را Export می‌کند، Feature Moduleها از ES Import استفاده می‌کنند، `browser.ts` Module Graph را مشخص می‌کند و esbuild یک Bundle اصلی به نام `browser.js` می‌سازد. JavaScript تولیدشده Source of Truth نیست.
+
+## بدون Cloud Control Plane
+
+TL Studio، Application Server، Database، Telemetry Backend یا Model Proxy متعلق به پروژه ندارد. External Request فقط برای Serviceهایی انجام می‌شود که User خودش Configure کرده، به‌علاوه Distribution/Update معمول.

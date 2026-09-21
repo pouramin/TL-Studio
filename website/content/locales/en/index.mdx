@@ -1,0 +1,64 @@
+---
+title: TL Studio
+description: Learn what TL Studio v0.3 is and how its local development workspace and native Agent path fit together.
+icon: House
+---
+
+TL Studio is a **local development workspace with its own browser IDE and AI built in**. Stable v0.3 combines a writable Monaco workspace, Project Search, Terminal, capability-driven Preview, semantic sessions, Provider/Model management, a local credential vault, permissions, live events, and a TL Studio-native Agent path for supported custom providers.
+
+## Product identity
+
+The product you install and operate is **TL Studio**. The Browser workspace and product-facing contracts are owned by TL Studio rather than by the bundled compatibility engine.
+
+```text
+You
+  ↓
+TL Studio
+  ├─ Browser IDE / Monaco
+  ├─ Files / Search / Terminal / Preview
+  ├─ Provider registry + credential vault
+  ├─ Sessions / Questions / Permissions / Events
+  ├─ Tool Registry + Tool Executor
+  └─ Native Agent runtime
+        ├─ supported custom providers → direct model APIs
+        └─ compatibility adapter → bundled engine for hosted/legacy capabilities
+```
+
+## What v0.3 can do
+
+- open a local Project with the operating-system Folder Picker;
+- browse, create, rename, delete, edit, and save Project files;
+- use locally bundled Monaco with multi-tab editing, Find/Replace, multi-cursor, conflict protection, and a lightweight fallback;
+- search the Project and jump directly to a match;
+- run Project-scoped commands and stop long-running process trees;
+- preview HTML, SVG/images, PDF, video, audio, rendered Markdown, rendered text, and supported development servers;
+- reveal the active file in the native file manager with **Show in Folder**;
+- create, rename, delete, resume, run, and abort Sessions through TL Studio semantic contracts;
+- keep semantic Session metadata, transcripts, usage/activity history, and Changes in TL Studio local state;
+- connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible custom Providers;
+- keep custom-provider API keys in the TL Studio credential vault rather than in `providers.json` or browser storage;
+- run supported custom-provider coding tasks through TL Studio's own model/tool/model Agent loop;
+- execute the native core coding tools through TL Studio-owned handlers;
+- approve, reject, and remember safe Project-scoped Permission rules;
+- answer interactive Questions through TL Studio-owned local routes;
+- follow semantic live events and Agent activity without exposing raw engine event envelopes to the Browser.
+
+## Current stable release
+
+**v0.3.0 is the current stable TL Studio release.**
+
+```bash
+npx --yes tl-studio
+```
+
+Or download a portable build from GitHub Releases. Stable production lives on `main`.
+
+## Development line
+
+The next private development line is **v0.4.0-alpha.1** on `dev`. Phase 3 implementation has not started yet, so the public docs do not claim any v0.4-only product behavior.
+
+See [Development line](./reference/development-preview) for the branch/release discipline.
+
+## Start here
+
+Start with [Installation](./getting-started/installation) and [First run](./getting-started/first-run). Then continue with [Workspace and editor](./guides/workspace-editor), [Native Agent and tools](./guides/native-agent-and-tools), [Projects and sessions](./guides/projects-and-sessions), and [Live Preview](./guides/live-preview).

@@ -1,0 +1,59 @@
+---
+title: Permissions and questions
+description: Handle TL Studio-owned permission policy and semantic interactive Questions in stable v0.3.
+icon: ShieldCheck
+---
+
+Stable v0.3 owns the product-facing Permission policy and Question contracts while keeping final enforcement at the execution boundary.
+
+## Permission decisions
+
+A request can expose:
+
+- **Reject** — deny the action;
+- **Allow once** — approve this request only;
+- **Always allow these** — remember exact reusable matching rules when persistence is safe.
+
+Remembered allow rules are stored locally in:
+
+```text
+permissions.json
+```
+
+They are scoped to the selected Project.
+
+## Conservative remembered rules
+
+TL Studio does not invent broad wildcard Permission rules.
+
+For compatibility requests, it stores exact canonical matcher tokens supplied by the runtime. Every matcher on a future request must already be covered before automatic approval.
+
+For the native Tool path, write/edit requests can produce Project-scoped reusable matchers. Execute- or network-capable Tool requests are treated as sensitive and cannot be remembered.
+
+Sensitive compatibility classes such as `skillShell` and `sandboxEscalation`, and requests marked `disableAlways`, always remain interactive.
+
+Remembered rules are visible in Settings and can be forgotten.
+
+## Native Tool permissions
+
+Read-only native Tools that have no write/execute/network capability can run without an approval prompt.
+
+Write/edit and command execution pass through TL Studio's native Permission authorizer before the Tool Executor performs the action.
+
+Unknown native Tools cannot be authorized.
+
+## Questions
+
+Interactive Questions use TL Studio-owned routes:
+
+```text
+GET  /local/questions
+POST /local/questions/{requestID}/reply
+POST /local/questions/{requestID}/reject
+```
+
+The UI can represent option lists, single or multiple selection, defaults, and custom answers. TL Studio validates that the Question request is active for the target Session before forwarding the decision through the active engine adapter.
+
+## Human responsibility
+
+Loopback isolation protects the network surface, but approving a local command or write still grants real access on your machine. Read the requested action, patterns, and metadata before approving.

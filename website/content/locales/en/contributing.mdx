@@ -1,0 +1,89 @@
+---
+title: Contributing
+description: Contribute while preserving TL Studio v0.3 ownership, local security, and compatibility boundaries.
+icon: GitPullRequest
+---
+
+## Product source
+
+The Go launcher and TL Studio-owned local capabilities live under:
+
+```text
+cmd/launcher/
+```
+
+Browser source is strict TypeScript under:
+
+```text
+cmd/launcher/ui/
+```
+
+Generated Browser output lives under:
+
+```text
+cmd/launcher/web/
+```
+
+Do not edit generated JavaScript as the primary source.
+
+## Browser architecture
+
+The Browser no longer depends on a global `window.KLU` kernel.
+
+- `kernel.ts` exports the shared typed kernel;
+- feature modules use real ES imports;
+- `browser.ts` defines the module graph;
+- esbuild emits the primary `browser.js` bundle;
+- TypeScript is checked with `strict: true`.
+
+## Before proposing changes
+
+```bash
+npm install --ignore-scripts --no-audit --no-fund
+npm run check:web
+npm run build:web
+go test ./...
+go vet ./...
+```
+
+Run the relevant contract/regression scripts when changing runtime, Provider, Session, Permission, Tool, or release behavior.
+
+## Stable architecture rules
+
+- Project filesystem/Search/process/Preview stay behind TL Studio-owned local APIs.
+- Provider/Model definitions and credentials belong to TL Studio-owned state.
+- Native core Tool execution must reuse Project-boundary, process, Search, and Permission infrastructure rather than duplicating it.
+- Tool Registry metadata is descriptive; it must not bypass execution enforcement.
+- Browser Session/Question/Permission/Event features must use TL Studio semantic contracts.
+- Engine-specific routes, auth details, headers, and protocol quirks stay behind compatibility adapters.
+- Monaco remains a replaceable Editor engine, not a filesystem authority.
+- Preview Project code stays on a separate local origin from the privileged control API.
+- No new Editor/runtime assets should be loaded from a CDN.
+
+## Native Agent changes
+
+When changing the native path, preserve:
+
+- supported Provider protocol normalization;
+- strict Tool IDs and input schemas;
+- unknown Tool rejection;
+- Project confinement and symlink protections;
+- Permission enforcement;
+- cancellation/timeouts;
+- Agent/Tool loop guards;
+- semantic Session persistence and live events;
+- no API secrets in Session history.
+
+## Current dev line
+
+The private next line is `v0.4.0-alpha.1`.
+
+Phase 3 implementation has not started. Do not document Phase 3 goals as shipped behavior.
+
+Preview alphas remain GitHub Actions artifacts only; stable npm/GitHub Releases change only after deliberate promotion.
+
+## Public documentation
+
+The Fumadocs site lives under `website/` and is bilingual.
+
+Keep user-facing language centered on **TL Studio**. Name the bundled compatibility implementation only where maintainer compatibility or legal attribution actually requires it.

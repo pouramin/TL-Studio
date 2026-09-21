@@ -1,0 +1,39 @@
+---
+title: Terminal
+description: Run Project-scoped commands with TL Studio's local process manager.
+icon: Terminal
+---
+
+TL Studio includes a Project-scoped command runner backed by its own local process manager.
+
+## Project-scoped commands
+
+Commands run with the active Project as their working directory. Output is streamed into the Workspace and retained in a bounded local history.
+
+When you switch Projects, new commands follow the new Project CWD.
+
+## Stop a process
+
+Long-running commands can be stopped from TL Studio. On Windows, Stop terminates the process tree so child development servers are not intentionally left behind.
+
+An intentional stop is represented as a stopped command rather than an unexplained crash.
+
+## Native Agent use
+
+The stable v0.3 native Tool Executor reuses this same process layer for:
+
+```text
+terminal.command
+```
+
+Command Tool calls require Permission authorization. Because execution is sensitive, native terminal requests are not remembered as reusable approvals.
+
+## Current limitation
+
+The current Terminal is **not a full PTY terminal emulator**. It is designed for Project commands, builds/tests, scripts, and processes that work in a command-runner model.
+
+Interactive TUI applications that require a real terminal device may not work correctly.
+
+## Security
+
+Commands execute on your machine with your user account's permissions. Local execution does not make an arbitrary command safe. Review destructive, network, package-manager, and credential-sensitive commands before running or approving them.

@@ -1,0 +1,90 @@
+---
+title: Native Agent and tools
+description: Understand TL Studio v0.3 native model execution, Tool Registry, Tool Executor, permissions, and compatibility fallback.
+icon: Bot
+---
+
+Stable v0.3 can execute supported custom-provider coding tasks without delegating the Agent loop or core coding Tool execution to the bundled compatibility engine.
+
+## Native execution path
+
+For a supported custom Provider and Model:
+
+```text
+Browser
+  ↓
+TL Studio semantic Session command
+  ↓
+TL Studio native Agent loop
+  ↓
+Direct model request
+  ↓
+Normalized Tool call
+  ↓
+TL Studio permission policy
+  ↓
+TL Studio Tool Executor
+  ↓
+TL Studio local Project subsystem
+  ↓
+Structured Tool result
+  ↓
+Next model turn
+  ↓
+Final response + Session persistence + live events
+```
+
+The native path is selected only when the requested Provider/Model can be resolved from TL Studio-owned Provider definitions and credentials.
+
+## Direct provider protocols
+
+The stable native model client supports:
+
+- OpenAI-compatible Chat Completions;
+- OpenAI Responses;
+- Anthropic Messages compatible APIs.
+
+Provider traffic goes directly to the endpoint configured by the user. TL Studio does not proxy it through a project-owned cloud service.
+
+## Native coding tools
+
+The v0.3 native Tool Executor currently implements:
+
+```text
+files.read
+files.list
+files.write
+files.edit
+search.content
+terminal.command
+```
+
+These handlers reuse TL Studio's existing Project-boundary, symlink, Search, process, cancellation, and Permission infrastructure.
+
+Unknown native Tool IDs are rejected instead of being guessed.
+
+## Tool Registry
+
+TL Studio owns the semantic identity of known Tools. The local Tool Registry exposes stable product descriptors such as:
+
+- semantic Tool ID;
+- product-facing name and description;
+- category;
+- Permission class;
+- read/write/execute/network capability flags;
+- input schema;
+- presentation hint.
+
+The registry does not grant permission by itself. Runtime or native execution enforcement remains authoritative for the path that actually executes the Tool.
+
+## Safety and loop guards
+
+The native Agent runtime includes explicit limits on Agent iterations, Tool rounds, Tools per round, and repeated identical Tool calls. Tool execution also uses structured argument validation, Project confinement, cancellation, and bounded command timeouts.
+
+Execution-sensitive and network-capable Tool requests are not silently converted into reusable approvals.
+
+## Compatibility fallback
+
+TL Studio still bundles a compatibility engine for hosted authentication/models, legacy or unresolved Provider configurations, and capabilities that are not represented by native handlers yet.
+
+That compatibility path is intentionally behind TL Studio-owned contracts, so the Browser product surface does not depend on engine-specific API names.

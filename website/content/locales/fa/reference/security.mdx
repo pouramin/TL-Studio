@@ -1,0 +1,91 @@
+---
+title: مدل Security
+description: Network، Filesystem، Credential، Permission، Session و Preview Boundary در TL Studio v0.3.
+icon: ShieldCheck
+---
+
+TL Studio یک Local Application است، نه Coding Service که از راه دور Expose شود.
+
+## Loopback-only Control Surface
+
+Control Server مربوط به Browser فقط Loopback Address را قبول می‌کند.
+
+Compatibility Process همراه برنامه هم روی Loopback اجرا می‌شود و در هر اجرا یک Backend Credential تصادفی تازه دارد. این Credential سمت Server می‌ماند و Local Adapter آن را Inject می‌کند؛ Browser به آن دسترسی ندارد.
+
+Request دارای Origin با Local Control Origin بررسی می‌شود و UI با Content Security Policy محدودکننده Serve می‌شود.
+
+## Project Filesystem Boundary
+
+عملیات File مربوط به Browser و Native Tool به Project انتخاب‌شده محدود است.
+
+TL Studio این موارد را Reject می‌کند:
+
+- Path Traversal؛
+- Symlink-parent Escape؛
+- Project-root Mutation در موارد محافظت‌شده؛
+- تغییر Protected Git Metadata.
+
+Save معمولی در Editor از SHA-256 Revision Token استفاده می‌کند تا تغییر جدید Agent، Git یا برنامه دیگر بی‌صدا Overwrite نشود.
+
+## Native Tool Authorization
+
+Tool Native فقط‌خواندنی که Write/Execute/Network ندارد می‌تواند بدون Human Prompt اجرا شود.
+
+Write/Edit و Command Execution از Permission Authorizer خود TL Studio عبور می‌کنند.
+
+Request Native دارای Execute یا Network حساس است و به Rule قابل Remember تبدیل نمی‌شود. Tool ناشناخته هم قابل Authorize نیست.
+
+## Remembered Permission Policy
+
+Ruleهای امن و قابل‌استفاده داخل فایل Project-scoped زیر نگه‌داری می‌شوند:
+
+```text
+permissions.json
+```
+
+TL Studio فقط Matcher دقیق را استفاده می‌کند و Wildcard گسترده‌تر اختراع نمی‌کند. Compatibility Request حساس یا دارای `disableAlways` Interactive باقی می‌ماند.
+
+Ruleهای Remembered از Settings قابل مشاهده و Forget هستند.
+
+## Credential Vault
+
+API Key مربوط به Custom Provider متعلق به TL Studio است و داخل `providers.json` یا Browser Storage قرار نمی‌گیرد.
+
+Credential Store به این شکل کار می‌کند:
+
+- Windows با DPAPI؛
+- macOS با Keychain در صورت دسترس‌بودن؛
+- Linux با Secret Service از طریق `secret-tool` در صورت وجود؛
+- و در غیر این صورت Encrypted Private-file Fallback.
+
+Fallback یک Master Key خصوصی Local می‌سازد و از Authenticated Encryption استفاده می‌کند. Credentialها در Local State خود TL Studio و با File Permission خصوصی، جایی که سیستم پشتیبانی کند، ذخیره می‌شوند.
+
+## Session Persistence
+
+Semantic Session Snapshot داخل Local State خود TL Studio ذخیره می‌شود. Persistence دارای Limit است، از JSON خصوصی استفاده می‌کند و قبل از Write شدن Snapshot، Attachment Payloadهای Inline با Prefix `data:` حذف می‌شوند.
+
+Session State می‌تواند Prompt، Assistant Text، Tool Activity، Usage و Project Changes داشته باشد. Local State Directory خود TL Studio را داده حساس در نظر بگیرید.
+
+## Preview Isolation
+
+Project Web Content روی Origin دارای دسترسی Privileged مربوط به TL Studio اجرا نمی‌شود.
+
+Preview از Loopback Origin جدا استفاده می‌کند، External Preview URL رد می‌شود و File Resolution همچنان Project-bound است.
+
+## Local Editor Assets
+
+Monaco و Workerهای آن Local Bundle هستند و Runtime Code مربوط به Editor از CDN Load نمی‌شود.
+
+## Terminal Trust
+
+Command با Permissionهای OS User فعلی اجرا می‌شود. Loopback بودن، Command دلخواه را Safe نمی‌کند.
+
+قبل از Run یا Approval، Commandهای مخرب، Network، Package Manager یا Credential-sensitive را بررسی کنید.
+
+## Provider Trust
+
+Custom Provider Endpoint محتوایی را که برای Model Execution ارسال می‌شود دریافت می‌کند. فقط Endpoint قابل‌اعتماد استفاده کنید و API Key یا Local State File را داخل Issue یا Log منتشر نکنید.
+
+## بدون Telemetry Backend متعلق به TL Studio
+
+TL Studio برای کار به Telemetry Backend یا Model Proxy متعلق به پروژه نیاز ندارد. در Native Custom-provider Execution، ترافیک Provider مستقیم به Endpoint تنظیم‌شده می‌رود.

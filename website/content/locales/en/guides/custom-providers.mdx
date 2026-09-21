@@ -1,0 +1,75 @@
+---
+title: Custom providers
+description: Manage TL Studio-owned Provider/Model definitions and credentials in stable v0.3.
+icon: Cable
+---
+
+TL Studio manages custom Provider definitions from **Settings → Providers** without requiring a TL Studio-hosted gateway.
+
+## Supported API families
+
+The current Provider form supports:
+
+- **OpenAI Compatible**;
+- **OpenAI Responses**;
+- **Anthropic Messages**.
+
+For supported models, these same protocol families can be used by the TL Studio-native Agent runtime.
+
+## Add a Provider
+
+Open **Settings → Providers → Add provider** and configure:
+
+- Provider ID;
+- display name;
+- protocol;
+- Base URL;
+- API key;
+- Model ID and optional display name;
+- optional context/output limits;
+- Tool Calling support;
+- Reasoning support.
+
+## Provider registry
+
+Provider/Model definitions are stored in TL Studio's versioned local `providers.json`.
+
+That registry contains TL Studio concepts only:
+
+- Provider ID/name;
+- protocol;
+- Base URL;
+- Model definitions;
+- capability flags;
+- optional context/output limits.
+
+Implementation-specific engine package names and private config shapes are excluded.
+
+## Credential vault
+
+API keys are **not** written into `providers.json` and are not stored in Browser storage.
+
+Stable v0.3 owns credential persistence through the TL Studio credential vault:
+
+- **Windows:** DPAPI;
+- **macOS:** Keychain when the system `security` tool is available;
+- **Linux:** Secret Service through `secret-tool` when available;
+- **fallback:** an encrypted private-file store under TL Studio's local state.
+
+The fallback uses a local private master key and authenticated encryption; credential files and the key are created with private filesystem permissions where supported.
+
+## Native execution selection
+
+A custom Provider/Model can use the native TL Studio Agent loop when the Provider definition and credential are resolvable by TL Studio and the protocol/model is supported.
+
+Hosted accounts, unresolved legacy runtime Providers, and capabilities without native handlers fall back to the compatibility adapter.
+
+## Migration and removal
+
+When upgrading from older builds, TL Studio can import compatible Provider definitions from previous runtime configuration when its own registry does not exist yet.
+
+Managed credentials are synchronized to compatibility execution only when needed. Removing a managed Provider also removes its TL Studio-managed credential.
+
+## Security note
+
+The configured Base URL receives prompts and Model requests for that Provider. Only add endpoints you trust, and never publish API keys in screenshots, logs, Issues, or bug reports.

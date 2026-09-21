@@ -1,0 +1,93 @@
+---
+title: مشارکت در پروژه
+description: مشارکت با حفظ Ownership، Local Security و Compatibility Boundary در TL Studio v0.3.
+icon: GitPullRequest
+---
+
+## Product Source
+
+Go Launcher و Capabilityهای Local خود TL Studio زیر این مسیر هستند:
+
+```text
+cmd/launcher/
+```
+
+Browser Source با Strict TypeScript زیر این مسیر است:
+
+```text
+cmd/launcher/ui/
+```
+
+Generated Browser Output زیر این مسیر قرار می‌گیرد:
+
+```text
+cmd/launcher/web/
+```
+
+JavaScript تولیدشده را Source اصلی تغییر Product در نظر نگیرید.
+
+## Browser Architecture
+
+Browser دیگر به Global Kernel با نام `window.KLU` وابسته نیست.
+
+- فایل `kernel.ts` هسته تایپ‌شده مشترک را Export می‌کند؛
+- Feature Moduleها از ES Import واقعی استفاده می‌کنند؛
+- فایل `browser.ts` Module Graph را مشخص می‌کند؛
+- esbuild Bundle اصلی `browser.js` را می‌سازد؛
+- TypeScript با `strict: true` بررسی می‌شود.
+
+## قبل از تغییر
+
+```bash
+npm install --ignore-scripts --no-audit --no-fund
+npm run check:web
+npm run build:web
+go test ./...
+go vet ./...
+```
+
+هنگام تغییر Runtime، Provider، Session، Permission، Tool یا Release، Contract/Regression Script مربوط را هم اجرا کنید.
+
+## Ruleهای معماری Stable
+
+- Project Filesystem/Search/Process/Preview باید پشت Local APIهای خود TL Studio بمانند.
+- Provider/Model Definition و Credential متعلق به State خود TL Studio هستند.
+- Core Tool Execution در Native Path باید از Project Boundary، Process، Search و Permission Infrastructure موجود استفاده کند و سیستم موازی نسازد.
+- Tool Registry فقط Metadata توصیفی است و نباید Enforcement را دور بزند.
+- Featureهای Browser مربوط به Session/Question/Permission/Event باید از Contractهای Semantic خود TL Studio استفاده کنند.
+- Route، Auth، Header و Protocol Quirk مخصوص Engine فقط داخل Compatibility Adapter بماند.
+- Monaco یک Editor Engine قابل تعویض است، نه Filesystem Authority.
+- Project Code در Preview باید روی Origin جدا از Control API دارای دسترسی Privileged بماند.
+- Asset مربوط به Editor/Runtime از CDN جدید Load نشود.
+
+## تغییر Native Agent
+
+هنگام تغییر Native Path این موارد حفظ شوند:
+
+- Provider Protocol Normalization؛
+- Tool ID و Input Schema دقیق؛
+- Reject کردن Tool ناشناخته؛
+- Project Confinement و Symlink Protection؛
+- Permission Enforcement؛
+- Cancellation/Timeout؛
+- Agent/Tool Loop Guard؛
+- Semantic Session Persistence و Live Event؛
+- عدم ذخیره API Secret در Session History.
+
+## خط Development فعلی
+
+خط خصوصی بعدی:
+
+```text
+v0.4.0-alpha.1
+```
+
+پیاده‌سازی فاز 3 هنوز شروع نشده است. Goalهای فاز 3 را به‌عنوان Feature موجود مستند نکنید.
+
+Alphaهای Preview فقط Artifactهای GitHub Actions هستند و npm/GitHub Release پایدار فقط بعد از Promotion آگاهانه تغییر می‌کنند.
+
+## Public Documentation
+
+سایت Fumadocs زیر `website/` و دو‌زبانه است.
+
+متن User-facing باید روی **TL Studio** متمرکز بماند. اسم Implementation مربوط به Compatibility Engine فقط جایی بیاید که Maintainer Compatibility یا Attribution قانونی واقعاً لازم است.

@@ -1,0 +1,56 @@
+---
+title: Development line
+description: Current dev status after stable v0.3.0 and the next Phase 3 boundary.
+icon: FlaskConical
+---
+
+Stable production is **v0.3.0**.
+
+The private development branch has been reopened as:
+
+```text
+v0.4.0-alpha.1
+```
+
+## Current status
+
+**Phase 3 implementation has not started yet.**
+
+The branch currently marks the next private alpha line after Phase 2 was validated and promoted to v0.3.0. There is no v0.4-only feature set to document as implemented today.
+
+## What Phase 2 completed
+
+The stable v0.3 baseline now owns:
+
+- Browser IDE and local Workspace;
+- Monaco Editor;
+- file management, Project Search, Terminal, and Preview;
+- Provider/Model registry and credential vault;
+- Tool Registry and native core Tool Executor;
+- Project-scoped Permission policy;
+- semantic Session reads, commands, persistence, and execution ownership;
+- semantic Questions and live events;
+- direct model execution for supported custom Providers;
+- the native model/tool/model Agent loop;
+- cancellation and loop guards.
+
+## Remaining compatibility dependency
+
+A bundled third-party engine is still required for hosted authentication/models, unresolved legacy Provider configurations, runtime-only capabilities, and compatibility behavior covered by existing regression tests.
+
+It is **not** accurate to claim that the compatibility engine is fully removable yet.
+
+## Phase 3 direction
+
+The next architecture phase is to decide which remaining compatibility-only capabilities should become TL Studio-native and whether/when launcher startup can make the third-party engine optional instead of always bundled/started.
+
+Those are next-phase goals, not implemented features.
+
+## Preview distribution
+
+Development work stays private:
+
+- no npm alpha publishing;
+- no public GitHub prerelease;
+- GitHub Actions Preview Build artifacts for testing;
+- stable `latest` and stable GitHub Releases remain unchanged until promotion.

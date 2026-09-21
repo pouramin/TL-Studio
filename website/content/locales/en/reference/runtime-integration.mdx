@@ -1,0 +1,86 @@
+---
+title: Runtime integration
+description: Maintainer reference for TL Studio v0.3 native execution and the remaining compatibility-engine boundary.
+icon: Cable
+---
+
+The current stable distribution bundles **Kilo Code 7.6.2** as the tested third-party compatibility engine. It is not the public product identity and it is no longer the mandatory owner of the Agent loop or core coding Tool execution for supported TL Studio-managed custom Providers.
+
+## Two execution paths
+
+Stable v0.3 has a hybrid execution model.
+
+### Native path
+
+A supported custom Provider/Model can run through:
+
+```text
+TL Studio Session command
+→ native Agent runtime
+→ direct model client
+→ TL Studio Tool Executor
+→ semantic persistence/events
+```
+
+The compatibility engine is not asked to perform the Agent loop or native core Tool execution on this path.
+
+### Compatibility path
+
+Hosted authentication/models, unresolved legacy Providers, and runtime-only capabilities are translated through the bundled engine adapter.
+
+## Runtime engine boundary
+
+The launcher owns a generic `runtimeEngine` boundary.
+
+Implementation-specific responsibilities stay in the compatibility adapter:
+
+- binary discovery;
+- child-process startup;
+- private credentials;
+- Project request scoping;
+- private request decoration;
+- Session/Question compatibility translation;
+- runtime event projection.
+
+Generic product code should not contain private engine route names or protocol quirks.
+
+## Browser-facing contracts
+
+The Browser uses TL Studio semantic/local contracts for Sessions, Questions, Permissions, Tools, Events, Files, Search, Process, and Preview.
+
+`/runtime/*` remains only where a generic compatibility capability is still needed.
+
+Browser code never receives the compatibility-engine backend password.
+
+## Provider synchronization
+
+TL Studio owns Provider definitions and credentials.
+
+For native execution, the model client uses TL Studio-owned data directly.
+
+For compatibility execution, the launcher translates Provider definitions and synchronizes credentials into the active engine only when necessary.
+
+## Advanced override
+
+Maintainers can point TL Studio at a compatible runtime binary:
+
+```bash
+tl-studio --runtime-bin /path/to/runtime
+```
+
+Normal release users do not need this option because the tested compatibility engine is bundled.
+
+## Compatibility testing
+
+Before changing the bundled engine or adapter, regression coverage must verify:
+
+- Project routing;
+- hosted auth/model behavior;
+- Session compatibility;
+- Permissions and Questions;
+- semantic live-event projection;
+- Provider configuration/credentials;
+- compatibility Tool execution;
+- a real prompt/write-file flow.
+
+Native Agent tests separately prove that supported custom-provider coding can complete through TL Studio's direct model + Tool Executor path.

@@ -1,0 +1,47 @@
+---
+title: File attachments
+description: Attach images, PDFs, and text/code files to prompts in TL Studio.
+icon: Paperclip
+---
+
+TL Studio lets you prepare local files as structured attachment parts from the composer. Exact model-side handling depends on the selected Model and execution path.
+
+## Ways to attach files
+
+- click the **+** attachment button and select one or more files;
+- drag files onto the composer;
+- paste files from the clipboard.
+
+Selected files appear as attachment chips and can be removed before send.
+
+## Supported UI file types
+
+The composer accepts:
+
+- PNG, JPEG, WebP, and GIF images;
+- PDF;
+- text and common code/config formats such as Markdown, JSON, YAML, TOML, CSV, JavaScript/TypeScript, Python, Go, Rust, Java, C/C++, CSS, HTML, SQL, shell scripts, patches, `.env`, and similar text files.
+
+SVG is treated as text rather than image input.
+
+## Limits
+
+- up to **8 files** per Prompt;
+- up to **10 MB per file**;
+- up to **20 MB total** across pending attachments.
+
+Unsupported binary formats are rejected before send.
+
+## Session behavior
+
+Sent attachment metadata remains associated with the user Message in TL Studio's semantic Session history.
+
+Pending attachments are cleared after a successful send, when starting a new Session, or when switching Projects. If sending fails before acceptance, pending files remain available for retry.
+
+## Provider behavior
+
+Attachment support at the Model API is not identical across Providers or execution paths. Do not assume every selected Model can consume every binary format simply because the TL Studio composer accepts it.
+
+## Privacy
+
+TL Studio does not upload attachments to a TL Studio-owned cloud backend. Content sent to a Model can still be delivered to the Provider endpoint selected by the user, subject to that Provider's behavior and policies.

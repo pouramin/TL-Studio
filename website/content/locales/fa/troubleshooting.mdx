@@ -1,0 +1,83 @@
+---
+title: رفع مشکل
+description: بررسی مشکل‌های Startup، Editor، Preview، Provider، Session، Permission و Agent در TL Studio v0.3.
+icon: Wrench
+---
+
+## Browser خودکار باز نشد
+
+ممکن است Local Server همچنان در حال اجرا باشد. آدرس `Local:` چاپ‌شده در Terminal را دستی باز کنید. اگر `--no-browser` داده‌اید، این رفتار طبیعی است.
+
+## Folder Picker پوشه را قبول نمی‌کند
+
+یک Directory موجود انتخاب کنید. TL Studio قبل از Project Switch مسیر را Normalize و Validate می‌کند.
+
+## Monaco دیده نمی‌شود
+
+TL Studio یک Editor سبک به‌عنوان Fallback نگه می‌دارد. اگر Monaco Bundle نتواند Load شود، Edit فایل باید از Surface جایگزین قابل انجام باشد.
+
+Build رسمی، Monaco و Workerها را Local Bundle می‌کند و CDN لازم نیست.
+
+## File به‌دلیل تغییر روی Disk Save نمی‌شود
+
+Revision فایل بعد از Open تغییر کرده است. اول نسخه جدید روی Disk را بررسی کنید. Force Save را فقط وقتی استفاده کنید که آگاهانه می‌خواهید Buffer خودتان جایگزین نسخه جدید شود.
+
+## Unsaved Tab جلوی Project Switch را می‌گیرد
+
+Dirty Tabها را Save کنید یا صریحاً Discard را انتخاب کنید. TL Studio قبل از تغییر Project از Unsaved State محافظت می‌کند.
+
+## Project Search یک File را پیدا نمی‌کند
+
+Search فایل Binary/Non-UTF8، Symlink و Directoryهای سنگین مثل `.git`، `node_modules`، `dist`، `build`، `out`، `coverage` و `.next` را Skip می‌کند. Include/Exclude و Case-sensitive Setting را هم بررسی کنید.
+
+## برنامه Terminal به Interactive TTY نیاز دارد
+
+Terminal فعلی Command Runner است، نه Full PTY. بعضی TUIهای Interactive ممکن است درست کار نکنند.
+
+## Preview یک File را باز نمی‌کند
+
+فقط Capabilityهای ثبت‌شده خودکار Preview می‌شوند. Stable v0.3، HTML، SVG/Raster Image، PDF، Video/Audio پشتیبانی‌شده، Markdown و Plain Text/Log را می‌شناسد.
+
+برای Node Dev Server مطمئن شوید `package.json` دارای Script به اسم `dev` است و Server یک Loopback URL اعلام می‌کند.
+
+## PDF Preview رفتار عجیبی دارد
+
+TL Studio فایل PDF را Inline و با HTTP Range Support سرو می‌کند. رفتار PDF Viewer خود Browser ممکن است متفاوت باشد. در صورت نیاز از **Open in Browser** استفاده کنید.
+
+## Custom Provider دیده نمی‌شود
+
+از **Settings → Providers**، Provider ID، Protocol، Base URL، Model ID و Credential را بررسی کنید.
+
+Provider Definition در Registry خود TL Studio است و API Key جداگانه در Credential Vault نگه‌داری می‌شود.
+
+## Credential Restore نمی‌شود
+
+در Windows از DPAPI استفاده می‌شود. در macOS اولویت با Keychain است. در Linux اگر `secret-tool` موجود باشد از Secret Service استفاده می‌شود و در غیر این صورت Encrypted Private-file Fallback فعال می‌شود.
+
+Credential ساخته‌شده زیر User/Account سیستم‌عامل دیگر ممکن است در Environment فعلی قابل Decrypt نباشد.
+
+## چرا Run از Compatibility Path استفاده کرد؟
+
+Native Execution فقط وقتی انتخاب می‌شود که TL Studio بتواند Custom Provider/Model انتخاب‌شده را Resolve کند و Protocol/Model آن پشتیبانی شود.
+
+Hosted Account، Legacy Provider Resolve‌نشده یا Capability بدون Handler Native از Compatibility Adapter استفاده می‌کند.
+
+## Agent منتظر مانده
+
+Permission Request یا Question فعال را بررسی کنید.
+
+## چرا Always allow ندارم؟
+
+برای Request حساس دارای Execute/Network و همچنین Compatibility Request بدون Matcher امن و قابل‌استفاده، Persistent Approval عمداً غیرفعال است.
+
+## History باقی مانده ولی Engine History ندارد
+
+در v0.3 این می‌تواند طبیعی باشد. TL Studio Semantic Session History را داخل Persistence خودش Mirror می‌کند. Session فقط‌ذخیره‌شده همچنان قابل Read، Rename یا Delete است.
+
+## Attachment رد می‌شود
+
+Limit فعلی **8 فایل**، **10 MB برای هر File** و **20 MB مجموع** است و Binary Type پشتیبانی‌نشده رد می‌شود.
+
+## گزارش Bug
+
+OS، نسخه TL Studio، مراحل Reproduce، Execution Path در صورت مشخص‌بودن و Error غیرحساس را بفرستید. API Key یا Credential را منتشر نکنید.

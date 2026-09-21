@@ -1,0 +1,76 @@
+---
+title: TL Studio
+description: آشنایی با TL Studio v0.3، Workspace لوکال و مسیر Native Agent.
+icon: House
+---
+
+نسخه Stable جدید TL Studio یک **محیط توسعه‌ی Local با Browser IDE و AI داخلی** است. در v0.3، Monaco Editor، Project Search، Terminal، Preview مبتنی بر Capability، Sessionهای Semantic، مدیریت Provider/Model، Credential Vault، Permissionها، Live Eventها و مسیر Native Agent برای Custom Providerهای پشتیبانی‌شده کنار هم قرار گرفته‌اند.
+
+## هویت محصول
+
+محصولی که نصب و استفاده می‌کنید **TL Studio** است. Browser Workspace و Contractهای Product-facing متعلق به TL Studio هستند، نه Engine سازگاری که همراه برنامه Bundle می‌شود.
+
+```text
+User
+ ↓
+TL Studio
+ ├─ Browser IDE / Monaco
+ ├─ Files / Search / Terminal / Preview
+ ├─ Provider Registry + Credential Vault
+ ├─ Sessions / Questions / Permissions / Events
+ ├─ Tool Registry + Tool Executor
+ └─ Native Agent Runtime
+       ├─ Supported Custom Providers → Direct Model APIs
+       └─ Compatibility Adapter → Bundled Engine
+```
+
+## قابلیت‌های Stable v0.3
+
+- بازکردن Project با Folder Picker سیستم‌عامل؛
+- ساخت، Rename، Delete، Edit و Save کردن Project Fileها؛
+- استفاده از Monaco به‌صورت Local با Multi-tab، Find/Replace، Multi-cursor، Conflict Protection و Editor سبک به‌عنوان Fallback؛
+- Project-wide Search و رفتن مستقیم به Match؛
+- اجرای Command در Scope پروژه و Stop کردن Process Tree؛
+- Preview برای HTML، SVG/Image، PDF، Video، Audio، Markdown رندرشده، Text رندرشده و Development Serverهای پشتیبانی‌شده؛
+- بازکردن محل File فعال در File Manager سیستم با **Show in Folder**؛
+- ساخت، Rename، Delete، Resume، Run و Abort کردن Sessionها از Contractهای Semantic خود TL Studio؛
+- نگه‌داری Local مربوط به Session Metadata، Transcript، Usage/Activity History و Changes؛
+- اتصال Custom Providerهای سازگار با OpenAI، OpenAI Responses و Anthropic؛
+- نگه‌داری API Key در Credential Vault خود TL Studio و نه داخل `providers.json` یا Browser Storage؛
+- اجرای Taskهای Custom Provider پشتیبانی‌شده از طریق Agent Loop متعلق به TL Studio؛
+- اجرای Core Coding Toolها با Handlerهای Native خود TL Studio؛
+- Allow، Reject و Remember کردن Permission Ruleهای امن و Project-scoped؛
+- پاسخ به Questionهای تعاملی از Routeهای Local متعلق به TL Studio؛
+- دریافت Live Eventهای Semantic بدون وابستگی Browser به Event Envelope خام Engine.
+
+## نسخه Stable فعلی
+
+نسخه Stable فعلی:
+
+```text
+v0.3.0
+```
+
+اجرای سریع:
+
+```bash
+npx --yes tl-studio
+```
+
+نسخه‌های Portable هم از GitHub Releases قابل دریافت هستند. خط Stable روی `main` نگه‌داری می‌شود.
+
+## خط Development
+
+خط خصوصی بعدی روی `dev` از این نسخه شروع شده است:
+
+```text
+v0.4.0-alpha.1
+```
+
+پیاده‌سازی فاز 3 هنوز شروع نشده است؛ بنابراین Documentation فعلاً هیچ Feature مخصوص v0.4 را به‌عنوان قابلیت موجود معرفی نمی‌کند.
+
+برای جزئیات، [خط Development](./reference/development-preview) را ببینید.
+
+## از کجا شروع کنم؟
+
+از [نصب](./getting-started/installation) و [اولین اجرا](./getting-started/first-run) شروع کنید. بعد [Workspace و Editor](./guides/workspace-editor)، [Native Agent و Toolها](./guides/native-agent-and-tools)، [Project و Session](./guides/projects-and-sessions) و [Live Preview](./guides/live-preview) را ببینید.

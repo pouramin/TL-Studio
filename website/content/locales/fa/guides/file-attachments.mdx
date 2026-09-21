@@ -1,0 +1,47 @@
+---
+title: File Attachment
+description: Attach کردن Image، PDF و Fileهای Text/Code به Prompt در TL Studio.
+icon: Paperclip
+---
+
+Composer در TL Studio اجازه می‌دهد Fileهای Local را به‌صورت Structured Attachment آماده کنید. رفتار نهایی سمت Model به Provider، Model و Execution Path انتخاب‌شده بستگی دارد.
+
+## روش‌های Attach
+
+- روی دکمه **+** بزنید و یک یا چند File انتخاب کنید؛
+- File را Drag & Drop کنید؛
+- File را از Clipboard Paste کنید.
+
+قبل از Send، Fileها به‌شکل Attachment Chip دیده می‌شوند و قابل حذف هستند.
+
+## File Typeهای قابل انتخاب
+
+Composer این موارد را می‌پذیرد:
+
+- Imageهای PNG، JPEG، WebP و GIF؛
+- PDF؛
+- Text و Code/Configهای رایج مثل Markdown، JSON، YAML، TOML، CSV، JavaScript/TypeScript، Python، Go، Rust، Java، C/C++، CSS، HTML، SQL، Shell Script، Patch، `.env` و موارد مشابه.
+
+SVG به‌عنوان Text پردازش می‌شود، نه Image Input.
+
+## Limitها
+
+- حداکثر **8 فایل** در هر Prompt؛
+- حداکثر **10 MB برای هر File**؛
+- حداکثر **20 MB مجموع** برای Attachmentهای Pending.
+
+Binary Format پشتیبانی‌نشده قبل از Send رد می‌شود.
+
+## رفتار Session
+
+Metadata مربوط به Attachment ارسال‌شده کنار User Message در Semantic Session History خود TL Studio باقی می‌ماند.
+
+بعد از Send موفق، New Session یا Project Switch، Attachmentهای Pending پاک می‌شوند. اگر Send قبل از Accept شدن Fail شود، Fileها برای Retry باقی می‌مانند.
+
+## رفتار Provider
+
+پشتیبانی Attachment در Model API بین Providerها و Execution Pathها یکسان نیست. صرف اینکه Composer یک File را می‌پذیرد به معنی این نیست که هر Model انتخاب‌شده محتوای همان Binary Format را مصرف می‌کند.
+
+## Privacy
+
+TL Studio Attachment را به Cloud Backend متعلق به خودش Upload نمی‌کند. محتوایی که واقعاً به Model ارسال می‌شود می‌تواند به Endpoint همان Provider برسد و تابع رفتار و Policy آن Provider است.

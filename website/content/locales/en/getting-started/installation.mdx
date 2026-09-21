@@ -1,0 +1,49 @@
+---
+title: Installation
+description: Install stable TL Studio v0.3 with npm or a portable release.
+icon: Download
+---
+
+## One-command launch
+
+If Node.js/npm is installed, run this inside the Project directory you want to work on:
+
+```bash
+npx --yes tl-studio
+```
+
+The npm package is a lightweight launcher pinned to the matching stable TL Studio GitHub Release. It detects the operating system and architecture, downloads the official archive, verifies its SHA-256 checksum, caches it locally, and starts TL Studio with the current directory selected.
+
+To start without opening the browser automatically:
+
+```bash
+npx --yes tl-studio --no-browser
+```
+
+## Portable release
+
+Download the archive for your platform from GitHub Releases, extract it, and run:
+
+```text
+Windows:  tl-studio.exe
+Linux:    ./tl-studio
+macOS:    ./tl-studio
+```
+
+Portable releases include the tested compatibility engine, Monaco assets, TL Studio license files, and required third-party notices.
+
+## Supported builds
+
+- Windows x64
+- Linux x64
+- Linux ARM64
+- macOS Intel x64
+- macOS Apple Silicon ARM64
+
+## Verify a download
+
+Each stable release includes `SHA256SUMS.txt`. Compare the archive checksum with the published value before running it if you want to verify the download.
+
+## Development builds
+
+The next private line is `v0.4.0-alpha.1` on `dev`. Development alphas are not published to npm and are not public GitHub prereleases. When implementation work resumes, GitHub Actions Preview Build artifacts remain the private testing path.

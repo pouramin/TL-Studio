@@ -1,0 +1,83 @@
+---
+title: Troubleshooting
+description: Diagnose common TL Studio v0.3 startup, editor, Preview, Provider, Session, permission, and Agent issues.
+icon: Wrench
+---
+
+## Browser does not open
+
+The local server may still be running. Open the `Local:` URL printed in the terminal manually. If you used `--no-browser`, this is expected.
+
+## Project picker rejects a folder
+
+Choose an existing directory. TL Studio normalizes and validates the path before switching Project context.
+
+## Monaco does not appear
+
+TL Studio keeps a lightweight Editor fallback. If the enhanced Monaco bundle cannot load, file editing should remain available through the fallback surface.
+
+Official builds bundle Monaco and its workers locally; no CDN is required.
+
+## A file will not save because it changed on disk
+
+TL Studio detected that the file revision changed after you opened it. Review the newer disk content first. Use force-save only if you deliberately want your buffer to replace it.
+
+## Unsaved tabs block Project switching
+
+Save the dirty tabs or explicitly discard them. TL Studio protects unsaved Editor state before changing Project context.
+
+## Project Search misses a file
+
+Search skips binary/non-UTF-8 files, symlinks, and common generated/heavy directories such as `.git`, `node_modules`, `dist`, `build`, `out`, `coverage`, and `.next`. Check include/exclude patterns and case sensitivity too.
+
+## A Terminal app needs an interactive TTY
+
+The current Terminal is a command runner, not a full PTY. Interactive TUI applications may not work correctly.
+
+## Preview does not open the file
+
+Only registered Preview capabilities are opened automatically. Stable v0.3 recognizes HTML, SVG/raster images, PDF, supported video/audio, Markdown, and plain text/log files.
+
+For a Node dev server, make sure `package.json` contains a `dev` script and that the server reports a loopback URL.
+
+## PDF Preview behaves strangely
+
+TL Studio serves PDF inline with HTTP range support. Browser PDF viewer behavior can still vary by Browser. Use **Open in Browser** if the embedded view is limited.
+
+## A custom Provider is missing
+
+Check **Settings → Providers**, the Provider ID, protocol, Base URL, Model ID, and credential state.
+
+Provider definitions live in TL Studio's own registry. API keys live separately in the TL Studio credential vault.
+
+## A credential cannot be restored
+
+On Windows, the vault uses DPAPI. On macOS it prefers Keychain; on Linux it prefers Secret Service when `secret-tool` is available, otherwise TL Studio uses an encrypted private-file fallback.
+
+A credential created under a different OS user/account context may not be decryptable by the current environment.
+
+## Why did a run use the compatibility path?
+
+Native execution is used only when TL Studio can resolve the selected custom Provider/Model and supports its protocol/model path.
+
+Hosted accounts, unresolved legacy runtime Providers, or capabilities without native handlers use the compatibility adapter.
+
+## Agent is waiting
+
+Check for an active Permission request or interactive Question.
+
+## “Always allow” is unavailable
+
+Persistent approval is intentionally disabled for sensitive execution/network requests and for compatibility requests that do not provide safe reusable matchers.
+
+## Session history exists after engine history disappeared
+
+This can be expected in v0.3. TL Studio mirrors semantic Session history into its own local persistence. Persisted-only Sessions can still be read, renamed, or deleted locally.
+
+## Attachment rejected
+
+The composer currently limits attachments to **8 files**, **10 MB per file**, and **20 MB total**, and rejects unsupported binary types.
+
+## Reporting a bug
+
+Include your operating system, TL Studio version, reproduction steps, execution path if known, and non-secret error output. Never publish Provider API keys or credentials.

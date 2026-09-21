@@ -1,0 +1,41 @@
+---
+title: Model و Agent
+description: انتخاب Agent/Model و تفاوت Native Execution با Compatibility Path در Stable v0.3.
+icon: Bot
+---
+
+TL Studio مالک Contractهای Product-facing مربوط به Provider/Model و Session است. در Stable v0.3، اجرای Coding برای Custom Providerهای پشتیبانی‌شده می‌تواند از Native Agent Path خود TL Studio انجام شود.
+
+## انتخاب Agent و Model
+
+انتخاب Agent و Model داخل Composer خود TL Studio انجام می‌شود.
+
+اگر Custom Provider و Model از Registry و Credential Vault خود TL Studio قابل Resolve باشند، Run می‌تواند از Native Agent Loop استفاده کند.
+
+Modelهای Hosted و Capabilityهایی که هنوز Native نشده‌اند پشت Compatibility Adapter باقی می‌مانند.
+
+## Protocolهای Native Model
+
+مسیر مستقیم Native از این API Familyها پشتیبانی می‌کند:
+
+- OpenAI-compatible Chat Completions؛
+- OpenAI Responses؛
+- Anthropic Messages compatible.
+
+برای جزئیات Model/Tool/Model Loop و Toolهای Native، [Native Agent و Toolها](./native-agent-and-tools) را ببینید.
+
+## Tool Semantics
+
+TL Studio مالک Tool Registry Semantic مربوط به Browser UI است. Toolهای شناخته‌شده به Descriptorهایی با Name، Category، Permission Class، Capability Metadata، Schema و Presentation Hint متعلق به TL Studio Resolve می‌شوند.
+
+در Native Path، Core Tool Executor از Handlerهای خود TL Studio استفاده می‌کند. در Compatibility Path، اجرای واقعی در Engine همراه باقی می‌ماند ولی Presentation در Browser همچنان از Semanticهای TL Studio استفاده می‌کند.
+
+## Hosted Account Flow
+
+Hosted Authentication و Hosted Model هنوز Capability مربوط به Compatibility Path هستند. TL Studio آن‌ها را از Product Routeهای عمومی خودش نمایش می‌دهد تا Browser به Auth Endpoint مخصوص Engine وابسته نشود.
+
+## Failure و Recovery
+
+Authentication، Quota، Context یا Failure موقت Upstream ممکن است رخ دهد درحالی‌که خود TL Studio سالم است.
+
+در Compatibility Run، Error قابل‌Retry می‌تواند **Resume** را فعال کند. در Native Run، Session State و File Changes توسط Persistence خود TL Studio حفظ می‌شوند و Cancellation/Failure هم Local ثبت می‌شود.

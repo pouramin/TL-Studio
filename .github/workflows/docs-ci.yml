@@ -1,0 +1,39 @@
+name: Docs CI
+
+on:
+  pull_request:
+    paths:
+      - 'website/**'
+      - '.github/workflows/docs-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/docs-ci.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: website
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build GitHub Pages export
+        env:
+          DEPLOY_TARGET: static
+          NEXT_PUBLIC_BASE_PATH: /TL-Agent
+        run: npm run build
+      - name: Verify static output
+        run: test -f out/index.html && test -f out/docs/index.html && test -f out/llms.txt

@@ -1,0 +1,55 @@
+---
+title: Live Preview
+description: Use TL Studio's capability-driven local Preview for web pages, documents, media, and supported dev servers.
+icon: Play
+---
+
+Stable v0.3 generalizes Preview beyond a root `index.html`. TL Studio has a versioned file-capability registry and follows the active previewable file in the Workspace.
+
+## Previewable file types
+
+The current capability registry recognizes:
+
+- **HTML** — `.html`, `.htm`;
+- **SVG**;
+- **raster images** — PNG, JPEG, WebP, GIF, AVIF, ICO, BMP, APNG;
+- **PDF**;
+- **video** — MP4, WebM, OGV, M4V;
+- **audio** — MP3, WAV, OGG/OGA, M4A, AAC, FLAC;
+- **Markdown** — rendered locally;
+- **plain text/log files** — rendered locally.
+
+TL Studio can preview arbitrary supported files in the Project, not only a root HTML file.
+
+## Follow the active file
+
+When the active Workspace tab changes to another previewable file, the floating Preview can follow that file.
+
+Previewable binary/media files can open as real read-only Workspace tabs so they participate in the same tab workflow as editable code.
+
+## Web development Preview
+
+For supported Node Projects with a `package.json` `dev` script, TL Studio can run `npm run dev` through its own local process manager and detect the reported loopback URL.
+
+Static HTML/files are served by a TL Studio-owned loopback Preview server.
+
+## PDF behavior
+
+PDF files are served with an inline PDF MIME/disposition and HTTP range support. This allows the Browser's native PDF viewer to load and seek through the document without routing it through an external service.
+
+## Controls and resizing
+
+The floating Preview supports Start/Stop where applicable, Reload, and Open in Browser.
+
+The window can be moved and resized from all four edges and all four corners. Its local position/size is preserved by the workspace UI.
+
+## Security boundary
+
+Previewed Project content does **not** share the privileged origin used by TL Studio's local control API.
+
+- static/file Preview uses a separate loopback origin;
+- Node Preview accepts loopback URLs only;
+- Project path traversal and symlink escapes are rejected;
+- obvious heavy directories are not treated as normal Preview discovery roots.
+
+This isolation keeps Project JavaScript away from TL Studio's privileged `/local/*` routes.

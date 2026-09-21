@@ -1,0 +1,57 @@
+---
+title: Live Preview
+description: Preview مبتنی بر Capability برای Web، Document، Media و Dev Server در TL Studio.
+icon: Play
+---
+
+در Stable v0.3، Preview دیگر فقط به `index.html` در Root محدود نیست. TL Studio یک File Capability Registry دارد و می‌تواند File قابل Preview فعال در Workspace را دنبال کند.
+
+## File Typeهای قابل Preview
+
+Registry فعلی این موارد را می‌شناسد:
+
+- **HTML** با پسوندهای `.html` و `.htm`؛
+- **SVG**؛
+- **Raster Image** شامل PNG، JPEG، WebP، GIF، AVIF، ICO، BMP و APNG؛
+- **PDF**؛
+- **Video** شامل MP4، WebM، OGV و M4V؛
+- **Audio** شامل MP3، WAV، OGG/OGA، M4A، AAC و FLAC؛
+- **Markdown** با Render محلی؛
+- **Plain Text/Log** با Render محلی.
+
+هر File پشتیبانی‌شده در Project می‌تواند Preview شود و دیگر فقط Root HTML مطرح نیست.
+
+## دنبال‌کردن File فعال
+
+وقتی Tab فعال Workspace به File Previewable دیگری تغییر کند، Floating Preview می‌تواند همان File را دنبال کند.
+
+Fileهای Binary/Media قابل Preview هم می‌توانند به‌عنوان Tab واقعی و Read-only داخل Workspace باز شوند.
+
+## Preview برای Web Development
+
+اگر Project دارای `package.json` و Script به اسم `dev` باشد، TL Studio می‌تواند با Local Process Manager خودش دستور `npm run dev` را اجرا کند و Loopback URL اعلام‌شده را تشخیص دهد.
+
+HTML و Fileهای Static از Loopback Preview Server متعلق به TL Studio Serve می‌شوند.
+
+## رفتار PDF
+
+PDF با MIME و `Content-Disposition: inline` و همچنین HTTP Range Support سرو می‌شود. در نتیجه Browser می‌تواند از PDF Viewer Native خودش استفاده کند و فایل از سرویس خارجی عبور نمی‌کند.
+
+## Control و Resize
+
+Floating Preview در حالت‌های مربوطه Start/Stop، Reload و Open in Browser دارد.
+
+پنجره از هر 4 لبه و هر 4 گوشه قابل Resize است و Position/Size آن در UI به‌صورت Local حفظ می‌شود.
+
+## Security Boundary
+
+Project Content داخل Preview روی Origin دارای دسترسی Control API خود TL Studio اجرا نمی‌شود.
+
+- File/Static Preview روی Loopback Origin جدا قرار دارد؛
+- Node Preview فقط Loopback URL را قبول می‌کند؛
+- Path Traversal و Symlink Escape رد می‌شوند؛
+- Project JavaScript به Origin مربوط به Routeهای Privileged زیر دسترسی مشترک ندارد:
+
+```text
+/local/*
+```
