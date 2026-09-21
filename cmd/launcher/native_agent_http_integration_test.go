@@ -122,7 +122,6 @@ func TestNativeTerminalCancellationStopsProcess(t *testing.T) {
 	executor := newNativeToolExecutor(newProcessManager(func() string { return project }), nativeAllowAuthorizer{})
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	command := "sleep 5"
 	result := executor.Execute(ctx, "cancel-session", project, nativeToolCall{
 		ID:        "terminal.command",
 		Arguments: json.RawMessage(`{"command":"sleep 5","timeoutSeconds":5}`),
