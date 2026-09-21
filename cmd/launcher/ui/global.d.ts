@@ -159,6 +159,26 @@ interface TLStudioPermissionRule {
   createdAt: string;
 }
 
+interface TLStudioQuestionOption {
+  label: string;
+  description?: string;
+}
+
+interface TLStudioQuestionPrompt {
+  header?: string;
+  question: string;
+  options: TLStudioQuestionOption[];
+  multiple?: boolean;
+  custom: boolean;
+  default?: string;
+}
+
+interface TLStudioQuestionRequest {
+  id: string;
+  sessionID: string;
+  questions: TLStudioQuestionPrompt[];
+}
+
 type TLStudioLiveEventType =
   | "stream.ready"
   | "session.changed"
@@ -221,9 +241,9 @@ interface TLStudioRuntimeContract {
     removeRule(ruleID: string): Promise<any>;
   };
   questions: {
-    list(sessionID?: string): Promise<any[]>;
-    reply(sessionID: string, requestID: string, answers: string[][]): Promise<any>;
-    reject(sessionID: string, requestID: string): Promise<any>;
+    list(sessionID?: string): Promise<TLStudioQuestionRequest[]>;
+    reply(sessionID: string, requestID: string, answers: string[][]): Promise<{ resolved: boolean }>;
+    reject(sessionID: string, requestID: string): Promise<{ resolved: boolean }>;
   };
   hosted: {
     readonly providerID: string;
