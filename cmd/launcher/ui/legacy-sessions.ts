@@ -8,13 +8,13 @@
   const promptPlaceholder = K.els.prompt?.placeholder || "";
   const legacyCache = new Map();
 
-  const normalizePath = (value) => {
+  const normalizePath = (value: any) => {
     let path = String(value || "").replace(/[\\/]+$/, "").replace(/\\/g, "/");
     if (K.state.local?.platform === "windows") path = path.toLowerCase();
     return path;
   };
 
-  const sessionDirectory = (session) => session?.directory
+  const sessionDirectory = (session: any) => session?.directory
     || session?.location?.directory
     || session?.location?.project?.directory
     || session?.path
@@ -23,7 +23,7 @@
   const legacyKey = () => normalizePath(K.state.local?.project || "");
   const isLegacy = (session = K.state.session) => !!session?.__legacy;
 
-  const setLegacyMode = (enabled) => {
+  const setLegacyMode = (enabled: any) => {
     K.state.legacySession = !!enabled;
     if (K.els.prompt) {
       K.els.prompt.disabled = !!enabled;
@@ -46,12 +46,12 @@
       const payload = await K.api.legacySessions.list({ order: "desc", limit: 100 });
       const rows = Array.isArray(payload?.data) ? payload.data : [];
       const sessions = rows
-        .filter((session) => session?.id)
-        .map((session) => {
+        .filter((session: any) => session?.id)
+        .map((session: any) => {
           const directory = sessionDirectory(session);
           return { ...session, directory, __legacy: true };
         })
-        .filter((session) => !!session.directory && normalizePath(session.directory) === key);
+        .filter((session: any) => !!session.directory && normalizePath(session.directory) === key);
       legacyCache.set(key, sessions);
       return sessions;
     } catch (error) {
@@ -86,7 +86,7 @@
   const baseRenderSessions = K.renderSessions;
   K.renderSessions = (...args) => {
     const result = baseRenderSessions(...args);
-    const rows = [...(K.els.sessions?.querySelectorAll(".session-row") || [])];
+    const rows = [...(K.els.sessions?.querySelectorAll<HTMLElement>(".session-row") || [])];
     rows.forEach((row, index) => {
       const session = K.state.sessions[index];
       if (!session?.__legacy) return;
@@ -94,7 +94,7 @@
       row.querySelector(".session-quick-delete")?.remove();
       const meta = row.querySelector(".session-main span");
       if (meta && !/legacy/i.test(meta.textContent || "")) meta.textContent += " · legacy";
-      const open = row.querySelector(".session-main");
+      const open = row.querySelector<HTMLElement>(".session-main");
       if (open) open.title = `${open.title || session.title || "Session"}\nLegacy TL Studio session · read-only`;
     });
     return result;
@@ -104,7 +104,7 @@
   K.loadMessages = async (...args) => {
     if (!isLegacy()) return baseLoadMessages(...args);
     const revision = ++K.state.revision;
-    const payload = await K.api.legacySessions.messages(K.state.session.id, { order: "asc", limit: 500 });
+    const payload = await K.api.legacySessions.messages(K.state.session!.id, { order: "asc", limit: 500 });
     if (revision === K.state.revision) K.state.messages = Array.isArray(payload?.data) ? payload.data : [];
     return K.state.messages;
   };
@@ -129,7 +129,7 @@
     };
   }
 
-  const openLegacySession = async (session) => {
+  const openLegacySession = async (session: any) => {
     K.stopSessionPolling?.();
     K.clearAttachments?.();
     K.state.session = session;
@@ -147,7 +147,7 @@
       await K.loadMessages();
       K.renderMessages();
     } catch (error) {
-      K.showError(`Could not read legacy session: ${error.message || String(error)}`);
+      K.showError(`Could not read legacy session: ${(error as any).message || String(error)}`);
     }
   };
 

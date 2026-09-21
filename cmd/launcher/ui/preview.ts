@@ -55,7 +55,7 @@
     <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
   main.appendChild(panel);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button,
     panel,
     start: document.getElementById("previewStart"),
@@ -76,7 +76,7 @@
 
   K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "", followTimer: null, entrySwitchGeneration: 0, registry: null, registryPromise: null };
 
-  const request = async (path, options = {}) => {
+  const request = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
@@ -88,9 +88,7 @@
       : type.includes("application/json") ? await response.json().catch(() => null) : await response.text().catch(() => "");
     if (!response.ok) {
       const detail = payload && typeof payload === "object" ? payload.error || payload.reason || payload.message : String(payload || `${response.status} ${response.statusText}`);
-      const error = new Error(detail || "Preview request failed");
-      error.payload = payload;
-      throw error;
+      throw Object.assign(new Error(detail || "Preview request failed"), { payload });
     }
     return payload;
   };
@@ -100,7 +98,7 @@
     K.state.preview.poll = null;
   };
 
-  const setOpen = (open) => {
+  const setOpen = (open: any) => {
     K.state.preview.open = !!open;
     ui.panel.classList.toggle("hidden", !open);
     ui.button.classList.toggle("preview-toggle-active", !!open);
@@ -120,24 +118,24 @@
     return K.state.preview.registryPromise;
   };
 
-  const extensionOf = (value) => {
+  const extensionOf = (value: any) => {
     const name = String(value || "").trim().split(/[\\/]/).pop() || "";
     const index = name.lastIndexOf(".");
     return index > 0 ? name.slice(index).toLowerCase() : "";
   };
 
-  const previewCapabilityForPath = (value) => {
+  const previewCapabilityForPath = (value: any) => {
     const ext = extensionOf(value);
     if (!ext) return null;
     for (const capability of K.state.preview.registry?.capabilities || []) {
-      if ((capability?.extensions || []).some((candidate) => String(candidate).toLowerCase() === ext)) return capability;
+      if ((capability?.extensions || []).some((candidate: any) => String(candidate).toLowerCase() === ext)) return capability;
     }
     return null;
   };
 
-  const isPreviewablePath = (value) => !!previewCapabilityForPath(value);
+  const isPreviewablePath = (value: any) => !!previewCapabilityForPath(value);
   const activePreviewEntry = () => isPreviewablePath(K.state.activeEditorPath) ? String(K.state.activeEditorPath) : "";
-  const kindLabel = (snapshot) => snapshot?.kind === "dev-server"
+  const kindLabel = (snapshot: any) => snapshot?.kind === "dev-server"
     ? "Dev server"
     : snapshot?.entryMeta?.name || (snapshot?.kind === "file" ? "File preview" : "Web preview");
 
@@ -146,12 +144,12 @@
     return value ? `${base}?${new URLSearchParams({ entry: value })}` : base;
   };
 
-  const renderEntryChoices = (snapshot) => {
+  const renderEntryChoices = (snapshot: any) => {
     const entries = Array.isArray(snapshot?.entries)
-      ? snapshot.entries.filter((entry) => entry && typeof entry.path === "string")
+      ? snapshot.entries.filter((entry: any) => entry && typeof entry.path === "string")
       : [];
-    const paths = entries.map((entry) => entry.path);
-    const signature = entries.map((entry) => `${entry.path}:${entry.capabilityID || entry.kind || ""}`).join("\n");
+    const paths = entries.map((entry: any) => entry.path);
+    const signature = entries.map((entry: any) => `${entry.path}:${entry.capabilityID || entry.kind || ""}`).join("\n");
     const preferred = String(snapshot?.entry || activePreviewEntry() || ui.entry?.value || "");
     if (ui.entry && K.state.preview.entrySignature !== signature) {
       K.state.preview.entrySignature = signature;
@@ -169,7 +167,7 @@
     return entries;
   };
 
-  const render = (snapshot) => {
+  const render = (snapshot: any) => {
     K.state.preview.snapshot = snapshot || null;
     const available = !!snapshot?.available;
     const running = !!snapshot?.running;
@@ -236,11 +234,11 @@
         K.state.preview.poll = window.setInterval(() => refreshStatus().catch(() => {}), 500);
       }
     } catch (error) {
-      render(error.payload || { available: false, error: error.message || String(error) });
+      render((error as any).payload || { available: false, error: (error as any).message || String(error) });
     }
   };
 
-  const switchPreviewEntry = async (entry) => {
+  const switchPreviewEntry = async (entry: any) => {
     const value = String(entry || "").trim();
     if (!value) return K.state.preview.snapshot;
     const generation = ++K.state.preview.entrySwitchGeneration;
@@ -251,13 +249,13 @@
       return snapshot;
     } catch (error) {
       if (generation === K.state.preview.entrySwitchGeneration) {
-        render(error.payload || { available: false, error: error.message || String(error) });
+        render((error as any).payload || { available: false, error: (error as any).message || String(error) });
       }
       return null;
     }
   };
 
-  const followActivePreviewEntry = async (path) => {
+  const followActivePreviewEntry = async (path: any) => {
     const entry = String(path || "").trim();
     if (!entry || !K.state.preview.open) return;
     await loadPreviewRegistry().catch(() => null);
@@ -284,7 +282,7 @@
     try {
       await request("/local/preview", { method: "DELETE" });
     } catch (error) {
-      if (!silent) K.showError?.(error.message || String(error));
+      if (!silent) K.showError?.((error as any).message || String(error));
     }
     render(await request("/local/preview").catch(() => ({ available: false })));
   };
@@ -349,9 +347,10 @@
   window.fetch = async (input, init = {}) => {
     const response = await nativeFetch(input, init);
     try {
-      const raw = typeof input === "string" ? input : input?.url || "";
+      const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       const parsed = new URL(raw, window.location.href);
-      const method = String(init?.method || (typeof input !== "string" ? input?.method : "") || "GET").toUpperCase();
+      const requestMethod = input instanceof Request ? input.method : "";
+      const method = String(init?.method || requestMethod || "GET").toUpperCase();
       const workspaceMutation = response.ok
         && parsed.origin === window.location.origin
         && (parsed.pathname === "/local/file" || parsed.pathname === "/local/entry")
@@ -361,7 +360,7 @@
     return response;
   };
   window.addEventListener("tl-studio:project-file-changed", scheduleFileReload);
-  window.addEventListener("tl-studio:editor-render", (event) => followActivePreviewEntry(event.detail?.path));
+  window.addEventListener("tl-studio:editor-render", (event) => followActivePreviewEntry((event as CustomEvent<any>).detail?.path));
 
   const baseHandleRuntimeEvent = K.handleRuntimeEvent;
   if (typeof baseHandleRuntimeEvent === "function") {

@@ -1,9 +1,9 @@
 (() => {
   "use strict";
   const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     button: $("filesButton"),
     panel: $("filesPanel"),
     close: $("closeFiles"),
@@ -15,17 +15,17 @@
     changesButton: $("changesButton"),
   };
 
-  const normalizePath = (value) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
-  const basename = (value) => normalizePath(value).split("/").pop() || "";
-  const parentPath = (value) => {
+  const normalizePath = (value: any) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  const basename = (value: any) => normalizePath(value).split("/").pop() || "";
+  const parentPath = (value: any) => {
     const bits = normalizePath(value).split("/").filter(Boolean);
     bits.pop();
     return bits.join("/");
   };
-  const joinPath = (parent, name) => [normalizePath(parent), String(name || "").trim()].filter(Boolean).join("/");
-  const pathKey = (value) => normalizePath(value).toLowerCase();
+  const joinPath = (parent: any, name: any) => [normalizePath(parent), String(name || "").trim()].filter(Boolean).join("/");
+  const pathKey = (value: any) => normalizePath(value).toLowerCase();
 
-  const makeButton = (id, label, title = label) => {
+  const makeButton = (id: any, label: any, title = label) => {
     const button = document.createElement("button");
     button.id = id;
     button.type = "button";
@@ -138,35 +138,35 @@
   K.state.editorTabs = [];
   K.state.activeEditorPath = "";
 
-  const sizeText = (bytes) => {
+  const sizeText = (bytes: any) => {
     const value = Number(bytes) || 0;
     if (value < 1024) return `${value} B`;
     if (value < 1024 * 1024) return `${(value / 1024).toFixed(value < 10 * 1024 ? 1 : 0)} KB`;
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const extensionLabel = (path) => {
+  const extensionLabel = (path: any) => {
     const name = basename(path);
     const index = name.lastIndexOf(".");
     return index > 0 ? name.slice(index + 1).toUpperCase() : "TEXT";
   };
 
-  const languageHint = (path) => {
+  const languageHint = (path: any) => {
     const extension = extensionLabel(path).toLowerCase();
-    const aliases = { js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", py: "python", go: "go", rs: "rust", java: "java", cs: "csharp", cpp: "cpp", c: "c", h: "c", html: "html", css: "css", json: "json", md: "markdown", sh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml", xml: "xml", sql: "sql" };
+    const aliases: Record<string, string> = { js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", py: "python", go: "go", rs: "rust", java: "java", cs: "csharp", cpp: "cpp", c: "c", h: "c", html: "html", css: "css", json: "json", md: "markdown", sh: "bash", ps1: "powershell", yml: "yaml", yaml: "yaml", xml: "xml", sql: "sql" };
     return aliases[extension] || "";
   };
 
-  const byteSize = (text) => {
+  const byteSize = (text: any) => {
     try { return new TextEncoder().encode(String(text || "")).length; }
     catch (_) { return String(text || "").length; }
   };
 
-  const isDirty = (tab) => !!tab && !tab.viewOnly && tab.content !== tab.savedContent;
+  const isDirty = (tab: any) => !!tab && !tab.viewOnly && tab.content !== tab.savedContent;
   const activeTab = () => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(K.state.activeEditorPath)) || null;
-  const tabFor = (path) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
+  const tabFor = (path: any) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
 
-  const localRequest = async (path, options = {}) => {
+  const localRequest = async (path: string, options: RequestInit = {}) => {
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
@@ -180,15 +180,13 @@
       const detail = payload && typeof payload === "object"
         ? payload.error || payload.message || JSON.stringify(payload)
         : String(payload || `${response.status} ${response.statusText}`);
-      const error = new Error(detail);
-      error.status = response.status;
-      error.payload = payload;
+      const error = Object.assign(new Error(detail), { status: response.status, payload });
       throw error;
     }
     return payload;
   };
 
-  const setSelectedEntry = (entry) => {
+  const setSelectedEntry = (entry: any) => {
     K.state.selectedFileEntry = entry || null;
     renderFiles();
   };
@@ -304,7 +302,7 @@
     }));
   };
 
-  const renderLineNumbers = (content) => {
+  const renderLineNumbers = (content: any) => {
     if (!ui.gutter) return;
     const count = Math.max(1, String(content ?? "").split("\n").length);
     ui.gutter.textContent = Array.from({ length: count }, (_, index) => String(index + 1)).join("\n");
@@ -358,7 +356,7 @@
     else updateCursor();
   };
 
-  const notifyEditorRender = (tab) => {
+  const notifyEditorRender = (tab: any) => {
     window.dispatchEvent(new CustomEvent("tl-studio:editor-render", {
       detail: {
         path: tab?.path || "",
@@ -401,7 +399,7 @@
     notifyEditorRender(tab);
   };
 
-  const activateTab = (path) => {
+  const activateTab = (path: any) => {
     const tab = tabFor(path);
     if (!tab) return;
     K.state.activeEditorPath = tab.path;
@@ -409,7 +407,7 @@
     if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
   };
 
-  const closeTab = (path, options = {}) => {
+  const closeTab = (path: any, options: { force?: boolean } = {}) => {
     const index = K.state.editorTabs.findIndex((tab) => pathKey(tab.path) === pathKey(path));
     if (index < 0) return true;
     const tab = K.state.editorTabs[index];
@@ -423,7 +421,7 @@
     return true;
   };
 
-  const applyPreviewToTab = (tab, preview) => {
+  const applyPreviewToTab = (tab: any, preview: any) => {
     tab.path = preview.path || tab.path;
     tab.content = preview.content || "";
     tab.savedContent = preview.content || "";
@@ -434,7 +432,7 @@
     tab.externalChanged = false;
   };
 
-  const openEditor = async (path) => {
+  const openEditor = async (path: any) => {
     if (!path) return;
     const existing = tabFor(path);
     if (existing) {
@@ -466,11 +464,11 @@
       renderEditor();
       if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
-  const refreshTabFromDisk = async (tab, options = {}) => {
+  const refreshTabFromDisk = async (tab: any, options: { force?: boolean; silent?: boolean } = {}) => {
     if (!tab?.path) return;
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path: tab.path })}`);
@@ -500,7 +498,7 @@
       else renderTabs();
     } catch (error) {
       if (options.silent) return;
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -523,14 +521,14 @@
       renderEditor();
       await loadDirectory(K.state.filesPath || "", { preserveSelection: true });
     } catch (error) {
-      if (error.status === 409 && !force) {
+      if ((error as any).status === 409 && !force) {
         tab.externalChanged = true;
         renderEditor();
         const overwrite = window.confirm(`${basename(tab.path)} changed on disk after you opened it. Overwrite the disk version with your editor contents?`);
         if (overwrite) return saveActive(true);
         return;
       }
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       updateEditorChrome();
     }
@@ -551,7 +549,7 @@
     try {
       await localRequest(`/local/reveal?${new URLSearchParams({ path: tab.path })}`, { method: "POST" });
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       if (ui.showInFolder) ui.showInFolder.disabled = !activeTab()?.path;
     }
@@ -573,7 +571,7 @@
     window.setTimeout(() => K.els.prompt.focus(), 0);
   };
 
-  const loadDirectory = async (path = "", options = {}) => {
+  const loadDirectory = async (path = "", options: { preserveSelection?: boolean } = {}) => {
     K.state.filesLoading = true;
     K.state.filesPath = normalizePath(path);
     renderFiles();
@@ -585,25 +583,26 @@
       K.state.filesEntries = Array.isArray(payload?.entries) ? payload.entries : [];
       if (!options.preserveSelection) K.state.selectedFileEntry = null;
       else if (K.state.selectedFileEntry) {
-        const fresh = K.state.filesEntries.find((entry) => pathKey(entry.path) === pathKey(K.state.selectedFileEntry.path));
+        const selected = K.state.selectedFileEntry;
+        const fresh = selected ? K.state.filesEntries.find((entry) => pathKey(entry.path) === pathKey(selected.path)) : undefined;
         K.state.selectedFileEntry = fresh || null;
       }
     } catch (error) {
       K.state.filesEntries = [];
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       K.state.filesLoading = false;
       renderFiles();
     }
   };
 
-  const validEntryName = (value) => {
+  const validEntryName = (value: any) => {
     const name = String(value || "").trim();
     if (!name || name === "." || name === ".." || /[\\/]/.test(name)) return "";
     return name;
   };
 
-  const createEntry = async (type) => {
+  const createEntry = async (type: any) => {
     const label = type === "directory" ? "folder" : "file";
     const input = window.prompt(`New ${label} name:`);
     if (input == null) return;
@@ -618,7 +617,7 @@
       if (fresh) setSelectedEntry(fresh);
       if (type === "file") await openEditor(entry?.path || path);
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -652,7 +651,7 @@
       renderFiles();
       renderEditor();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -673,12 +672,12 @@
         const path = normalizePath(tab.path).toLowerCase();
         return path !== deleted && !(selected.type === "directory" && path.startsWith(`${deleted}/`));
       });
-      if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs.at(-1)?.path || "";
+      if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs[K.state.editorTabs.length - 1]?.path || "";
       K.state.selectedFileEntry = null;
       await loadDirectory(K.state.filesPath || "");
       renderEditor();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     }
   };
 
@@ -705,7 +704,7 @@
     if (tab) await refreshTabFromDisk(tab, { silent: true });
   };
 
-  const openEditorAt = async ({ path, line = 1, column = 1, match = "" } = {}) => {
+  const openEditorAt = async ({ path, line = 1, column = 1, match = "" }: { path?: string; line?: number; column?: number; match?: string } = {}) => {
     if (!path) return;
     await openFiles();
     await openEditor(path);
@@ -766,7 +765,7 @@
     if (ui.gutter) ui.gutter.scrollTop = ui.editor.scrollTop;
   });
   for (const eventName of ["click", "keyup", "select"]) ui.editor?.addEventListener(eventName, updateCursor);
-  ui.editor?.addEventListener("keydown", (event) => {
+  ui.editor?.addEventListener("keydown", (event: any) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       saveActive(false);

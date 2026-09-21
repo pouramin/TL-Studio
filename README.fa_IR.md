@@ -55,6 +55,7 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **Terminal داخلی** — اجرای Command در Scope پروژه، تاریخچه‌ی خروجی، Stop و پایان Process tree.
 - **Live Preview** — Preview لوکال مبتنی بر Capability در پنجره‌ی قابل‌جابجایی و تغییر اندازه؛ TL Studio فایل Previewable فعال را بین HTML، SVG و Image، PDF، Video، Audio، Markdown رندرشده و Plain Text رندرشده دنبال می‌کند. PDF مستقیماً با MIME و `Content-Disposition: inline` و Range support برای PDF Viewer خود مرورگر سرو می‌شود. پنجره‌ی Preview از هر 4 لبه و هر 4 گوشه قابل Resize است.
 - **تنظیمات ظاهر و Editor** — حالت System، Dark و Light به‌همراه Editor theme و Font جداگانه برای UI، Code و Terminal.
+- **Browser Source با Strict TypeScript** — تمام Sourceهای Browser در `cmd/launcher/ui` با `strict: true` کامپایل و Type-check می‌شوند و Contractهای مشخص برای `TLStudioKernel`، State، DOM، Runtime API، Session، Tool و Live Event جای global `any` قبلی را گرفته‌اند.
 - **معماری Local-first** — اجرای Loopback-only، رمز تصادفی Backend در هر اجرا، کنترل Origin و CSP محدودکننده.
 - **بدون Cloud یا Telemetry اختصاصی TL Studio** — ترافیک Model براساس Provider و Runtime انتخاب‌شده‌ی کاربر انجام می‌شود و از زیرساخت TL Studio عبور نمی‌کند.
 

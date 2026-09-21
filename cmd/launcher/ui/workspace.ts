@@ -1,9 +1,9 @@
 (() => {
   "use strict";
   const K = window.KLU;
-  const $ = (id) => document.getElementById(id);
+  const $ = (id: string) => document.getElementById(id);
 
-  const ui = {
+  const ui: TLStudioDynamicRecord = {
     changesButton: $("changesButton"),
     changesCount: $("changesCount"),
     changesPanel: $("changesPanel"),
@@ -23,13 +23,13 @@
   K.state.changesLoading = false;
   K.state.sseSettling = false;
 
-  const escapeText = (value) => String(value ?? "");
-  const basename = (path) => {
+  const escapeText = (value: any) => String(value ?? "");
+  const basename = (path: any) => {
     const bits = escapeText(path).split(/[\\/]/);
     return bits[bits.length - 1] || escapeText(path) || "Unknown file";
   };
 
-  const normalizeChange = (candidate, fallbackPath = "") => {
+  const normalizeChange = (candidate: any, fallbackPath = "") => {
     if (!candidate || typeof candidate !== "object") return null;
     const file = candidate.file || candidate.filePath || candidate.path || fallbackPath;
     if (!file) return null;
@@ -41,7 +41,7 @@
     };
   };
 
-  const mergeChanges = (items) => {
+  const mergeChanges = (items: any) => {
     const merged = new Map();
     for (const raw of Array.isArray(items) ? items : []) {
       const item = normalizeChange(raw);
@@ -125,7 +125,7 @@
     }
     K.state.changesLoading = true;
     K.renderChanges();
-    let aggregate = [];
+    let aggregate: any[] = [];
     try {
       const changes = await K.api.sessionView.changes(K.state.session.id);
       aggregate = Array.isArray(changes) ? changes : [];
@@ -174,7 +174,7 @@
       K.stopSessionPolling?.();
       await settleSelectedSession();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as any).message || String(error));
     } finally {
       ui.stopButton.disabled = false;
       K.refreshWorkspaceControls();
@@ -201,7 +201,7 @@
       await K.loadSessions();
       K.renderSessionHeader();
       K.renderSessions();
-    } catch (error) { K.showError(error.message || String(error)); }
+    } catch (error) { K.showError((error as any).message || String(error)); }
   };
 
   const deleteSession = async () => {
@@ -219,7 +219,7 @@
       await K.loadSessions();
       K.renderChanges();
       K.refreshWorkspaceControls();
-    } catch (error) { K.showError(error.message || String(error)); }
+    } catch (error) { K.showError((error as any).message || String(error)); }
   };
 
   const originalSelectSession = K.selectSession;
@@ -257,7 +257,7 @@
       window.setTimeout(() => K.loadChanges().catch(() => {}), 60);
     }
     if (sessionID && sessionID === K.state.session?.id && type === "session.idle") {
-      window.setTimeout(() => settleSelectedSession().catch((error) => K.showError(error.message || String(error))), 80);
+      window.setTimeout(() => settleSelectedSession().catch((error) => K.showError((error as any).message || String(error))), 80);
     }
   };
 
@@ -296,7 +296,7 @@
   ui.sessionCancel?.addEventListener("click", () => ui.sessionDialog.close());
   ui.sessionSave?.addEventListener("click", saveSessionTitle);
   ui.sessionDelete?.addEventListener("click", deleteSession);
-  ui.sessionTitleInput?.addEventListener("keydown", (event) => {
+  ui.sessionTitleInput?.addEventListener("keydown", (event: any) => {
     if (event.key === "Enter") { event.preventDefault(); saveSessionTitle(); }
   });
 

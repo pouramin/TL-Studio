@@ -2,12 +2,12 @@
   "use strict";
   const K = window.KLU;
 
-  const safeJSON = (value) => {
+  const safeJSON = (value: any) => {
     try { return JSON.stringify(value, null, 2); }
     catch { return String(value); }
   };
 
-  const errorText = (error) => {
+  const errorText = (error: any) => {
     if (!error) return "";
     if (typeof error === "string") return error;
     const message = error.message || error.data?.message || error.error?.message || "";
@@ -16,21 +16,21 @@
     return safeJSON(error);
   };
 
-  const partsOf = (message) => Array.isArray(message?.parts)
+  const partsOf = (message: any) => Array.isArray(message?.parts)
     ? message.parts
     : Array.isArray(message?.content) ? message.content : [];
 
-  const textOf = (message) => {
+  const textOf = (message: any) => {
     if (typeof message?.text === "string" && message.text) return message.text;
     return partsOf(message)
-      .filter((item) => item?.type === "text" && !item.ignored)
-      .map((item) => item.text || "")
+      .filter((item: any) => item?.type === "text" && !item.ignored)
+      .map((item: any) => item.text || "")
       .filter(Boolean)
       .join("\n")
       .trim();
   };
 
-  const toolSummary = (item) => {
+  const toolSummary = (item: any) => {
     const state = item?.state || {};
     const status = state.status || item.status || "pending";
     const details = [];
@@ -45,13 +45,13 @@
     return { status, detail: details.filter(Boolean).join("\n\n") };
   };
 
-  const toolDescriptor = (item) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
+  const toolDescriptor = (item: any) => K.toolDescriptor?.(item?.tool || item?.name || "") || {
     name: "Runtime tool",
     category: "runtime",
     permissionClass: "runtime",
   };
 
-  const messageNode = (kind, author, text, time, error) => {
+  const messageNode = (kind: any, author: any, text: any, time: any, error: any = "") => {
     const row = document.createElement("article");
     const avatar = document.createElement("div");
     const content = document.createElement("div");
@@ -75,7 +75,7 @@
     return row;
   };
 
-  const toolNode = (name, status, detail) => {
+  const toolNode = (name: any, status: any, detail: any) => {
     const card = document.createElement("div");
     const head = document.createElement("div");
     const title = document.createElement("strong");
@@ -95,7 +95,7 @@
     return card;
   };
 
-  const appendParts = (node, message) => {
+  const appendParts = (node: any, message: any) => {
     const content = node.querySelector(".message-content");
     for (const item of partsOf(message)) {
       if (item?.type === "reasoning" && item.text) content.appendChild(toolNode("Reasoning", "completed", item.text));
@@ -110,7 +110,7 @@
     }
   };
 
-  const renderEnvelope = (view, message) => {
+  const renderEnvelope = (view: any, message: any) => {
     if (!message?.info || !Array.isArray(message.parts)) return false;
     const info = message.info;
     const time = info.time?.created ?? info.time?.completed;
@@ -148,7 +148,7 @@
         view.appendChild(node);
       } else if (message?.type === "shell") {
         const node = messageNode("assistant", "Shell", "", message.time?.created);
-        node.querySelector(".message-content").appendChild(toolNode(message.command || "command", message.time?.completed ? "completed" : "running", message.output || ""));
+        node.querySelector<HTMLElement>(".message-content")!.appendChild(toolNode(message.command || "command", message.time?.completed ? "completed" : "running", message.output || ""));
         view.appendChild(node);
       } else if (message?.type === "system" || message?.type === "synthetic") {
         view.appendChild(messageNode("system", "System", message.text || "", message.time?.created));
@@ -157,7 +157,7 @@
 
     if (K.state.session && (K.isSessionRunning(K.state.session.id) || K.state.sending)) {
       const row = messageNode("assistant", K.state.session.agent || "Agent", "", Date.now());
-      row.querySelector(".message-text").innerHTML = 'Working <span class="typing"><i></i><i></i><i></i></span>';
+      row.querySelector<HTMLElement>(".message-text")!.innerHTML = 'Working <span class="typing"><i></i><i></i><i></i></span>';
       view.appendChild(row);
     }
     requestAnimationFrame(() => { view.scrollTop = view.scrollHeight; });
@@ -211,7 +211,7 @@
   };
 
   K.createSession = async () => {
-    const input = {};
+    const input: any = {};
     const agent = K.els.agentSelect.value || undefined;
     const model = K.selectedModel();
     if (agent) input.agent = agent;
@@ -236,7 +236,7 @@
     K.renderSessionHeader();
   };
 
-  let refreshTimer = null;
+  let refreshTimer: number | null = null;
   const scheduleSelectedRefresh = (delay = 80) => {
     if (refreshTimer) window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(async () => {
@@ -249,7 +249,7 @@
         K.renderMessages();
         K.renderSessionHeader();
         K.renderSessions();
-      } catch (err) { K.showError(err.message || String(err)); }
+      } catch (err) { K.showError((err as any).message || String(err)); }
     }, delay);
   };
 
@@ -277,7 +277,7 @@
     if (K.state.fallbackPolling) window.clearInterval(K.state.fallbackPolling);
     K.state.fallbackPolling = null;
 
-    if (!("EventSource" in window)) {
+    if (typeof globalThis.EventSource === "undefined") {
       K.state.fallbackPolling = window.setInterval(() => scheduleSelectedRefresh(0), 1200);
       return;
     }
@@ -290,7 +290,7 @@
     });
   };
 
-  const assistantAfter = (timestamp) => K.state.messages.some((message) => {
+  const assistantAfter = (timestamp: any) => K.state.messages.some((message) => {
     if (message?.role !== "assistant") return false;
     const created = Number(message.createdAt || 0);
     return created >= timestamp - 1000 && (message.text || message.error || (message.activities || []).some((activity) => activity?.kind === "tool"));
@@ -322,7 +322,7 @@
       } catch (err) {
         K.state.sending = false;
         K.stopSessionPolling();
-        K.showError(err.message || String(err));
+        K.showError((err as any).message || String(err));
         K.renderMessages();
       }
     }, 700);
@@ -356,13 +356,13 @@
       });
       K.renderMessages();
 
-      await K.api.sessions.promptAsync(K.state.session.id, { text, agent, model, variant: model?.variant });
+      await K.api.sessions.promptAsync(K.state.session!.id, { text, agent, model, variant: model?.variant });
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       K.renderMessages();
       K.startSessionPolling(startedAt);
     } catch (err) {
       K.state.sending = false;
-      K.showError(err.message || String(err));
+      K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {
       K.els.sendButton.disabled = false;
@@ -376,8 +376,8 @@
       K.state.local = await K.request("/local/pick-directory", { method: "POST" });
       await K.afterProjectChange();
     } catch (err) {
-      if (/no supported folder picker/i.test(err.message || "")) return K.openManualProject();
-      K.showError(err.message || String(err));
+      if (/no supported folder picker/i.test((err as any).message || "")) return K.openManualProject();
+      K.showError((err as any).message || String(err));
     }
   };
 
@@ -396,15 +396,15 @@
       K.state.local = await K.request("/local/project", { method: "POST", body: JSON.stringify({ path }) });
       K.els.pathDialog.close();
       await K.afterProjectChange();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
   K.afterProjectChange = async () => {
     K.stopEvents();
     Object.assign(K.state, { session: null, sessions: [], messages: [], activeSessions: {}, sending: false });
-    K.els.projectName.textContent = K.basename(K.state.local.project);
-    K.els.projectPath.textContent = K.state.local.project;
-    K.els.projectPath.title = K.state.local.project;
+    K.els.projectName.textContent = K.basename(K.state.local!.project);
+    K.els.projectPath.textContent = K.state.local!.project;
+    K.els.projectPath.title = K.state.local!.project;
     K.newSession();
     await Promise.all([K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
     K.startEvents();

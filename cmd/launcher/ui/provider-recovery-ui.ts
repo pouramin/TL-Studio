@@ -8,20 +8,20 @@
   const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
-  const messageRole = (message) => message?.role || message?.info?.role || message?.type || "";
-  const errorOf = (message) => message?.error || message?.info?.error || null;
-  const errorData = (error) => error?.data && typeof error.data === "object" ? error.data : (error || {});
+  const messageRole = (message: any) => message?.role || message?.info?.role || message?.type || "";
+  const errorOf = (message: any) => message?.error || message?.info?.error || null;
+  const errorData = (error: any) => error?.data && typeof error.data === "object" ? error.data : (error || {});
 
-  const text = (value) => String(value ?? "").trim();
-  const finiteStatus = (value) => {
+  const text = (value: any) => String(value ?? "").trim();
+  const finiteStatus = (value: any) => {
     const number = Number(value);
     return Number.isFinite(number) && number > 0 ? number : 0;
   };
 
-  const clearlyNonRetryable = (value) => /context (?:window|length)|quota exceeded|insufficient quota|invalid prompt|usage not included|freeusagelimiterror|unauthori[sz]ed|forbidden|authentication|reauthenticate|content filter/i.test(value);
-  const transientMessage = (value) => /provider returned error|upstream|temporar(?:y|ily) unavailable|server (?:is )?(?:error|overloaded)|overloaded|rate limit|too many requests|fetch failed|connection (?:reset|closed|dropped)|response stream|timed out|timeout/i.test(value);
+  const clearlyNonRetryable = (value: any) => /context (?:window|length)|quota exceeded|insufficient quota|invalid prompt|usage not included|freeusagelimiterror|unauthori[sz]ed|forbidden|authentication|reauthenticate|content filter/i.test(value);
+  const transientMessage = (value: any) => /provider returned error|upstream|temporar(?:y|ily) unavailable|server (?:is )?(?:error|overloaded)|overloaded|rate limit|too many requests|fetch failed|connection (?:reset|closed|dropped)|response stream|timed out|timeout/i.test(value);
 
-  const providerErrorInfo = (message) => {
+  const providerErrorInfo = (message: any) => {
     if (messageRole(message) !== "assistant") return null;
     const error = errorOf(message);
     if (!error || typeof error !== "object") return null;
@@ -57,7 +57,7 @@
     .map((message, index) => ({ message, index }))
     .filter(({ message }) => messageRole(message) === "assistant");
 
-  const resumeProviderFailure = async (button) => {
+  const resumeProviderFailure = async (button: any) => {
     const session = K.state.session;
     if (!session || K.state.sending || K.isSessionRunning?.(session.id)) return false;
     if (!K.els?.prompt || !K.sendPrompt) return false;
@@ -75,7 +75,7 @@
       await K.sendPrompt();
       return true;
     } catch (error) {
-      K.showError?.(`Resume failed: ${error.message || String(error)}`);
+      K.showError?.(`Resume failed: ${(error as any).message || String(error)}`);
       return false;
     } finally {
       if (button?.isConnected) {

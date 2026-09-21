@@ -55,6 +55,8 @@ The release already includes the pinned local agent runtime.
 - **Integrated terminal** — project-scoped command execution, output history, stop controls, and process-tree termination.
 - **Live Preview** — capability-driven local preview in a movable/resizable browser window. TL Studio follows the active previewable file across HTML, SVG/raster images, PDF, video, audio, rendered Markdown, and rendered plain text; PDF is served directly with inline MIME/disposition and HTTP range support for the browser's native PDF viewer. Previewable binary media opens as a real read-only Workspace tab, while the floating Preview can be resized from all four edges and all four corners.
 - **Appearance & editor settings** — System, Dark, and Light themes plus editor theme and separate UI/code/terminal font controls.
+- **Strict TypeScript browser source** — all Browser UI source under `cmd/launcher/ui` is compiled and type-checked with `strict: true`; shared `TLStudioKernel`, state, DOM element, runtime API, session, tool, and live-event contracts replace the former global `any` surface.
+- **Strict TypeScript browser source** — all Browser UI source under `cmd/launcher/ui` is compiled and type-checked with `strict: true`; the shared `TLStudioKernel`, state, DOM element, runtime API, session, tool, and live-event contracts replace the former global `any` surface.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
 - **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
 

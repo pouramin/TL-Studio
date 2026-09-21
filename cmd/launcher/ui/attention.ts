@@ -2,7 +2,7 @@
   "use strict";
   const K = window.KLU;
 
-  const parseDeviceCode = (input) => input?.match(/code:\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase()
+  const parseDeviceCode = (input: any) => input?.match(/code:\s*([A-Z0-9-]+)/i)?.[1]?.toUpperCase()
     || input?.match(/\b[A-Z0-9]{4,}(?:-[A-Z0-9]{3,})+\b/i)?.[0]?.toUpperCase() || "";
 
   K.applyHostedAuthStatus = (status) => {
@@ -26,7 +26,7 @@
     try {
       status = await K.refreshHostedAuthStatus();
     } catch (err) {
-      K.showError(`Unable to verify hosted account state: ${err.message || String(err)}`);
+      K.showError(`Unable to verify hosted account state: ${(err as any).message || String(err)}`);
       return;
     }
     if (status.authenticated) return K.showError("The hosted model account is already connected on this computer.");
@@ -41,7 +41,7 @@
     K.els.authDialog.showModal();
 
     try {
-      const info = await K.api.hosted.authorize() || {};
+      const info: any = await K.api.hosted.authorize() || {};
       K.state.authURL = info.url || "";
       K.els.authInstructions.textContent = info.instructions || "Authorization is ready. Open the sign-in page to continue.";
       const code = parseDeviceCode(info.instructions);
@@ -61,7 +61,7 @@
 
       window.setTimeout(() => { if (K.els.authDialog.open) K.els.authDialog.close(); }, 650);
     } catch (err) {
-      if (err?.name !== "AbortError") K.els.authInstructions.textContent = `Sign-in failed: ${err.message || String(err)}`;
+      if ((err as any)?.name !== "AbortError") K.els.authInstructions.textContent = `Sign-in failed: ${(err as any).message || String(err)}`;
     }
   };
 
@@ -76,7 +76,7 @@
     catch {}
   };
 
-  const actionButton = (label, className, fn) => {
+  const actionButton = (label: any, className: any, fn: any) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
@@ -85,7 +85,7 @@
     return button;
   };
 
-  const reset = (title) => {
+  const reset = (title: any) => {
     K.els.attentionTitle.textContent = title;
     K.els.attentionBody.textContent = "";
     K.els.attentionActions.textContent = "";
@@ -107,7 +107,7 @@
     }
   };
 
-  const showPermission = (item) => {
+  const showPermission = (item: any) => {
     const key = `permission:${item.id}`;
     if (K.state.attentionKey === key && K.els.attentionDialog.open) return;
     K.state.attentionKey = key;
@@ -142,23 +142,23 @@
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
   };
 
-  const replyPermission = async (item, reply) => {
+  const replyPermission = async (item: any, reply: any) => {
     try {
-      await K.api.permissions.reply(K.state.session.id, item.id, reply);
+      await K.api.permissions.reply(K.state.session!.id, item.id, reply);
       if (reply === "always") await K.refreshPermissionRules?.();
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
-  const showQuestion = (item) => {
+  const showQuestion = (item: any) => {
     const key = `question:${item.id}`;
     if (K.state.attentionKey === key && K.els.attentionDialog.open) return;
     K.state.attentionKey = key;
     reset("Agent question");
 
-    const blocks = [];
+    const blocks: Array<{ controls: HTMLInputElement[]; custom: HTMLInputElement | null }> = [];
     for (const [index, question] of (item.questions || []).entries()) {
       const block = document.createElement("div");
       const header = document.createElement("div");
@@ -169,7 +169,7 @@
       title.textContent = question.question || `Question ${index + 1}`;
       block.append(header, title);
 
-      const controls = [];
+      const controls: HTMLInputElement[] = [];
       const name = `q-${item.id}-${index}`;
       for (const option of question.options || []) {
         const label = document.createElement("label");
@@ -186,7 +186,7 @@
         controls.push(input);
       }
 
-      let custom = null;
+      let custom: HTMLInputElement | null = null;
       if (question.custom !== false) {
         custom = document.createElement("input");
         custom.className = "question-custom";
@@ -204,29 +204,29 @@
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
   };
 
-  const answerQuestion = async (item, blocks) => {
+  const answerQuestion = async (item: any, blocks: Array<{ controls: HTMLInputElement[]; custom: HTMLInputElement | null }>) => {
     const answers = blocks.map(({ controls, custom }) => {
-      const selected = controls.filter((input) => input.checked).map((input) => input.value);
+      const selected = controls.filter((input: any) => input.checked).map((input: HTMLInputElement) => input.value);
       const typed = custom?.value.trim();
       if (typed) selected.push(typed);
       return selected;
     });
-    if (answers.some((answer) => !answer.length)) return K.showError("Answer every agent question before continuing.");
+    if (answers.some((answer: any) => !answer.length)) return K.showError("Answer every agent question before continuing.");
 
     try {
-      await K.api.questions.reply(K.state.session.id, item.id, answers);
+      await K.api.questions.reply(K.state.session!.id, item.id, answers);
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 
-  const rejectQuestion = async (item) => {
+  const rejectQuestion = async (item: any) => {
     try {
-      await K.api.questions.reject(K.state.session.id, item.id);
+      await K.api.questions.reject(K.state.session!.id, item.id);
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError(err.message || String(err)); }
+    } catch (err) { K.showError((err as any).message || String(err)); }
   };
 })();

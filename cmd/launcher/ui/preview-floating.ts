@@ -12,13 +12,13 @@
   }
 
   const panel = document.getElementById("previewPanel");
-  const head = panel?.querySelector(".preview-head");
+  const head = panel?.querySelector<HTMLElement>(".preview-head");
   if (!panel || !head) return;
 
   const KEY = "tl-studio.preview-window";
   const MIN_WIDTH = 340;
   const MIN_HEIGHT = 300;
-  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+  const clamp = (v: any, min: any, max: any) => Math.min(Math.max(v, min), max);
   const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
 
   const read = () => {
@@ -65,8 +65,8 @@
 
   apply();
 
-  let edgeResize = null;
-  const startResize = (event) => {
+  let edgeResize: { id: number; direction: string; startX: number; startY: number; left: number; top: number; right: number; bottom: number } | null = null;
+  const startResize = (event: any) => {
     if (event.button !== 0) return;
     const handle = event.currentTarget;
     const direction = String(handle?.dataset?.direction || "");
@@ -88,7 +88,7 @@
     event.stopPropagation();
   };
 
-  const moveResize = (event) => {
+  const moveResize = (event: any) => {
     if (!edgeResize || edgeResize.id !== event.pointerId) return;
     const vp = viewport();
     const dx = event.clientX - edgeResize.startX;
@@ -118,7 +118,7 @@
     panel.style.height = `${Math.max(MIN_HEIGHT, bottom - top)}px`;
   };
 
-  const endEdgeResize = (event) => {
+  const endEdgeResize = (event: any) => {
     if (!edgeResize || edgeResize.id !== event.pointerId) return;
     edgeResize = null;
     panel.classList.remove("preview-resizing");
@@ -132,9 +132,9 @@
     handle.addEventListener("pointercancel", endEdgeResize);
   }
 
-  let drag = null;
-  head.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 || event.target.closest("button, a, input, select")) return;
+  let drag: { id: number; dx: number; dy: number } | null = null;
+  head.addEventListener("pointerdown", (event: PointerEvent) => {
+    if (event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select")) return;
     const r = panel.getBoundingClientRect();
     drag = { id: event.pointerId, dx: event.clientX - r.left, dy: event.clientY - r.top };
     head.setPointerCapture?.(event.pointerId);
@@ -142,7 +142,7 @@
     event.preventDefault();
   });
 
-  head.addEventListener("pointermove", (event) => {
+  head.addEventListener("pointermove", (event: PointerEvent) => {
     if (!drag || drag.id !== event.pointerId) return;
     const r = panel.getBoundingClientRect();
     const vp = viewport();
@@ -152,7 +152,7 @@
     panel.style.top = `${top}px`;
   });
 
-  const endDrag = (event) => {
+  const endDrag = (event: any) => {
     if (!drag || drag.id !== event.pointerId) return;
     drag = null;
     panel.classList.remove("preview-dragging");
@@ -161,10 +161,10 @@
   head.addEventListener("pointerup", endDrag);
   head.addEventListener("pointercancel", endDrag);
 
-  let resizeTimer = null;
+  let resizeTimer: number | null = null;
   if ("ResizeObserver" in window) {
     new ResizeObserver(() => {
-      clearTimeout(resizeTimer);
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(write, 100);
     }).observe(panel);
   }

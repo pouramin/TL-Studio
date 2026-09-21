@@ -13,7 +13,7 @@
     presentation: "tool",
   });
 
-  const cleanDescriptor = (value) => {
+  const cleanDescriptor = (value: any) => {
     if (!value || typeof value !== "object") return null;
     return {
       id: String(value.id || ""),
@@ -40,8 +40,8 @@
 
   K.loadToolRegistry = async () => {
     const payload = await K.api.tools.registry();
-    const byRuntimeID = new Map();
-    const descriptors = Array.isArray(payload?.tools) ? payload.tools.map(cleanDescriptor).filter(Boolean) : [];
+    const byRuntimeID = new Map<string, TLStudioToolDescriptor>();
+    const descriptors = Array.isArray(payload?.tools) ? payload.tools.map(cleanDescriptor).filter((item: TLStudioToolDescriptor | null): item is TLStudioToolDescriptor => !!item) : [];
     for (const descriptor of descriptors) {
       for (const runtimeID of descriptor.runtimeIDs) byRuntimeID.set(runtimeID, descriptor);
     }

@@ -7,11 +7,11 @@
   const panel = document.querySelector('[data-settings-panel="general"]');
   if (!panel || document.getElementById("editorThemeSelect")) return;
 
-  const read = (key, fallback) => {
+  const read = (key: any, fallback: any) => {
     try { return localStorage.getItem(key) || fallback; }
     catch { return fallback; }
   };
-  const write = (key, value) => {
+  const write = (key: any, value: any) => {
     try { localStorage.setItem(key, value); } catch {}
   };
 
@@ -22,7 +22,7 @@
     terminalFont: "tl-studio.terminal-font",
   };
 
-  const fonts = {
+  const fonts: Record<string, string> = {
     system: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     segoe: '"Segoe UI", Arial, sans-serif',
     arial: 'Arial, Helvetica, sans-serif',
@@ -95,7 +95,7 @@
     </div>`;
   panel.append(permissionTitle, ...permissionHolder.children);
 
-  const controls = {
+  const controls: TLStudioDynamicRecord = {
     theme: document.getElementById("editorThemeSelect"),
     uiFont: document.getElementById("uiFontSelect"),
     codeFont: document.getElementById("codeFontSelect"),
@@ -115,7 +115,7 @@
   controls.resetPreview.addEventListener("click", () => K.previewWindow?.reset?.());
 
   const permissionRules = document.getElementById("permissionRules");
-  const projectName = (value) => String(value || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Project";
+  const projectName = (value: any) => String(value || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Project";
   const renderPermissionRules = async () => {
     if (!permissionRules || !K.api?.permissions?.rules) return;
     permissionRules.textContent = "Loading…";
@@ -147,11 +147,11 @@
         permissionRules.appendChild(row);
       }
     } catch (error) {
-      permissionRules.textContent = `Could not load permission rules: ${error.message || String(error)}`;
+      permissionRules.textContent = `Could not load permission rules: ${(error as Error).message || String(error)}`;
     }
   };
   permissionRules?.addEventListener("click", async (event) => {
-    const button = event.target.closest?.("button[data-rule-id]");
+    const button = (event.target as Element | null)?.closest<HTMLButtonElement>("button[data-rule-id]");
     const id = button?.dataset?.ruleId;
     if (!id) return;
     button.disabled = true;
@@ -159,7 +159,7 @@
       await K.api.permissions.removeRule(id);
       await renderPermissionRules();
     } catch (error) {
-      K.showError(error.message || String(error));
+      K.showError((error as Error).message || String(error));
       button.disabled = false;
     }
   });
