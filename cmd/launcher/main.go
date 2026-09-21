@@ -191,6 +191,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	permissionEngine := newPermissionEngineWithBackend(state, backend)
 	sessionRead := newSessionReadContractWithBackend(state, backend)
 	sessionCommands := newSessionCommandContract(state, backend, sessionRead)
+	questions := newQuestionContract(state, backend)
 	liveEvents := newLiveEventContractWithBackend(state, backend)
 
 	mux := http.NewServeMux()
@@ -238,6 +239,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	registerToolRegistryRoutes(mux)
 	registerSessionReadRoutes(mux, sessionRead)
 	registerSessionCommandRoutes(mux, sessionCommands)
+	registerQuestionRoutes(mux, questions)
 	registerLiveEventRoutes(mux, liveEvents)
 	registerPermissionRoutes(mux, permissionEngine)
 	mux.Handle("/runtime/", proxy)
