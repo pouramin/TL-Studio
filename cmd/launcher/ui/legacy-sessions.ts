@@ -86,7 +86,7 @@
   const baseRenderSessions = K.renderSessions;
   K.renderSessions = (...args) => {
     const result = baseRenderSessions(...args);
-    const rows = [...(K.els.sessions?.querySelectorAll(".session-row") || [])];
+    const rows = [...(K.els.sessions?.querySelectorAll<HTMLElement>(".session-row") || [])];
     rows.forEach((row, index) => {
       const session = K.state.sessions[index];
       if (!session?.__legacy) return;
@@ -94,7 +94,7 @@
       row.querySelector(".session-quick-delete")?.remove();
       const meta = row.querySelector(".session-main span");
       if (meta && !/legacy/i.test(meta.textContent || "")) meta.textContent += " · legacy";
-      const open = row.querySelector(".session-main");
+      const open = row.querySelector<HTMLElement>(".session-main");
       if (open) open.title = `${open.title || session.title || "Session"}\nLegacy TL Studio session · read-only`;
     });
     return result;
@@ -104,7 +104,7 @@
   K.loadMessages = async (...args) => {
     if (!isLegacy()) return baseLoadMessages(...args);
     const revision = ++K.state.revision;
-    const payload = await K.api.legacySessions.messages(K.state.session.id, { order: "asc", limit: 500 });
+    const payload = await K.api.legacySessions.messages(K.state.session!.id, { order: "asc", limit: 500 });
     if (revision === K.state.revision) K.state.messages = Array.isArray(payload?.data) ? payload.data : [];
     return K.state.messages;
   };
@@ -147,7 +147,7 @@
       await K.loadMessages();
       K.renderMessages();
     } catch (error) {
-      K.showError(`Could not read legacy session: ${error.message || String(error)}`);
+      K.showError(`Could not read legacy session: ${(error as any).message || String(error)}`);
     }
   };
 
