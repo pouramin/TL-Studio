@@ -35,11 +35,11 @@ var previewFileCapabilities = []previewCapabilityDescriptor{
 	{ID: "web.html", Name: "HTML", Kind: "html", Renderer: "browser", Extensions: []string{".html", ".htm"}},
 	{ID: "image.svg", Name: "SVG", Kind: "svg", Renderer: "browser", Extensions: []string{".svg"}},
 	{ID: "image.raster", Name: "Image", Kind: "image", Renderer: "browser", Extensions: []string{".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif", ".ico", ".bmp", ".apng"}},
-	{ID: "document.pdf", Name: "PDF", Kind: "pdf", Renderer: "browser", Extensions: []string{".pdf"}},
+	{ID: "document.pdf", Name: "PDF", Kind: "pdf", Renderer: "pdf", Extensions: []string{".pdf"}},
 	{ID: "media.video", Name: "Video", Kind: "video", Renderer: "browser", Extensions: []string{".mp4", ".webm", ".ogv", ".m4v"}},
 	{ID: "media.audio", Name: "Audio", Kind: "audio", Renderer: "browser", Extensions: []string{".mp3", ".wav", ".ogg", ".oga", ".m4a", ".aac", ".flac"}},
 	{ID: "document.markdown", Name: "Markdown", Kind: "markdown", Renderer: "markdown", Extensions: []string{".md", ".markdown", ".mdown"}},
-	{ID: "document.text", Name: "Text", Kind: "text", Renderer: "browser", Extensions: []string{".txt", ".text", ".log"}},
+	{ID: "document.text", Name: "Text", Kind: "text", Renderer: "text", Extensions: []string{".txt", ".text", ".log"}},
 }
 
 func previewRegistry() previewCapabilityRegistry {
