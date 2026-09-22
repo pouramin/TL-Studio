@@ -169,6 +169,10 @@
             <span class="settings-nav-icon" aria-hidden="true">⚙</span>
             <span>General</span>
           </button>
+          <button class="settings-nav-item" type="button" data-settings-section="plugins">
+            <span class="settings-nav-icon" aria-hidden="true">◆</span>
+            <span>Plugins</span>
+          </button>
           <button class="settings-nav-item" type="button" data-settings-section="about">
             <span class="settings-nav-icon settings-nav-info" aria-hidden="true">i</span>
             <span>About</span>
@@ -197,6 +201,37 @@
                 <option value="default">Default</option>
                 <option value="large">Large</option>
               </select>
+            </div>
+          </section>
+
+          <section class="settings-panel hidden plugins-settings-panel" data-settings-panel="plugins">
+            <div class="settings-panel-head settings-panel-head-actions">
+              <div>
+                <h3>Plugins</h3>
+                <p>Add MCP servers to TL Studio. Enabled plugins expose discovered tools to the native Agent through the normal Tool Registry and permission policy.</p>
+              </div>
+              <button id="pluginAddButton" class="primary small" type="button">+ Add Plugin</button>
+            </div>
+            <div id="pluginList" class="plugin-list" aria-live="polite"></div>
+            <div id="pluginEditor" class="plugin-editor hidden">
+              <div class="settings-section-title">Plugin configuration</div>
+              <input id="pluginEditID" type="hidden" />
+              <div class="plugin-form-grid">
+                <label><span>Name</span><input id="pluginNameInput" autocomplete="off" placeholder="My MCP Server" /></label>
+                <label><span>Transport</span><select id="pluginTransportSelect"><option value="stdio">stdio</option></select></label>
+                <label class="plugin-form-wide"><span>Description</span><input id="pluginDescriptionInput" autocomplete="off" placeholder="Optional description" /></label>
+                <label class="plugin-form-wide"><span>Command</span><input id="pluginCommandInput" autocomplete="off" spellcheck="false" placeholder="my-mcp-server" /></label>
+                <label class="plugin-form-wide"><span>Arguments</span><textarea id="pluginArgsInput" rows="3" spellcheck="false" placeholder="One argument per line"></textarea></label>
+                <label><span>Scope</span><select id="pluginScopeSelect"><option value="project">Current project</option><option value="global">All projects</option></select></label>
+                <label><span>Working directory</span><input id="pluginCwdInput" autocomplete="off" spellcheck="false" placeholder=". (project root)" /></label>
+                <label class="plugin-form-wide"><span>Environment variables</span><textarea id="pluginEnvInput" rows="3" spellcheck="false" placeholder="API_KEY=value&#10;TOKEN=value"></textarea><small>Values are stored in TL Studio's credential vault and are never shown again after save.</small></label>
+              </div>
+              <div id="pluginEditorStatus" class="plugin-editor-status"></div>
+              <div class="plugin-editor-actions">
+                <button id="pluginCancelButton" class="ghost small" type="button">Cancel</button>
+                <button id="pluginTestButton" class="ghost small" type="button">Test Connection</button>
+                <button id="pluginSaveButton" class="primary small" type="button">Save Plugin</button>
+              </div>
             </div>
           </section>
 
