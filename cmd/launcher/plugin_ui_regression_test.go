@@ -41,24 +41,36 @@ func TestSettingsExposeGenericPluginsSurface(t *testing.T) {
 	}
 }
 
-func TestPluginsUIKeepsGraphifyAsConvenienceLayer(t *testing.T) {
+func TestPluginsUIKeepsIntegrationsGeneric(t *testing.T) {
 	source := readBrowserSource(t, "plugins.ts")
-	if !strings.Contains(source, `buildGraphify`) || !strings.Contains(source, `open-graph`) {
-		t.Fatal("Graphify convenience actions should remain available through Plugins")
+	for _, expected := range []string{
+		"plugin.integration?.actions",
+		"K.api.plugins.action",
+		`descriptor.kind === "preview"`,
+	} {
+		if !strings.Contains(source, expected) {
+			t.Fatalf("generic integration action handling is missing %q", expected)
+		}
 	}
-	if strings.Contains(source, `mcp.graphify.query_graph`) || strings.Contains(source, `mcp.graphify.shortest_path`) {
-		t.Fatal("Graphify MCP tools must be discovered dynamically, not hardcoded in the browser")
+	for _, forbidden := range []string{
+		"buildGraphify",
+		"mcp.graphify.query_graph",
+		"mcp.graphify.shortest_path",
+	} {
+		if strings.Contains(source, forbidden) {
+			t.Fatalf("browser must not hardcode Graphify integration internals: found %q", forbidden)
+		}
 	}
 }
 
-func TestPluginsUseExistingPreviewForGraphHTML(t *testing.T) {
+func TestPluginPreviewActionsUseExistingPreview(t *testing.T) {
 	source := readBrowserSource(t, "plugins.ts")
 	for _, expected := range []string{
 		"K.preview?.open?.()",
 		"K.preview?.selectEntry?.(path)",
 	} {
 		if !strings.Contains(source, expected) {
-			t.Fatalf("Graphify Open Graph must reuse TL Studio Preview: missing %q", expected)
+			t.Fatalf("Plugin preview actions must reuse TL Studio Preview: missing %q", expected)
 		}
 	}
 }
