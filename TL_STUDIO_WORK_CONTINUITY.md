@@ -32,9 +32,13 @@ The next private milestone is the generic Plugin/MCP architecture. It is being i
 
 `feature/plugin-mcp`
 
-Draft PR:
+Merged PR:
 
 `#93 — Add generic Plugin and MCP architecture`
+
+Squash merge commit:
+
+`f69b3c49288558ee42b6adb5cd468ffcefe3e9c0`
 
 Graphify is the first real integration used to validate the architecture, but the Plugin core is intentionally configuration-driven and supports arbitrary user-added stdio MCP servers without a new Agent integration.
 
@@ -255,12 +259,21 @@ Deterministic automated coverage uses a fake local stdio MCP server and does not
 
 The implementation has also passed the existing real bundled-runtime product contract, real prompt/write E2E, strict Browser TypeScript/build checks, Go test/vet, and custom-provider compatibility gates on the feature PR during development.
 
-Remaining release actions for this checkpoint:
+Final PR gates were green before merge:
 
-1. run final PR gates on the documentation/version head;
-2. mark PR #93 ready and squash-merge it into `dev` only if all gates are green;
-3. verify the resulting private Windows Preview Build for `0.4.0-alpha.2`;
-4. keep `main` on stable `v0.3.0`.
+- strict Browser TypeScript check and Browser build
+- Go tests and vet, including deterministic fake stdio MCP coverage
+- supported launcher cross-compiles
+- npm package contract
+- real bundled-runtime product contract
+- real bundled-runtime prompt/write-tool E2E
+- real bundled-runtime custom-provider contract
+
+The milestone was squash-merged into `dev` only. Stable `main` remains on `v0.3.0`.
+
+The post-merge `dev` Preview Build status must be re-read from GitHub when resuming, because this continuity checkpoint itself creates a later `dev` documentation commit and therefore triggers a newer private Preview Build.
+
+Exact next product action after a green Preview Build: hands-on validate `0.4.0-alpha.2` on Windows, especially Settings → Plugins, arbitrary stdio MCP add/test/enable/disable, and Graphify build/query/open behavior. Do not start the separate runtime-independence phase until this milestone is validated.
 
 ## Next product phase
 
