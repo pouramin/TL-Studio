@@ -86,7 +86,7 @@ type pluginManager struct {
 	store       *pluginStore
 	credentials providerCredentialStore
 	processes   *processManager
-	permissions *permissionEngine
+	permissions nativeToolAuthorizer
 
 	mu      sync.Mutex
 	clients map[string]*mcpClient
@@ -408,7 +408,7 @@ func (s *pluginStore) remove(project, id string) (pluginConfig, bool, error) {
 	return removed, true, nil
 }
 
-func newPluginManager(state *appState, processes *processManager, permissions *permissionEngine) *pluginManager {
+func newPluginManager(state *appState, processes *processManager, permissions nativeToolAuthorizer) *pluginManager {
 	if processes == nil {
 		processes = newProcessManager(state.projectPath)
 	}
