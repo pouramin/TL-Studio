@@ -127,21 +127,27 @@ func registerPluginRoutes(mux *http.ServeMux, state *appState, manager *pluginMa
 		writeJSON(w, http.StatusOK, view)
 	})
 
-	mux.HandleFunc("POST /local/plugins/{pluginID}/graphify/build", func(w http.ResponseWriter, r *http.Request) {
-		var body struct { Confirmed bool `json:"confirmed"` }
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10)).Decode(&body); err != nil || !body.Confirmed {
-			writeJSON(w, http.StatusBadRequest, jsonError{Error: "Graphify build requires explicit confirmation"})
+	mux.HandleFunc("POST /local/plugins/{pluginID}/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
+		var body struct { Confirmed bool `json:"confirmed,omitempty"` }
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10)).Decode(&body); err != nil {
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: "invalid JSON body"})
 			return
 		}
-		snapshot, view, err := manager.BuildGraphify(r.Context(), state.projectPath(), r.PathValue("pluginID"))
+		result, err := manager.RunIntegrationAction(
+			r.Context(),
+			state.projectPath(),
+			r.PathValue("pluginID"),
+			r.PathValue("actionID"),
+			body.Confirmed,
+		)
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]any{
-				"error": err.Error(),
-				"process": snapshot,
-				"plugin": view,
-			})
+			status := http.StatusBadRequest
+			if errors.Is(err, os.ErrNotExist) {
+				status = http.StatusNotFound
+			}
+			writeJSON(w, status, map[string]any{"error": err.Error(), "result": result})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"process": snapshot, "plugin": view})
+		writeJSON(w, http.StatusOK, result)
 	})
 }
