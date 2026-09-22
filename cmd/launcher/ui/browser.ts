@@ -25,6 +25,7 @@ import "./preview";
 import "./preview-floating";
 import "./search";
 import "./settings-enhancements";
+import "./plugins";
 import "./attachments";
 import "./diagnostics-ui";
 import "./provider-recovery-ui";
