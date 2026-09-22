@@ -146,14 +146,11 @@ import { K } from "./kernel";
         card.append(head, meta, command);
       }
 
-      if (plugin.graph) {
-        const graph = document.createElement("div");
-        graph.className = "plugin-graph-meta";
-        const graphState = plugin.graph.available
-          ? `Graph ready${plugin.graph.modifiedAt ? ` · ${new Date(plugin.graph.modifiedAt).toLocaleString()}` : ""}`
-          : "Graph missing";
-        graph.textContent = graphState;
-        card.appendChild(graph);
+      if (plugin.integration?.summary) {
+        const integration = document.createElement("div");
+        integration.className = "plugin-integration-meta";
+        integration.textContent = plugin.integration.summary;
+        card.appendChild(integration);
       }
 
       const actions = document.createElement("div");
@@ -164,11 +161,10 @@ import { K } from "./kernel";
         actionButton("Configure", "configure", plugin.id),
         actionButton("Remove", "remove", plugin.id, "ghost small danger-text"),
       );
-      if (plugin.graph) {
-        actions.insertBefore(actionButton(plugin.graph.available ? "Rebuild Graph" : "Build Graph", "build-graph", plugin.id), actions.children[1] || null);
-        if (plugin.graph.htmlPath) {
-          actions.insertBefore(actionButton("Open Graph", "open-graph", plugin.id), actions.children[2] || null);
-        }
+      for (const integrationAction of plugin.integration?.actions || []) {
+        const extra = actionButton(integrationAction.label, "integration", plugin.id);
+        extra.dataset.integrationActionId = integrationAction.id;
+        actions.insertBefore(extra, actions.children[1] || null);
       }
       card.appendChild(actions);
       list.appendChild(card);
@@ -303,28 +299,31 @@ import { K } from "./kernel";
       }
       return;
     }
-    if (action === "build-graph") {
-      if (!window.confirm("Run this local command in the current project?\n\ngraphify extract . --code-only")) return;
-      busy(button, true, "Building…");
+    if (action === "integration") {
+      const actionID = String(button.dataset.integrationActionId || "");
+      const descriptor = (plugin.integration?.actions || []).find((item) => item.id === actionID);
+      if (!descriptor) return;
+      if (descriptor.kind === "preview") {
+        const path = String(descriptor.target || "");
+        if (!path) return;
+        (document.getElementById("settingsDialog") as HTMLDialogElement | null)?.close();
+        K.preview?.open?.();
+        await K.preview?.selectEntry?.(path);
+        return;
+      }
+      if (descriptor.requiresConfirmation && !window.confirm(descriptor.confirmation || `Run “${descriptor.label}”?`)) return;
+      busy(button, true, `${descriptor.label}…`);
       try {
-        const result = await K.api.plugins.buildGraphify(plugin.id);
+        const result = await K.api.plugins.action(plugin.id, descriptor.id, !!descriptor.requiresConfirmation);
         await load();
-        const output = String(result?.process?.output || "").trim();
-        if (output) console.info("[TL Studio] Graphify build output\n" + output);
+        const output = String(result?.result?.output || "").trim();
+        if (output) console.info(`[TL Studio] Plugin action ${descriptor.id}\n${output}`);
       } catch (error) {
         K.showError((error as Error).message || String(error));
         await load();
       } finally {
         busy(button, false);
       }
-      return;
-    }
-    if (action === "open-graph") {
-      const path = plugin.graph?.htmlPath;
-      if (!path) return;
-      (document.getElementById("settingsDialog") as HTMLDialogElement | null)?.close();
-      K.preview?.open?.();
-      await K.preview?.selectEntry?.(path);
     }
   });
 
