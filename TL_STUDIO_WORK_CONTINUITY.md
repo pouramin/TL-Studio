@@ -271,9 +271,16 @@ Final PR gates were green before merge:
 
 The milestone was squash-merged into `dev` only. Stable `main` remains on `v0.3.0`.
 
-The post-merge `dev` Preview Build status must be re-read from GitHub when resuming, because this continuity checkpoint itself creates a later `dev` documentation commit and therefore triggers a newer private Preview Build.
+Post-merge private Windows Preview Build:
 
-Exact next product action after a green Preview Build: hands-on validate `0.4.0-alpha.2` on Windows, especially Settings → Plugins, arbitrary stdio MCP add/test/enable/disable, and Graphify build/query/open behavior. Do not start the separate runtime-independence phase until this milestone is validated.
+- workflow run: `35735591863`
+- result: `success`
+- head: `5636e1311f74a02e255fd4353bcdb07935df81f4`
+- artifact: `TL-Studio-0.4.0-alpha.2-Windows-x64-Preview`
+- inner product ZIP SHA-256: `b3dff1738edc3411906ae70582e86265052ec61db07bd23662423671d8b70a3a`
+- checksum was independently recomputed after downloading the Actions artifact and matched `SHA256SUMS.txt`.
+
+The implementation/build milestone is therefore complete. The remaining product-validation step is hands-on Windows testing of `0.4.0-alpha.2`, especially Settings → Plugins, arbitrary stdio MCP add/test/enable/disable, and Graphify build/query/open behavior. Do not start the separate runtime-independence phase until this hands-on milestone is validated.
 
 ## Next product phase
 
