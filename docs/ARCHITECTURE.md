@@ -10,7 +10,7 @@ The launcher is also the filesystem trust boundary for browser IDE operations. B
 
 ### Bundled coding runtime
 
-The current implementation starts the bundled runtime on loopback with a random per-launch password. The runtime remains responsible for active agent execution, actual tool execution, provider execution, model inference, and filesystem operations initiated by the agent. TL Studio owns semantic session persistence/history, product-facing session commands, interactive-question semantics, custom-provider credentials, and the semantic identity/presentation metadata for known tools.
+The current implementation still starts the bundled runtime on loopback with a random per-launch password, but it is a compatibility engine rather than the owner of every Agent run. Supported TL Studio-managed custom providers use the TL Studio-native Agent loop and native Tool Executor. The bundled runtime remains responsible for hosted Kilo execution and compatibility-only capabilities that have not yet moved behind native handlers.
 
 The runtime is behind TL Studio's product boundary. The browser never connects to it directly and never receives its server password.
 
@@ -84,7 +84,7 @@ Only loopback preview URLs are accepted. File serving remains project-boundary c
 ```text
 Browser TL Studio UI
   │
-  ├── /local/*  ───────────────► launcher project/files/search/process/preview/tool-registry/permission boundary
+  ├── /local/*  ───────────────► launcher project/files/search/process/preview/plugins/tool-registry/permission boundary
   │
   └── /runtime/*
           │
@@ -184,6 +184,46 @@ The launcher translates managed definitions to the current engine's provider con
 API keys are deliberately excluded from TL Studio's provider registry and browser storage. TL Studio now owns custom-provider credentials in a separate local credential vault. Windows uses user-scoped DPAPI; macOS uses Keychain; Linux uses Secret Service when available; environments without a usable keyring use an AES-GCM encrypted private-file fallback with a separate `0600` local master key. The launcher restores owned credentials into the active runtime's execution store when needed. Existing legacy runtime-only credentials cannot be reverse-read or silently imported because the engine does not expose their plaintext; saving that provider again moves the credential under TL Studio ownership.
 
 Semantic session persistence is now TL Studio-owned. The runtime remains the active execution binding for resumable Agent work, while TL Studio retains its own semantic history independently. Permission request generation and enforcement still happen in the runtime, but permission policy and remembered approval semantics are owned by TL Studio as described below.
+
+## Plugin and MCP ownership
+
+TL Studio owns a generic Plugin domain at `/local/plugins*`. The first plugin type is `mcp`, and the first transport is `stdio`. Plugin definitions are product data rather than Agent/runtime-specific configuration: ID, display metadata, enabled state, scope, transport, command, argument vector, project-relative working directory, environment-variable names, and optional metadata.
+
+Project-scoped definitions are matched only to their configured project. Global scope is represented in the schema so a user can intentionally expose the same plugin across projects. Saving a new plugin does **not** execute it. Starting a configured local MCP command requires a separate explicit enable action, and Graphify build actions require a separate explicit confirmation.
+
+Secret environment values are not written to `plugins.json`, browser storage, session history, or normal API responses. Only environment-variable names and configured-state metadata are persisted with the plugin. Values use the existing TL Studio credential infrastructure: DPAPI on Windows, Keychain on macOS, Secret Service on Linux when available, or the encrypted private-file fallback.
+
+The MCP Client Manager is transport-isolated behind an internal client interface. The initial stdio implementation:
+
+1. starts the configured executable directly with an argument vector rather than shell-concatenating user input;
+2. performs MCP `initialize` and `notifications/initialized`;
+3. discovers `tools/list` and optional `resources/list`;
+4. converts discovered tool schemas to native model-tool definitions;
+5. namespaces tool IDs as `mcp.<plugin-id>.<tool-name>`;
+6. invokes `tools/call` and returns structured results to the native Agent loop;
+7. propagates timeout/cancellation and sends the MCP cancellation notification best-effort;
+8. observes process exit, reports useful errors, and reconnects once after a transport/process failure;
+9. terminates the plugin process on disable, removal, project switch where relevant, and TL Studio shutdown.
+
+The Plugin Manager depends on that client interface rather than on stdio details. A future Streamable HTTP MCP transport can therefore implement the same client contract without changing the native Agent loop, Tool Registry, or Browser plugin model.
+
+Discovered MCP tools are merged into the existing TL Studio Tool Registry. MCP annotations are used when available to classify tools as read-like, write-like, or open-world/network-capable; conservative name-based classification is used only as a fallback. Unclassified tools use a safer `unknown` permission class with execution-sensitive behavior. Every MCP tool invocation still passes through the existing native permission authorizer before the MCP server receives the call.
+
+The native Agent remains the decision maker. Enabling an MCP plugin only adds its discovered tool definitions to the same model request that already contains TL Studio's built-in tools. No prompt router forces code questions through a plugin, which keeps plugin OFF/ON a clean benchmarking boundary.
+
+### Graphify validation integration
+
+Graphify validates the generic path rather than defining it. TL Studio does not hardcode Graphify's MCP tool inventory; `graphify-mcp` is initialized like any other MCP server and its actual tools are discovered at runtime.
+
+Graphify-specific convenience behavior is kept at the product edge:
+
+- detect whether `graphify` and the configured MCP executable are available;
+- detect `graphify-out/graph.json`, `graphify-out/graph.html`, and `graphify-out/GRAPH_REPORT.md`;
+- run the fixed local graph-build command `graphify extract . --code-only` through the existing project process manager after explicit confirmation;
+- reopen/reconnect its MCP client after a graph rebuild;
+- open the generated interactive HTML using the existing TL Studio Preview surface.
+
+These conveniences are not part of the generic Plugin core and do not change how the Agent executes MCP tools.
 
 ## Tool Registry ownership
 
