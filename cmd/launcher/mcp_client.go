@@ -51,6 +51,29 @@ type mcpRPCResponse struct {
 	} `json:"error,omitempty"`
 }
 
+type mcpPluginClient interface {
+	Config() pluginConfig
+	Start(context.Context) error
+	Healthy() bool
+	Tools() []mcpTool
+	Resources() []mcpResource
+	ToolIDs() []string
+	ToolDescriptors() []toolDescriptor
+	ToolDefinitions() []nativeModelToolDefinition
+	ResolveTool(string) (toolDescriptor, string, bool)
+	CallTool(context.Context, string, map[string]any) (any, error)
+	Close()
+}
+
+func newMCPPluginClient(config pluginConfig, cwd string, env map[string]string) (mcpPluginClient, error) {
+	switch config.Transport {
+	case pluginTransportStdio:
+		return newMCPClient(config, cwd, env), nil
+	default:
+		return nil, fmt.Errorf("unsupported MCP transport %q", config.Transport)
+	}
+}
+
 type mcpClient struct {
 	config pluginConfig
 	cwd    string
