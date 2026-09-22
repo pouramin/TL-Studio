@@ -36,6 +36,7 @@ type appState struct {
 	project     string
 	backendURL  string
 	frontendURL string
+	ctx         context.Context
 }
 
 func (s *appState) snapshot() map[string]any {
@@ -120,6 +121,7 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	state.ctx = ctx
 
 	runtimeCmd, err := startRuntime(ctx, engine, runtimePath, backendPort, credentials)
 	if err != nil {
@@ -195,7 +197,9 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 
 	processes := newProcessManager(state.projectPath)
 	permissionEngine.setEventBus(liveEvents.bus)
+	plugins := newPluginManager(state, processes, permissionEngine)
 	nativeTools := newNativeToolExecutor(processes, permissionEngine)
+	nativeTools.setPluginManager(plugins)
 	nativeAgent := newNativeAgentRuntime(providerManager, newNativeModelClient(), nativeTools, sessionRead.store, liveEvents.bus)
 	sessionRead.setNativeStatusProvider(nativeAgent)
 	sessionCommands := newSessionCommandContract(state, backend, sessionRead)
@@ -219,6 +223,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 			return
 		}
 		state.setProject(project)
+		plugins.SwitchProject(project)
 		writeJSON(w, http.StatusOK, state.snapshot())
 	})
 	mux.HandleFunc("POST /local/pick-directory", func(w http.ResponseWriter, _ *http.Request) {
@@ -243,7 +248,8 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	registerProjectSearchRoutes(mux, state)
 	registerLocalProcessRoutesWithManager(mux, state, processes)
 	registerRuntimeProviderRoutes(mux, providerManager)
-	registerToolRegistryRoutes(mux)
+	registerPluginRoutes(mux, state, plugins)
+	registerToolRegistryRoutesWithPlugins(mux, plugins, state.projectPath)
 	registerSessionReadRoutes(mux, sessionRead)
 	registerSessionCommandRoutes(mux, sessionCommands)
 	registerQuestionRoutes(mux, questions)
