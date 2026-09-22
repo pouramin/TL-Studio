@@ -862,7 +862,7 @@ func (m *pluginManager) Descriptor(project, id string) (toolDescriptor, bool) {
 	return toolDescriptor{}, false
 }
 
-func (m *pluginManager) Execute(ctx context.Context, project string, call nativeToolCall) (nativeToolResult, bool) {
+func (m *pluginManager) Execute(ctx context.Context, sessionID, project string, call nativeToolCall) (nativeToolResult, bool) {
 	if !strings.HasPrefix(strings.TrimSpace(call.ID), "mcp.") {
 		return nativeToolResult{}, false
 	}
@@ -890,7 +890,7 @@ func (m *pluginManager) Execute(ctx context.Context, project string, call native
 			return nativeToolResult{ToolID: call.ID, CallID: call.CallID, Error: decodeErr.Error()}, true
 		}
 		if m.permissions != nil {
-			if permissionErr := m.permissions.AuthorizeNativeTool(ctx, "", project, descriptor, input); permissionErr != nil {
+			if permissionErr := m.permissions.AuthorizeNativeTool(ctx, sessionID, project, descriptor, input); permissionErr != nil {
 				return nativeToolResult{ToolID: call.ID, CallID: call.CallID, Error: permissionErr.Error()}, true
 			}
 		}
