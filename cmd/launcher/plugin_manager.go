@@ -620,6 +620,12 @@ func (m *pluginManager) SetEnabled(project, id string, enabled bool) (pluginView
 	if !found {
 		return pluginView{}, os.ErrNotExist
 	}
+	if enabled {
+		if err := validatePluginIntegrationStart(config, project); err != nil {
+			view := m.viewConfig(project, config, false)
+			return view, err
+		}
+	}
 	config.Enabled = enabled
 	if err := m.store.upsert(config); err != nil {
 		return pluginView{}, err
@@ -651,14 +657,6 @@ func (m *pluginManager) TestConfig(ctx context.Context, project string, request 
 				env[name] = stored
 			}
 		}
-	}
-	integration := pluginIntegrationSnapshot(config, project)
-	if err := validatePluginIntegrationStart(config, project); err != nil {
-		status := "Error"
-		if integration != nil && integration.Status != "" {
-			status = integration.Status
-		}
-		return pluginView{pluginConfig: config, Status: status, Integration: integration}, err
 	}
 	cwd, err := pluginWorkingDirectory(config, project)
 	if err != nil {

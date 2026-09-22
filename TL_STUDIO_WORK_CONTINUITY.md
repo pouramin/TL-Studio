@@ -12,7 +12,7 @@ This file is a durable operating instruction for future TL Studio development se
 ## Branch and release discipline
 
 - `main` is stable production only and is promoted to the stable `v0.3.0` line after Phase 2 validation.
-- `dev` is the next private alpha line and currently starts from `0.4.0-alpha.2`.
+- `dev` is the next private alpha line and currently starts from `0.4.0-alpha.3`.
 - Feature/fix branches start from `dev`.
 - Experimental work must not be merged into `main`.
 - Private alpha builds use the GitHub Actions Preview Build artifact flow.
@@ -208,9 +208,18 @@ The old Kilo prompt/write E2E remains green through capability-based compatibili
 5. The existing local file/search/process systems are reused; native tools do not duplicate those subsystems.
 6. Kilo remains bundled for compatibility. Do not claim it is fully removable yet.
 
+## Plugin / MCP hands-on fixes — alpha.3
+
+Windows hands-on validation of `0.4.0-alpha.2` found two UX inconsistencies in Settings → Plugins:
+
+- the unsaved editor's **Test Connection** incorrectly treated Graphify graph readiness as part of MCP connectivity, while the saved-card test correctly tested only the MCP server;
+- closing Settings after a completed plugin flow could leave the editor open with stale form values when Settings was reopened.
+
+The `0.4.0-alpha.3` fix separates MCP connection testing from integration readiness, keeps Graphify graph readiness as an enable/execution precondition, and resets/hides the Plugin editor after save and whenever the Settings dialog closes.
+
 ## Plugin / MCP milestone — implemented on feature branch
 
-The `0.4.0-alpha.2` milestone adds a TL Studio-owned generic Plugin system with first-class MCP support.
+The `0.4.0-alpha.3` milestone adds a TL Studio-owned generic Plugin system with first-class MCP support.
 
 Current architecture:
 
@@ -276,11 +285,11 @@ Post-merge private Windows Preview Build:
 - workflow run: `35735591863`
 - result: `success`
 - head: `5636e1311f74a02e255fd4353bcdb07935df81f4`
-- artifact: `TL-Studio-0.4.0-alpha.2-Windows-x64-Preview`
+- artifact: `TL-Studio-0.4.0-alpha.3-Windows-x64-Preview`
 - inner product ZIP SHA-256: `b3dff1738edc3411906ae70582e86265052ec61db07bd23662423671d8b70a3a`
 - checksum was independently recomputed after downloading the Actions artifact and matched `SHA256SUMS.txt`.
 
-The implementation/build milestone is therefore complete. The remaining product-validation step is hands-on Windows testing of `0.4.0-alpha.2`, especially Settings → Plugins, arbitrary stdio MCP add/test/enable/disable, and Graphify build/query/open behavior. Do not start the separate runtime-independence phase until this hands-on milestone is validated.
+The implementation/build milestone is therefore complete. The remaining product-validation step is hands-on Windows testing of `0.4.0-alpha.3`, especially Settings → Plugins, arbitrary stdio MCP add/test/enable/disable, and Graphify build/query/open behavior. Do not start the separate runtime-independence phase until this hands-on milestone is validated.
 
 ## Next product phase
 

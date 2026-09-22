@@ -293,6 +293,51 @@ func TestPluginManagerDisabledEnabledAgentExecutionAndSecretRedaction(t *testing
 	}
 }
 
+func TestGraphifyConnectionTestDoesNotRequireBuiltGraph(t *testing.T) {
+	project := t.TempDir()
+	manager := newTestPluginManager(t, project, &recordingPluginAuthorizer{})
+	config := fakeMCPConfig(project, false)
+	config.Metadata = map[string]string{"integration": "graphify"}
+	env := fakeMCPEnvironment()
+
+	view, err := manager.TestConfig(context.Background(), project, pluginUpsertRequest{
+		Plugin: config,
+		Environment: &env,
+	})
+	if err != nil {
+		t.Fatalf("connection test should validate MCP connectivity independently from Graphify graph readiness: %v", err)
+	}
+	if view.Status != "Connected" || view.DiscoveredTools != 3 {
+		t.Fatalf("unexpected Graphify connection-test result: %#v", view)
+	}
+	if view.Integration == nil || view.Integration.Status != "Graph Missing" {
+		t.Fatalf("connection test should still report integration readiness separately: %#v", view.Integration)
+	}
+}
+
+func TestGraphifyCannotEnableBeforeGraphExists(t *testing.T) {
+	project := t.TempDir()
+	manager := newTestPluginManager(t, project, &recordingPluginAuthorizer{})
+	config := fakeMCPConfig(project, false)
+	config.Metadata = map[string]string{"integration": "graphify"}
+	env := fakeMCPEnvironment()
+
+	if _, err := manager.Upsert(project, pluginUpsertRequest{Plugin: config, Environment: &env}); err != nil {
+		t.Fatal(err)
+	}
+	view, err := manager.SetEnabled(project, config.ID, true)
+	if err == nil || !strings.Contains(err.Error(), "Graphify graph is missing") {
+		t.Fatalf("expected graph readiness error before enable, got view=%#v err=%v", view, err)
+	}
+	stored, found, findErr := manager.store.find(project, config.ID)
+	if findErr != nil || !found {
+		t.Fatalf("saved plugin disappeared after rejected enable: found=%v err=%v", found, findErr)
+	}
+	if stored.Enabled {
+		t.Fatal("rejected enable must not persist an enabled plugin")
+	}
+}
+
 func TestUnknownMCPToolUsesSaferPermissionClass(t *testing.T) {
 	descriptor := classifyMCPTool(pluginConfig{ID:"x",Name:"X"}, mcpTool{
 		Name:"mystery_capability",
