@@ -120,14 +120,14 @@ import { K } from "./kernel";
       remove: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}`, { method: "DELETE" }),
       setEnabled: (pluginID: string, enabled: boolean) => K.request(`/local/plugins/${enc(pluginID)}/enabled`, {
         method: "POST",
-        ...body({ enabled }),
+        ...body({ enabled, ...(enabled ? { confirmed: true } : {}) }),
       }),
       testConfig: (plugin: any, environment?: Record<string, string>) => K.request("/local/plugins/test", {
         method: "POST",
         ...body({ plugin, ...(environment !== undefined ? { environment } : {}) }),
       }),
       test: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/test`, { method: "POST" }),
-      buildGraphify: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/graphify/build`, { method: "POST" }),
+      buildGraphify: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/graphify/build`, { method: "POST", ...body({ confirmed: true }) }),
     },
 
     sessionView: {
