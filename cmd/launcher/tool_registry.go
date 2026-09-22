@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const toolRegistryVersion = 2
+const toolRegistryVersion = 1
 
 type toolCapabilities struct {
 	Read    bool `json:"read"`
