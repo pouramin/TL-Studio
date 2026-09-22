@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -56,16 +55,6 @@ type pluginStore struct {
 	plugins  []pluginConfig
 }
 
-type pluginGraphStatus struct {
-	Available    bool   `json:"available"`
-	ModifiedAt   string `json:"modifiedAt,omitempty"`
-	GraphPath    string `json:"graphPath,omitempty"`
-	HTMLPath     string `json:"htmlPath,omitempty"`
-	ReportPath   string `json:"reportPath,omitempty"`
-	CLIAvailable bool   `json:"cliAvailable,omitempty"`
-	MCPAvailable bool   `json:"mcpAvailable,omitempty"`
-}
-
 type pluginView struct {
 	pluginConfig
 	Status          string            `json:"status"`
@@ -73,7 +62,7 @@ type pluginView struct {
 	DiscoveredTools int               `json:"discoveredTools"`
 	Resources       int               `json:"resources"`
 	Tools           []string          `json:"tools,omitempty"`
-	Graph           *pluginGraphStatus `json:"graph,omitempty"`
+	Integration     *pluginIntegrationView `json:"integration,omitempty"`
 }
 
 type pluginUpsertRequest struct {
@@ -464,59 +453,6 @@ func pluginWorkingDirectory(config pluginConfig, project string) (string, error)
 	return target, nil
 }
 
-func isGraphifyPlugin(config pluginConfig) bool {
-	name := strings.ToLower(filepath.Base(strings.TrimSpace(config.Command)))
-	return name == "graphify-mcp" || name == "graphify-mcp.exe" || strings.EqualFold(config.Metadata["integration"], "graphify")
-}
-
-func graphifyStatus(config pluginConfig, project string) *pluginGraphStatus {
-	if !isGraphifyPlugin(config) {
-		return nil
-	}
-	if config.Scope == "project" {
-		project = config.Project
-	}
-	status := &pluginGraphStatus{}
-	_, status.CLIAvailable = lookPathPluginExecutable("graphify")
-	_, status.MCPAvailable = lookPathPluginExecutable(config.Command)
-	graphRel := "graphify-out/graph.json"
-	if len(config.Arguments) > 0 && strings.TrimSpace(config.Arguments[0]) != "" {
-		graphRel = filepath.ToSlash(config.Arguments[0])
-	}
-	target, rel, err := resolveProjectEntry(project, graphRel)
-	if err == nil {
-		if info, statErr := os.Stat(target); statErr == nil && info.Mode().IsRegular() {
-			status.Available = true
-			status.GraphPath = filepath.ToSlash(rel)
-			status.ModifiedAt = info.ModTime().UTC().Format(time.RFC3339)
-		}
-	}
-	for _, candidate := range []struct{ rel string; field *string }{
-		{"graphify-out/graph.html", &status.HTMLPath},
-		{"graphify-out/GRAPH_REPORT.md", &status.ReportPath},
-	} {
-		if target, rel, err := resolveProjectEntry(project, candidate.rel); err == nil {
-			if info, statErr := os.Stat(target); statErr == nil && info.Mode().IsRegular() {
-				*candidate.field = filepath.ToSlash(rel)
-			}
-		}
-	}
-	return status
-}
-
-func lookPathPluginExecutable(command string) (string, bool) {
-	command = strings.TrimSpace(command)
-	if command == "" {
-		return "", false
-	}
-	if strings.ContainsAny(command, `/\\`) {
-		info, err := os.Stat(command)
-		return command, err == nil && !info.IsDir()
-	}
-	path, err := exec.LookPath(command)
-	return path, err == nil
-}
-
 func (m *pluginManager) clientKey(config pluginConfig) string {
 	return pluginKey(config)
 }
@@ -541,8 +477,8 @@ func (m *pluginManager) ensureClientLocked(ctx context.Context, config pluginCon
 	if !config.Enabled {
 		return nil, errors.New("plugin is disabled")
 	}
-	if graph := graphifyStatus(config, project); graph != nil && !graph.Available {
-		return nil, errors.New("Graphify graph is missing; build the graph before enabling MCP queries")
+	if err := validatePluginIntegrationStart(config, project); err != nil {
+		return nil, err
 	}
 	env, err := m.configEnvironment(config)
 	if err != nil {
@@ -716,8 +652,13 @@ func (m *pluginManager) TestConfig(ctx context.Context, project string, request 
 			}
 		}
 	}
-	if graph := graphifyStatus(config, project); graph != nil && !graph.Available {
-		return pluginView{pluginConfig: config, Status: "Graph Missing", Graph: graph}, errors.New("Graphify graph is missing")
+	integration := pluginIntegrationSnapshot(config, project)
+	if err := validatePluginIntegrationStart(config, project); err != nil {
+		status := "Error"
+		if integration != nil && integration.Status != "" {
+			status = integration.Status
+		}
+		return pluginView{pluginConfig: config, Status: status, Integration: integration}, err
 	}
 	cwd, err := pluginWorkingDirectory(config, project)
 	if err != nil {
@@ -729,13 +670,13 @@ func (m *pluginManager) TestConfig(ctx context.Context, project string, request 
 	}
 	if err := client.Start(ctx); err != nil {
 		client.Close()
-		return pluginView{pluginConfig: config, Status: "Error", Error: err.Error(), Graph: graphifyStatus(config, project)}, err
+		return pluginView{pluginConfig: config, Status: "Error", Error: err.Error(), Integration: pluginIntegrationSnapshot(config, project)}, err
 	}
 	defer client.Close()
 	return pluginView{
 		pluginConfig: config,
 		Status: "Connected", DiscoveredTools: len(client.Tools()), Resources: len(client.Resources()),
-		Tools: client.ToolIDs(), Graph: graphifyStatus(config, project),
+		Tools: client.ToolIDs(), Integration: pluginIntegrationSnapshot(config, project),
 	}, nil
 }
 
@@ -762,22 +703,27 @@ func (m *pluginManager) TestSaved(ctx context.Context, project, id string) (plug
 	}
 	if err := client.Start(ctx); err != nil {
 		client.Close()
-		return pluginView{pluginConfig: config, Status: "Error", Error: err.Error(), Graph: graphifyStatus(config, project)}, err
+		return pluginView{pluginConfig: config, Status: "Error", Error: err.Error(), Integration: pluginIntegrationSnapshot(config, project)}, err
 	}
 	defer client.Close()
 	return pluginView{
 		pluginConfig: config, Status: "Connected", DiscoveredTools: len(client.Tools()), Resources: len(client.Resources()),
-		Tools: client.ToolIDs(), Graph: graphifyStatus(config, project),
+		Tools: client.ToolIDs(), Integration: pluginIntegrationSnapshot(config, project),
 	}, nil
 }
 
 func (m *pluginManager) viewConfig(project string, config pluginConfig, start bool) pluginView {
-	view := pluginView{pluginConfig: config, Status: "Disabled", Graph: graphifyStatus(config, project)}
+	view := pluginView{pluginConfig: config, Status: "Disabled", Integration: pluginIntegrationSnapshot(config, project)}
 	if !config.Enabled {
 		return view
 	}
-	if view.Graph != nil && !view.Graph.Available {
-		view.Status = "Graph Missing"
+	if err := validatePluginIntegrationStart(config, project); err != nil {
+		if view.Integration != nil && view.Integration.Status != "" {
+			view.Status = view.Integration.Status
+		} else {
+			view.Status = "Error"
+		}
+		view.Error = err.Error()
 		return view
 	}
 	m.mu.Lock()
@@ -934,33 +880,4 @@ func (m *pluginManager) Execute(ctx context.Context, sessionID, project string, 
 		return result, true
 	}
 	return nativeToolResult{ToolID: call.ID, CallID: call.CallID, Error: "MCP tool is unavailable or its plugin is disabled"}, true
-}
-
-func (m *pluginManager) BuildGraphify(ctx context.Context, project, id string) (processSnapshot, pluginView, error) {
-	config, found, err := m.store.find(project, id)
-	if err != nil {
-		return processSnapshot{}, pluginView{}, err
-	}
-	if !found {
-		return processSnapshot{}, pluginView{}, os.ErrNotExist
-	}
-	if !isGraphifyPlugin(config) {
-		return processSnapshot{}, pluginView{}, errors.New("plugin is not a Graphify integration")
-	}
-	if _, ok := lookPathPluginExecutable("graphify"); !ok {
-		return processSnapshot{}, m.viewConfig(project, config, false), errors.New("graphify executable was not found in PATH")
-	}
-	root := project
-	if config.Scope == "project" {
-		root = config.Project
-	}
-	snapshot, runErr := m.processes.run(ctx, "graphify extract . --code-only", root)
-	m.mu.Lock()
-	m.stopLocked(config)
-	m.mu.Unlock()
-	view := m.viewConfig(project, config, config.Enabled)
-	if runErr != nil {
-		return snapshot, view, runErr
-	}
-	return snapshot, view, nil
 }
