@@ -89,7 +89,7 @@ type pluginManager struct {
 	permissions nativeToolAuthorizer
 
 	mu      sync.Mutex
-	clients map[string]*mcpClient
+	clients map[string]mcpPluginClient
 	errors  map[string]string
 }
 
@@ -414,7 +414,7 @@ func newPluginManager(state *appState, processes *processManager, permissions na
 	}
 	manager := &pluginManager{
 		state: state, store: newPluginStore(pluginStorePath()), credentials: newProviderCredentialStore(),
-		processes: processes, permissions: permissions, clients: map[string]*mcpClient{}, errors: map[string]string{},
+		processes: processes, permissions: permissions, clients: map[string]mcpPluginClient{}, errors: map[string]string{},
 	}
 	if state != nil && state.ctx != nil {
 		go func() {
@@ -529,7 +529,7 @@ func (m *pluginManager) stopLocked(config pluginConfig) {
 	}
 }
 
-func (m *pluginManager) ensureClientLocked(ctx context.Context, config pluginConfig, project string) (*mcpClient, error) {
+func (m *pluginManager) ensureClientLocked(ctx context.Context, config pluginConfig, project string) (mcpPluginClient, error) {
 	key := m.clientKey(config)
 	if existing := m.clients[key]; existing != nil && existing.Healthy() {
 		return existing, nil
@@ -552,7 +552,10 @@ func (m *pluginManager) ensureClientLocked(ctx context.Context, config pluginCon
 	if err != nil {
 		return nil, err
 	}
-	client := newMCPClient(config, cwd, env)
+	client, err := newMCPPluginClient(config, cwd, env)
+	if err != nil {
+		return nil, err
+	}
 	if err := client.Start(ctx); err != nil {
 		client.Close()
 		m.errors[key] = err.Error()
@@ -713,7 +716,10 @@ func (m *pluginManager) TestConfig(ctx context.Context, project string, request 
 	if err != nil {
 		return pluginView{}, err
 	}
-	client := newMCPClient(config, cwd, env)
+	client, err := newMCPPluginClient(config, cwd, env)
+	if err != nil {
+		return pluginView{}, err
+	}
 	if err := client.Start(ctx); err != nil {
 		client.Close()
 		return pluginView{pluginConfig: config, Status: "Error", Error: err.Error(), Graph: graphifyStatus(config, project)}, err
@@ -743,7 +749,10 @@ func (m *pluginManager) TestSaved(ctx context.Context, project, id string) (plug
 	if err != nil {
 		return pluginView{}, err
 	}
-	client := newMCPClient(config, cwd, env)
+	client, err := newMCPPluginClient(config, cwd, env)
+	if err != nil {
+		return pluginView{}, err
+	}
 	if err := client.Start(ctx); err != nil {
 		client.Close()
 		return pluginView{pluginConfig: config, Status: "Error", Error: err.Error(), Graph: graphifyStatus(config, project)}, err
