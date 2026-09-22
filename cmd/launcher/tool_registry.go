@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const toolRegistryVersion = 1
+const toolRegistryVersion = 2
 
 type toolCapabilities struct {
 	Read    bool `json:"read"`
@@ -23,6 +23,9 @@ type toolDescriptor struct {
 	PermissionClass string           `json:"permissionClass"`
 	Capabilities    toolCapabilities `json:"capabilities"`
 	Presentation    string           `json:"presentation"`
+	InputSchema     map[string]any   `json:"inputSchema,omitempty"`
+	Source          string           `json:"source,omitempty"`
+	PluginID        string           `json:"pluginID,omitempty"`
 }
 
 type toolRegistryPayload struct {
@@ -96,8 +99,24 @@ func currentToolRegistry() toolRegistryPayload {
 	}
 }
 
+func currentToolRegistryWithPlugins(plugins *pluginManager, project string) toolRegistryPayload {
+	payload := currentToolRegistry()
+	if plugins != nil {
+		payload.Tools = append(payload.Tools, plugins.ToolDescriptors(project)...)
+	}
+	return payload
+}
+
 func registerToolRegistryRoutes(mux *http.ServeMux) {
+	registerToolRegistryRoutesWithPlugins(mux, nil, nil)
+}
+
+func registerToolRegistryRoutesWithPlugins(mux *http.ServeMux, plugins *pluginManager, project func() string) {
 	mux.HandleFunc("GET /local/tools", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, currentToolRegistry())
+		currentProject := ""
+		if project != nil {
+			currentProject = project()
+		}
+		writeJSON(w, http.StatusOK, currentToolRegistryWithPlugins(plugins, currentProject))
 	})
 }
