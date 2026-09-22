@@ -699,6 +699,10 @@ func (m *pluginManager) TestConfig(ctx context.Context, project string, request 
 			}
 			if strings.TrimSpace(value) != "" {
 				env[name] = value
+				continue
+			}
+			if stored, getErr := m.credentials.Get(pluginCredentialID(config, name)); getErr == nil {
+				env[name] = stored
 			}
 		}
 	}
