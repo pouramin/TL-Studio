@@ -104,6 +104,32 @@ import { K } from "./kernel";
       },
     },
 
+    plugins: {
+      list: async () => {
+        const payload = await K.request("/local/plugins");
+        return Array.isArray(payload) ? payload : [];
+      },
+      create: (plugin: any, environment?: Record<string, string>) => K.request("/local/plugins", {
+        method: "POST",
+        ...body({ plugin, ...(environment !== undefined ? { environment } : {}) }),
+      }),
+      update: (pluginID: string, plugin: any, environment?: Record<string, string>) => K.request(`/local/plugins/${enc(pluginID)}`, {
+        method: "PUT",
+        ...body({ plugin, ...(environment !== undefined ? { environment } : {}) }),
+      }),
+      remove: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}`, { method: "DELETE" }),
+      setEnabled: (pluginID: string, enabled: boolean) => K.request(`/local/plugins/${enc(pluginID)}/enabled`, {
+        method: "POST",
+        ...body({ enabled }),
+      }),
+      testConfig: (plugin: any, environment?: Record<string, string>) => K.request("/local/plugins/test", {
+        method: "POST",
+        ...body({ plugin, ...(environment !== undefined ? { environment } : {}) }),
+      }),
+      test: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/test`, { method: "POST" }),
+      buildGraphify: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/graphify/build`, { method: "POST" }),
+    },
+
     sessionView: {
       list: ({ limit = 150 } = {}) => K.request(withQuery("/local/sessions", { limit })),
       status: ({ directory = projectDirectory() } = {}) => K.request(withQuery("/local/sessions/status", { directory })),
