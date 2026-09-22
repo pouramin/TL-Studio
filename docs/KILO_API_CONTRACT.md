@@ -19,7 +19,7 @@ TL Studio owns the browser-facing runtime namespace, provider/model registry, wo
 
 The browser talks to TL Studio through:
 
-- `/local/*` for TL Studio-owned workspace/files/search/process/preview/tool-registry/permission-policy capabilities;
+- `/local/*` for TL Studio-owned workspace/files/search/process/preview/plugins/tool-registry/permission-policy capabilities;
 - `/runtime/*` for agent-runtime capabilities.
 
 The browser must not construct Kilo-specific route prefixes or depend on Kilo-specific authentication details.
@@ -110,6 +110,12 @@ Those routes are now an implementation compatibility surface. Normal browser per
 Tool identity and product-facing metadata are no longer inferred directly in the browser. The launcher exposes `GET /local/tools`, which maps known Kilo 7.6.2 runtime IDs such as `read`, `write`, `edit`, `apply_patch`, `bash`, `webfetch`, and `websearch` to TL Studio semantic descriptors.
 
 For the TL Studio native path, the registry now feeds executable TL Studio tool definitions and the native dispatcher. Core file/search/terminal tools execute without Kilo's Agent tool executor. On the Kilo compatibility path, runtime tool parts are still normalized through this registry for presentation. Unknown native tool IDs are rejected rather than silently executed.
+
+### Native Plugins and MCP
+
+Plugin configuration and MCP execution are **not** Kilo compatibility APIs. Settings uses TL Studio-owned `/local/plugins*` routes. Enabled MCP tools are discovered by the TL Studio Plugin/MCP managers, merged into `/local/tools`, authorized by the native permission engine, and executed through the TL Studio native Tool Executor.
+
+Kilo does not need a plugin-specific adapter for these tools. Hosted/compatibility Agent runs continue to use the Kilo capability set, while supported TL Studio-native Agent runs can receive enabled MCP tool definitions directly. MCP transport details and plugin secrets must not be translated into Kilo configuration as a side effect of the generic Plugin feature.
 
 ### Questions
 

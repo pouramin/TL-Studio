@@ -206,7 +206,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		return err
 	}
 	conversation := nativeConversationFromMessages(messages)
-	tools := r.tools.ToolDefinitions()
+	tools := r.tools.ToolDefinitionsForProject(directory)
 	if len(tools) == 0 {
 		return errors.New("native Agent runtime has no executable tools")
 	}
@@ -299,7 +299,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				return fmt.Errorf("native Agent repeated the same tool call more than %d times", nativeAgentMaxRepeatedCalls)
 			}
 
-			descriptor, _ := toolDescriptorForID(modelCall.Name)
+			descriptor, _ := r.tools.Descriptor(directory, modelCall.Name)
 			decodedInput, _ := decodeNativeToolArguments(modelCall.Arguments)
 			started := time.Now().UnixMilli()
 			r.publish(liveEventView{Type: "message.changed", Action: "content", SessionID: sessionID})

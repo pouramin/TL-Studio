@@ -12,7 +12,7 @@ This file is a durable operating instruction for future TL Studio development se
 ## Branch and release discipline
 
 - `main` is stable production only and is promoted to the stable `v0.3.0` line after Phase 2 validation.
-- `dev` is the next private alpha line and currently starts from `0.4.0-alpha.1`.
+- `dev` is the next private alpha line and currently starts from `0.4.0-alpha.2`.
 - Feature/fix branches start from `dev`.
 - Experimental work must not be merged into `main`.
 - Private alpha builds use the GitHub Actions Preview Build artifact flow.
@@ -28,7 +28,15 @@ Current private development line:
 
 `0.4.0-alpha.1`
 
-Phase 3 implementation has not started yet. The branch was reopened from the stable `v0.3.0` baseline after successful release publication.
+The next private milestone is the generic Plugin/MCP architecture. It is being implemented on:
+
+`feature/plugin-mcp`
+
+Draft PR:
+
+`#93 — Add generic Plugin and MCP architecture`
+
+Graphify is the first real integration used to validate the architecture, but the Plugin core is intentionally configuration-driven and supports arbitrary user-added stdio MCP servers without a new Agent integration.
 
 Phase 2 native execution milestone was squash-merged through PR:
 
@@ -196,13 +204,69 @@ The old Kilo prompt/write E2E remains green through capability-based compatibili
 5. The existing local file/search/process systems are reused; native tools do not duplicate those subsystems.
 6. Kilo remains bundled for compatibility. Do not claim it is fully removable yet.
 
+## Plugin / MCP milestone — implemented on feature branch
+
+The `0.4.0-alpha.2` milestone adds a TL Studio-owned generic Plugin system with first-class MCP support.
+
+Current architecture:
+
+```text
+Settings → Plugins
+        ↓
+TL Studio Plugin Manager
+        ↓
+MCP Client Manager
+        ↓
+discovered MCP tools
+        ↓
+TL Studio Tool Registry
+        ↓
+Permission Engine
+        ↓
+Native Tool Executor
+        ↓
+Native Agent
+```
+
+Implemented behavior:
+
+- persisted project/global Plugin definitions owned by TL Studio
+- initial Plugin type `mcp`
+- initial MCP transport `stdio`
+- transport client interface designed so Streamable HTTP can be added without changing the Agent architecture
+- user-configurable command, argument vector, working directory, scope, and environment-variable names
+- secret environment values stored through the existing TL Studio credential vault and omitted from normal Plugin API responses
+- explicit user confirmation before enabling a local Plugin command
+- MCP initialize handshake, dynamic tool discovery, optional resource discovery, structured tool calls/results, process error reporting, reconnect, stop, timeout, and cancellation signaling
+- namespaced tool IDs in the form `mcp.<plugin-id>.<tool-name>`
+- discovered MCP schemas normalized into native model tool definitions
+- MCP tools merged into the existing TL Studio Tool Registry
+- all MCP Agent calls routed through the existing native Permission Engine
+- conservative permission classification for unknown MCP capabilities
+- enabled Plugin tools exposed to the existing native Agent loop; the Agent remains the tool-selection decision maker
+- Plugin disable/remove/project switch/application shutdown stops relevant MCP child processes
+- Settings → Plugins list/add/configure/remove/enable/disable/Test Connection UI
+- Graphify convenience detection for `graphify` and `graphify-mcp`
+- Graphify Build/Rebuild using the fixed local `graphify extract . --code-only` command after explicit confirmation
+- Graphify Open Graph reuses TL Studio Preview for `graphify-out/graph.html`
+- Graphify MCP tools are never hardcoded; they are discovered through MCP like any other plugin
+
+Deterministic automated coverage uses a fake local stdio MCP server and does not require Graphify in CI. Coverage proves Plugin persistence/scoping, disabled vs enabled process behavior, MCP initialization, tool/resource discovery, namespacing/schema normalization, native Agent tool availability, tool-result round-trip, permission authorization, cancellation, process failure status, secret redaction, disable/stop behavior, and preservation of the built-in native tool set.
+
+The implementation has also passed the existing real bundled-runtime product contract, real prompt/write E2E, strict Browser TypeScript/build checks, Go test/vet, and custom-provider compatibility gates on the feature PR during development.
+
+Remaining release actions for this checkpoint:
+
+1. run final PR gates on the documentation/version head;
+2. mark PR #93 ready and squash-merge it into `dev` only if all gates are green;
+3. verify the resulting private Windows Preview Build for `0.4.0-alpha.2`;
+4. keep `main` on stable `v0.3.0`.
+
 ## Next product phase
 
 Phase 2 is complete according to its ownership criteria.
 
-The next major architectural work is Phase 3: reduce the remaining runtime dependency further by deciding which compatibility-only capabilities should become TL Studio-native next, and whether/when launcher startup can make the third-party engine optional instead of always bundled/started.
-
-Do not begin Phase 3 by rewriting the product. Continue from the current boundaries.
+After the Plugin/MCP milestone is validated on `dev`, the previously identified runtime-independence work remains a separate future architectural phase: native session ownership cleanup, runtime-optional startup, and eventually lazy compatibility-engine startup. Do not mix that work into the Plugin/MCP milestone.
 
 ## Development behavior
 

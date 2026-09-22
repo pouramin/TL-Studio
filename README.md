@@ -4,7 +4,7 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
-<p align="center"><strong>Development branch: 0.4.0-alpha.1</strong> · Stable release: v0.3.0.</p>
+<p align="center"><strong>Development branch: 0.4.0-alpha.2</strong> · Stable release: v0.3.0.</p>
 
 <p align="center">
   A fast local development workspace with AI built in.
@@ -58,6 +58,7 @@ The release already includes the pinned local agent runtime.
 - **Local project picker** — open project folders with the operating-system folder picker.
 - **Agent & model selection** — switch agents and available provider models from the composer.
 - **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
+- **Plugins & MCP** — add arbitrary stdio MCP servers from Settings without editing config files; TL Studio discovers their tools dynamically, namespaces them, routes them through the native Tool Registry and permission engine, and exposes enabled tools to the native Agent.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
 - **TL Studio-native Agent execution** — supported custom providers now run through a TL Studio-owned model/tool/model loop with cancellation, loop guards, semantic persistence, and live events; hosted Kilo remains available through the compatibility adapter.
 - **TL Studio Tool Executor** — core coding tools for project file read/list/write/edit, project search, and terminal commands execute through TL Studio-owned handlers with project confinement, validation, cancellation, and permission enforcement.
@@ -81,6 +82,39 @@ The release already includes the pinned local agent runtime.
 - **Local-first security** — loopback-only UI, random per-run backend password, origin checks, and restrictive CSP.
 - **No TL Studio telemetry or cloud service** — model traffic goes directly through the provider/runtime configuration selected by the user.
 
+## Plugins & MCP
+
+Open:
+
+```text
+Settings
+→ Plugins
+→ + Add Plugin
+```
+
+The initial plugin transport is **MCP over stdio**. Enter the MCP server command, one argument per line, optional environment variables, working directory, and scope. Use **Test Connection** before saving, then explicitly enable the plugin. Secret environment values are stored through TL Studio's credential vault and are not returned to the browser after saving.
+
+Enabled MCP servers are initialized by TL Studio, their tools are discovered dynamically, and tool IDs are namespaced as:
+
+```text
+mcp.<plugin-id>.<tool-name>
+```
+
+This is a generic plugin path, not a Graphify-specific integration. Another stdio MCP server can be added through the same screen without adding a custom Agent adapter.
+
+### Graphify example
+
+If Graphify and its MCP executable are already installed, a project-scoped plugin can use:
+
+```text
+Name: Graphify
+Command: graphify-mcp
+Arguments:
+graphify-out/graph.json
+```
+
+Graphify's MCP tools are discovered at runtime; TL Studio does not hardcode its tool list. The Graphify card additionally offers **Build/Rebuild Graph** and **Open Graph** conveniences. Graph building runs the fixed local command `graphify extract . --code-only` only after explicit confirmation, while **Open Graph** reuses TL Studio's existing Preview for `graphify-out/graph.html`.
+
 ## Architecture
 
 ```text
@@ -89,9 +123,16 @@ Browser workspace
     ▼
 TL Studio launcher (Go)
     │
-    ├─ TL Studio provider/model registry + credential vault
-    ├─ TL Studio native Agent loop
-    ├─ TL Studio Tool Executor + permission policy
+    ├─ provider/model registry + credential vault
+    ├─ Plugin Manager
+    │    └─ MCP Client Manager
+    │         ├─ stdio MCP servers
+    │         └─ future transports behind the MCP client interface
+    │
+    ├─ Tool Registry ← discovered MCP tools
+    ├─ Permission Engine
+    ├─ Native Tool Executor
+    ├─ Native Agent loop
     ├─ semantic sessions / persistence / live events
     ├─ project files / search / terminal / preview
     │
@@ -101,7 +142,9 @@ TL Studio launcher (Go)
                               → hosted Kilo / compatibility capabilities
 ```
 
-TL Studio owns the workspace, product UI, local launcher, provider/model definitions, custom-provider credentials, tool semantics/metadata, semantic session persistence/read/command models, semantic question handling, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. Custom provider definitions and semantic session history are persisted in TL Studio's local state and translated/synchronized to the active runtime as needed. For supported custom-provider coding, TL Studio now owns the Agent loop and core tool execution directly. Kilo remains bundled as the currently tested compatibility engine for hosted Kilo authentication/models and capabilities not yet provided by the native path.
+TL Studio owns the workspace, product UI, local launcher, provider/model definitions, custom-provider credentials, Plugin Manager, MCP normalization, tool semantics/metadata, semantic session persistence/read/command models, semantic question handling, semantic live-event projection, project-scoped permission policy, project/session experience, recovery behavior, and release packaging. MCP tools enter the same native Agent/tool/permission path as built-in tools; they do not create a parallel Agent architecture. Custom provider definitions, plugin definitions, and semantic session history are persisted in TL Studio-owned state. Plugin secret environment values stay in the credential vault instead of plugin JSON.
+
+For supported custom-provider coding, TL Studio owns the Agent loop and core tool execution directly. Kilo remains bundled as the currently tested compatibility engine for hosted Kilo authentication/models and capabilities not yet provided by the native path.
 
 The selected project stays on the user's computer, and TL Studio does not proxy model traffic through project-owned infrastructure.
 
