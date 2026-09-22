@@ -74,3 +74,21 @@ func TestPluginPreviewActionsUseExistingPreview(t *testing.T) {
 		}
 	}
 }
+
+
+func TestPluginEditorResetsAfterCompletion(t *testing.T) {
+	source := readBrowserSource(t, "plugins.ts")
+	for _, expected := range []string{
+		"const resetEditor = () =>",
+		"nameInput.value = \"\"",
+		"commandInput.value = \"\"",
+		"argsInput.value = \"\"",
+		"envInput.value = \"\"",
+		"settingsDialog?.addEventListener(\"close\", closeEditor)",
+		"closeEditor();",
+	} {
+		if !strings.Contains(source, expected) {
+			t.Fatalf("Plugin editor reset behavior is missing %q", expected)
+		}
+	}
+}
