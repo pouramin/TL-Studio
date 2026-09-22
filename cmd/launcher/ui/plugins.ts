@@ -65,10 +65,22 @@ import { K } from "./kernel";
     workingDirectory: cwdInput.value.trim(),
   });
 
+  const resetEditor = () => {
+    editID.value = "";
+    nameInput.value = "";
+    if (descriptionInput) descriptionInput.value = "";
+    commandInput.value = "";
+    argsInput.value = "";
+    transportSelect.value = "stdio";
+    scopeSelect.value = "project";
+    cwdInput.value = "";
+    envInput.value = "";
+    setStatus();
+  };
+
   const closeEditor = () => {
     editor.classList.add("hidden");
-    setStatus();
-    editID.value = "";
+    resetEditor();
   };
 
   const openEditor = (plugin?: TLStudioPluginView) => {
@@ -257,6 +269,7 @@ import { K } from "./kernel";
       busy(button, true, "Removing…");
       try {
         await K.api.plugins.remove(plugin.id);
+        if (editID.value === plugin.id) closeEditor();
         await load();
         await K.loadToolRegistry?.().catch(() => {});
       } catch (error) {
@@ -331,6 +344,9 @@ import { K } from "./kernel";
   document.getElementById("settingsButton")?.addEventListener("click", () => {
     if (!panel.classList.contains("hidden")) load();
   });
+
+  const settingsDialog = document.getElementById("settingsDialog") as HTMLDialogElement | null;
+  settingsDialog?.addEventListener("close", closeEditor);
 
   const baseAfterProjectChange = K.afterProjectChange;
   if (typeof baseAfterProjectChange === "function") {
