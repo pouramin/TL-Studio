@@ -155,14 +155,21 @@ interface TLStudioPluginEnvironmentRef {
   configured?: boolean;
 }
 
-interface TLStudioPluginGraphStatus {
-  available: boolean;
-  modifiedAt?: string;
-  graphPath?: string;
-  htmlPath?: string;
-  reportPath?: string;
-  cliAvailable?: boolean;
-  mcpAvailable?: boolean;
+interface TLStudioPluginAction {
+  id: string;
+  label: string;
+  kind: "server" | "preview" | string;
+  target?: string;
+  requiresConfirmation?: boolean;
+  confirmation?: string;
+}
+
+interface TLStudioPluginIntegration {
+  id: string;
+  status?: string;
+  summary?: string;
+  details?: Record<string, string>;
+  actions?: TLStudioPluginAction[];
 }
 
 interface TLStudioPluginView {
@@ -184,7 +191,7 @@ interface TLStudioPluginView {
   discoveredTools: number;
   resources: number;
   tools?: string[];
-  graph?: TLStudioPluginGraphStatus;
+  integration?: TLStudioPluginIntegration;
 }
 
 interface TLStudioPermissionRule {
@@ -261,7 +268,7 @@ interface TLStudioRuntimeContract {
     setEnabled(pluginID: string, enabled: boolean): Promise<TLStudioPluginView>;
     testConfig(plugin: TLStudioDynamicRecord, environment?: Record<string, string>): Promise<TLStudioPluginView>;
     test(pluginID: string): Promise<TLStudioPluginView>;
-    buildGraphify(pluginID: string): Promise<any>;
+    action(pluginID: string, actionID: string, confirmed?: boolean): Promise<any>;
   };
   sessionView: {
     list(options?: { limit?: number }): Promise<TLStudioSessionView[]>;
