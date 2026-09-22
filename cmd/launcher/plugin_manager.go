@@ -638,6 +638,13 @@ func (m *pluginManager) Upsert(project string, request pluginUpsertRequest) (plu
 	if found && pluginKey(previous) != pluginKey(config) {
 		return pluginView{}, errors.New("changing plugin scope or project requires removing and re-adding the plugin")
 	}
+	if found {
+		config.Enabled = previous.Enabled
+	} else {
+		// Saving a plugin never starts an arbitrary local command. Enabling is a
+		// separate explicit action in Settings and is required before execution.
+		config.Enabled = false
+	}
 	config, err = m.saveEnvironment(config, request.Environment, previous)
 	if err != nil {
 		return pluginView{}, err
