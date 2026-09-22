@@ -242,6 +242,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 			return
 		}
 		state.setProject(project)
+		plugins.SwitchProject(project)
 		writeJSON(w, http.StatusOK, state.snapshot())
 	})
 	registerLocalFileRoutes(mux, state)
