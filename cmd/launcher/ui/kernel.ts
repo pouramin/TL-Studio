@@ -45,6 +45,7 @@ export const K = {
     preview: {},
     terminal: {},
     toolRegistry: null,
+    plugins: [],
     changesLoading: false,
     sseSettling: false,
   } as TLStudioState,
