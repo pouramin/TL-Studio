@@ -150,6 +150,43 @@ interface TLStudioToolRegistry {
   unknown: TLStudioToolDescriptor | null;
 }
 
+interface TLStudioPluginEnvironmentRef {
+  name: string;
+  configured?: boolean;
+}
+
+interface TLStudioPluginGraphStatus {
+  available: boolean;
+  modifiedAt?: string;
+  graphPath?: string;
+  htmlPath?: string;
+  reportPath?: string;
+  cliAvailable?: boolean;
+  mcpAvailable?: boolean;
+}
+
+interface TLStudioPluginView {
+  id: string;
+  name: string;
+  description?: string;
+  type: "mcp" | string;
+  enabled: boolean;
+  scope: "project" | "global" | string;
+  project?: string;
+  transport: "stdio" | string;
+  command: string;
+  arguments?: string[];
+  workingDirectory?: string;
+  environment?: TLStudioPluginEnvironmentRef[];
+  metadata?: Record<string, string>;
+  status: string;
+  error?: string;
+  discoveredTools: number;
+  resources: number;
+  tools?: string[];
+  graph?: TLStudioPluginGraphStatus;
+}
+
 interface TLStudioPermissionRule {
   id: string;
   project: string;
@@ -216,6 +253,16 @@ interface TLStudioRuntimeContract {
     remove(providerID: string): Promise<any>;
   };
   tools: { registry(): Promise<TLStudioToolRegistry> };
+  plugins: {
+    list(): Promise<TLStudioPluginView[]>;
+    create(plugin: TLStudioDynamicRecord, environment?: Record<string, string>): Promise<TLStudioPluginView>;
+    update(pluginID: string, plugin: TLStudioDynamicRecord, environment?: Record<string, string>): Promise<TLStudioPluginView>;
+    remove(pluginID: string): Promise<any>;
+    setEnabled(pluginID: string, enabled: boolean): Promise<TLStudioPluginView>;
+    testConfig(plugin: TLStudioDynamicRecord, environment?: Record<string, string>): Promise<TLStudioPluginView>;
+    test(pluginID: string): Promise<TLStudioPluginView>;
+    buildGraphify(pluginID: string): Promise<any>;
+  };
   sessionView: {
     list(options?: { limit?: number }): Promise<TLStudioSessionView[]>;
     status(options?: { directory?: string }): Promise<Record<string, TLStudioSessionStatus>>;
@@ -350,6 +397,7 @@ interface TLStudioState {
   preview: TLStudioDynamicRecord;
   terminal: TLStudioDynamicRecord;
   toolRegistry: TLStudioToolRegistry | null;
+  plugins: TLStudioPluginView[];
   changesLoading: boolean;
   sseSettling: boolean;
 }
@@ -453,4 +501,5 @@ interface TLStudioKernel {
   __settingsEnhancementsInstalled?: boolean;
   __terminalInstalled?: boolean;
   __toolRegistryInstalled?: boolean;
+  __pluginsInstalled?: boolean;
 }
