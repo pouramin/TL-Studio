@@ -1,12 +1,16 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestSettingsExposeGenericPluginsSurface(t *testing.T) {
-	index := readBrowserAsset(t, "index.html")
+	data, err := os.ReadFile(filepath.Join(releaseRepoRoot(t), "cmd", "launcher", "web", "index.html"))
+	if err != nil { t.Fatal(err) }
+	index := string(data)
 	source := readBrowserSource(t, "plugins.ts")
 
 	for _, expected := range []string{
