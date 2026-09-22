@@ -39,6 +39,7 @@ type nativeToolAuthorizer interface {
 type nativeToolExecutor struct {
 	processes   *processManager
 	permissions nativeToolAuthorizer
+	plugins     *pluginManager
 }
 
 func newNativeToolExecutor(processes *processManager, permissions nativeToolAuthorizer) *nativeToolExecutor {
@@ -46,6 +47,20 @@ func newNativeToolExecutor(processes *processManager, permissions nativeToolAuth
 		processes = newProcessManager(nil)
 	}
 	return &nativeToolExecutor{processes: processes, permissions: permissions}
+}
+
+func (e *nativeToolExecutor) setPluginManager(plugins *pluginManager) {
+	e.plugins = plugins
+}
+
+func (e *nativeToolExecutor) Descriptor(project, id string) (toolDescriptor, bool) {
+	if descriptor, ok := toolDescriptorForID(id); ok {
+		return descriptor, true
+	}
+	if e.plugins != nil {
+		return e.plugins.Descriptor(project, id)
+	}
+	return unknownToolDescriptor(), false
 }
 
 func nativeExecutableToolIDs() []string {
@@ -138,8 +153,12 @@ func nativeToolInputSchema(id string) map[string]any {
 }
 
 func (e *nativeToolExecutor) ToolDefinitions() []nativeModelToolDefinition {
+	return e.ToolDefinitionsForProject("")
+}
+
+func (e *nativeToolExecutor) ToolDefinitionsForProject(project string) []nativeModelToolDefinition {
 	ids := nativeExecutableToolIDs()
-	definitions := make([]nativeModelToolDefinition, 0, len(ids))
+	definitions := make([]nativeModelToolDefinition, 0, len(ids)+8)
 	for _, id := range ids {
 		descriptor, ok := toolDescriptorForID(id)
 		if !ok {
@@ -151,6 +170,9 @@ func (e *nativeToolExecutor) ToolDefinitions() []nativeModelToolDefinition {
 			Description: descriptor.Description,
 			InputSchema: nativeToolInputSchema(descriptor.ID),
 		})
+	}
+	if e.plugins != nil && strings.TrimSpace(project) != "" {
+		definitions = append(definitions, e.plugins.ToolDefinitions(project)...)
 	}
 	return definitions
 }
@@ -240,6 +262,12 @@ func (e *nativeToolExecutor) Execute(ctx context.Context, sessionID, project str
 	defer func() {
 		result.Duration = time.Since(start).Milliseconds()
 	}()
+
+	if e.plugins != nil && strings.HasPrefix(result.ToolID, "mcp.") {
+		if pluginResult, handled := e.plugins.Execute(ctx, sessionID, project, call); handled {
+			return pluginResult
+		}
+	}
 
 	descriptor, known := toolDescriptorForID(result.ToolID)
 	if !known || descriptor.ID == "runtime.unknown" {
