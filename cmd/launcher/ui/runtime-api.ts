@@ -127,7 +127,10 @@ import { K } from "./kernel";
         ...body({ plugin, ...(environment !== undefined ? { environment } : {}) }),
       }),
       test: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/test`, { method: "POST" }),
-      buildGraphify: (pluginID: string) => K.request(`/local/plugins/${enc(pluginID)}/graphify/build`, { method: "POST", ...body({ confirmed: true }) }),
+      action: (pluginID: string, actionID: string, confirmed = false) => K.request(`/local/plugins/${enc(pluginID)}/actions/${enc(actionID)}`, {
+        method: "POST",
+        ...body({ confirmed }),
+      }),
     },
 
     sessionView: {
