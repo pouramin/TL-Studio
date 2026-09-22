@@ -474,12 +474,20 @@ func (c *mcpClient) Close() {
 	cmd := c.cmd
 	c.mu.Unlock()
 	if stdin != nil { _ = stdin.Close() }
-	if cmd != nil && cmd.Process != nil {
-		_ = terminateManagedProcess(cmd)
+	if cmd == nil || cmd.Process == nil {
+		c.mu.Lock()
+		select {
+		case <-c.done:
+		default:
+			close(c.done)
+		}
+		c.mu.Unlock()
+		return
 	}
+	_ = terminateManagedProcess(cmd)
 	select {
 	case <-c.done:
 	case <-time.After(2 * time.Second):
-		if cmd != nil && cmd.Process != nil { _ = cmd.Process.Kill() }
+		_ = cmd.Process.Kill()
 	}
 }
