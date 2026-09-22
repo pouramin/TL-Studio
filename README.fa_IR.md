@@ -4,7 +4,7 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
-<p align="center"><strong>Development branch: 0.4.0-alpha.1</strong> · نسخه Stable: v0.3.0.</p>
+<p align="center"><strong>Development branch: 0.4.0-alpha.2</strong> · نسخه Stable: v0.3.0.</p>
 
 <p align="center">
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
@@ -58,6 +58,7 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **انتخاب مستقیم Project** — بازکردن فولدر با Folder Picker خود سیستم‌عامل.
 - **انتخاب Agent و Model** — تغییر Agent و مدل‌های Providerها از داخل Composer.
 - **Custom Provider** — اتصال Endpointهای سازگار با OpenAI، OpenAI Responses و Anthropic با Credential خود کاربر.
+- **Plugin و MCP** — اضافه‌کردن MCP serverهای دلخواه با transport نوع stdio از داخل Settings، بدون ویرایش دستی فایل تنظیمات؛ TL Studio ابزارها را به‌صورت Dynamic کشف و namespace می‌کند و از همان Tool Registry، Permission Engine و Native Agent موجود عبور می‌دهد.
 - **File attachment** — ارسال تصویر، PDF و فایل‌های متنی/کد؛ همراه با Multi-select، Drag & Drop و Paste از Clipboard.
 - **اجرای Native Agent متعلق به TL Studio** — برای Custom Providerهای پشتیبانی‌شده، حلقه‌ی Model/Tool/Model، توقف، Loop guard، Session persistence و Live Event مستقیماً توسط TL Studio اجرا می‌شود؛ مسیر Hosted Kilo همچنان از Adapter سازگاری استفاده می‌کند.
 - **Tool Executor خود TL Studio** — Toolهای اصلی کدنویسی شامل Read/List/Write/Edit فایل، Project Search و Terminal Command با Handlerهای خود TL Studio، محدودیت Project، Validation، Cancellation و Permission اجرا می‌شوند.
@@ -81,6 +82,39 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **معماری Local-first** — اجرای Loopback-only، رمز تصادفی Backend در هر اجرا، کنترل Origin و CSP محدودکننده.
 - **بدون Cloud یا Telemetry اختصاصی TL Studio** — ترافیک Model براساس Provider و Runtime انتخاب‌شده‌ی کاربر انجام می‌شود و از زیرساخت TL Studio عبور نمی‌کند.
 
+## Plugin و MCP
+
+برای اضافه‌کردن Plugin از این مسیر استفاده کنید:
+
+```text
+Settings
+→ Plugins
+→ + Add Plugin
+```
+
+در نسخه‌ی فعلی، transport اولیه **MCP روی stdio** است. کاربر Command، Argumentها، Environment Variableهای اختیاری، Working Directory و Scope را وارد می‌کند، قبل از ذخیره **Test Connection** می‌زند و سپس Plugin را جداگانه Enable می‌کند. مقدار Environment Variableها از طریق Credential Vault خود TL Studio نگه‌داری می‌شود و بعد از ذخیره دوباره به Browser برگردانده نمی‌شود.
+
+Toolهای MCP هنگام اتصال به‌صورت Dynamic کشف می‌شوند و شناسه‌ای با این ساختار می‌گیرند:
+
+```text
+mcp.<plugin-id>.<tool-name>
+```
+
+این معماری مخصوص Graphify نیست؛ یک MCP server دلخواه دیگر هم باید از همین صفحه و بدون Agent integration اختصاصی قابل اضافه‌شدن باشد.
+
+### نمونه‌ی Graphify
+
+اگر Graphify و MCP executable آن از قبل روی سیستم نصب باشند، یک Plugin در Scope پروژه می‌تواند چنین تنظیمی داشته باشد:
+
+```text
+Name: Graphify
+Command: graphify-mcp
+Arguments:
+graphify-out/graph.json
+```
+
+لیست Toolهای Graphify در کد TL Studio هاردکد نشده و از خود MCP server کشف می‌شود. کارت Graphify فقط چند Convenience Action اضافه دارد: **Build/Rebuild Graph** و **Open Graph**. ساخت Graph بعد از تأیید صریح کاربر با Command ثابت `graphify extract . --code-only` انجام می‌شود و **Open Graph** برای `graphify-out/graph.html` از Preview فعلی TL Studio استفاده می‌کند.
+
 ## معماری
 
 ```text
@@ -89,26 +123,28 @@ Browser workspace
     ▼
 TL Studio launcher (Go)
     │
-    ├─ TL Studio provider/model registry
-    ├─ TL Studio tool registry
-    ├─ TL Studio semantic session read model
-    ├─ TL Studio semantic live event projection
-    ├─ TL Studio permission policy engine
+    ├─ provider/model registry + credential vault
+    ├─ Plugin Manager
+    │    └─ MCP Client Manager
+    │         ├─ stdio MCP servers
+    │         └─ transportهای آینده پشت MCP client interface
+    │
+    ├─ Tool Registry ← MCP tools
+    ├─ Permission Engine
+    ├─ Native Tool Executor
+    ├─ Native Agent loop
+    ├─ semantic sessions / persistence / live events
     ├─ project files / search / terminal / preview
     │
-    └─ runtime adapter محلی و احراز‌شده
-            ▼
-        Local agent runtime
-            ├─ agents / sessions / tool execution
-            ├─ permission enforcement / questions / live events
-            └─ provider execution / model inference
+    ├─ supported custom providers → direct model APIs
+    │
+    └─ compatibility adapter → bundled Kilo engine
+                              → hosted Kilo / compatibility capabilities
 ```
 
-TL Studio مالک لایه‌ی محصول است: Workspace، رابط کاربری، Launcher محلی، تعریف Provider و Model، semantic metadata مربوط به Toolها، semantic read model مربوط به Session، semantic projection مربوط به Live Eventها، Permission Policy در Scope هر Project، تجربه‌ی Project و Session، Recovery و Release packaging.
+TL Studio مالک Plugin Manager، نرمال‌سازی MCP، Tool Registry و Permission path است. Toolهای MCP وارد همان مسیر Native Agent و Tool Executor موجود می‌شوند و یک Agent architecture موازی ایجاد نمی‌کنند. تعریف Plugin در State خود TL Studio ذخیره می‌شود، اما Secretهای Environment در Credential Vault جداگانه باقی می‌مانند.
 
-تعریف Custom Providerها و API Keyهای آن‌ها اکنون تحت مالکیت TL Studio هستند. تعریف Provider داخل Registry خود TL Studio می‌ماند و Credential در Vault جداگانه نگه‌داری می‌شود؛ Launcher در زمان لازم آن را برای اجرای مدل به Runtime فعال sync می‌کند.
-
-Runtime به‌عنوان یک لایه‌ی زیرساختی جدا پشت این مرز قرار می‌گیرد.
+برای Custom Providerهای پشتیبانی‌شده، Agent loop و Tool execution اصلی مستقیماً در اختیار TL Studio است. Kilo همچنان به‌عنوان Compatibility Engine برای Hosted Kilo و Capabilityهایی که هنوز Native نشده‌اند Bundle می‌شود.
 
 Project انتخاب‌شده روی سیستم کاربر باقی می‌ماند و TL Studio ترافیک Model را از زیرساخت خودش عبور نمی‌دهد.
 
