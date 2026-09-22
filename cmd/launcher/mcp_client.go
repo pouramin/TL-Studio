@@ -338,6 +338,7 @@ func (c *mcpClient) request(ctx context.Context, method string, params any, outp
 		return nil
 	case <-ctx.Done():
 		c.mu.Lock(); delete(c.pending, id); c.mu.Unlock()
+		_ = c.notify("notifications/cancelled", map[string]any{"requestId": id, "reason": "request cancelled"})
 		return ctx.Err()
 	case <-c.done:
 		c.mu.Lock(); delete(c.pending, id); c.mu.Unlock()
