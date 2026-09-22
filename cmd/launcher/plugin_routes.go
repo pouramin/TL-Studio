@@ -107,9 +107,16 @@ func registerPluginRoutes(mux *http.ServeMux, state *appState, manager *pluginMa
 	})
 
 	mux.HandleFunc("POST /local/plugins/{pluginID}/enabled", func(w http.ResponseWriter, r *http.Request) {
-		var body struct { Enabled bool `json:"enabled"` }
+		var body struct {
+			Enabled   bool `json:"enabled"`
+			Confirmed bool `json:"confirmed,omitempty"`
+		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10)).Decode(&body); err != nil {
 			writeJSON(w, http.StatusBadRequest, jsonError{Error: "invalid JSON body"})
+			return
+		}
+		if body.Enabled && !body.Confirmed {
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: "enabling a plugin requires explicit confirmation"})
 			return
 		}
 		view, err := manager.SetEnabled(state.projectPath(), r.PathValue("pluginID"), body.Enabled)
@@ -121,6 +128,11 @@ func registerPluginRoutes(mux *http.ServeMux, state *appState, manager *pluginMa
 	})
 
 	mux.HandleFunc("POST /local/plugins/{pluginID}/graphify/build", func(w http.ResponseWriter, r *http.Request) {
+		var body struct { Confirmed bool `json:"confirmed"` }
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10)).Decode(&body); err != nil || !body.Confirmed {
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: "Graphify build requires explicit confirmation"})
+			return
+		}
 		snapshot, view, err := manager.BuildGraphify(r.Context(), state.projectPath(), r.PathValue("pluginID"))
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]any{
