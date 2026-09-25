@@ -348,9 +348,19 @@ Merge validation completed:
 - `dev` version: `0.4.0-alpha.4`
 - stable `main` version remains `0.3.0`
 
+Post-merge Windows Preview Build:
+
+- workflow: **Preview Build**
+- run: `36129998956`
+- result: `success`
+- head: `679ae8663a984be2ba7a95a93d35268fd1acbc75`
+- artifact: `TL-Studio-0.4.0-alpha.4-Windows-x64-Preview`
+- artifact ID: `10861861706`
+- inner product ZIP SHA-256 from workflow: `75051d6454c11af165443a9cc0594002e05068f3a3e095e2f09a9c24062c5cca`
+- the inner product ZIP checksum was independently recomputed after downloading the Actions artifact and matched `SHA256SUMS.txt`
+
 Remaining product validation:
 
-- verify the push-triggered private `0.4.0-alpha.4` Windows Preview Build artifact
 - hands-on Windows validation of Provider discovery, multi-model selection/refresh/manual fallback, bundled-vs-user Plugins grouping, and MCP enable/disable lifecycle
 - do not promote alpha.4 work to stable `main` before those hands-on checks pass
 
