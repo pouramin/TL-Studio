@@ -490,6 +490,11 @@ func (m *runtimeProviderManager) discoverProviderModels(ctx context.Context, req
 		err = errors.New("unsupported provider protocol")
 	}
 	if err != nil {
+		var discoveryHTTPError *providerDiscoveryHTTPError
+		if errors.As(err, &discoveryHTTPError) &&
+			(discoveryHTTPError.Status == http.StatusUnauthorized || discoveryHTTPError.Status == http.StatusForbidden) {
+			return providerDiscoveryResponse{}, err
+		}
 		if cached, ok := loadProviderDiscoveryCache(input.ProviderID, input.Protocol, input.BaseURL); ok {
 			return providerDiscoveryResponse{
 				ProviderID: input.ProviderID,
