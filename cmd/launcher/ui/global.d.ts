@@ -258,6 +258,7 @@ interface TLStudioRuntimeContract {
     config(): Promise<{ providers: TLStudioDynamicRecord[] }>;
     upsert(providerID: string, input?: TLStudioDynamicRecord): Promise<any>;
     remove(providerID: string): Promise<any>;
+    discover(input?: TLStudioDynamicRecord): Promise<TLStudioDynamicRecord>;
   };
   tools: { registry(): Promise<TLStudioToolRegistry> };
   plugins: {
