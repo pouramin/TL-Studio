@@ -120,6 +120,48 @@ func bundledPluginExecutable(manifest bundledPluginManifest) string {
 	return bundledPluginExecutableAt(bundledPluginPackageRoot(), manifest, runtime.GOOS)
 }
 
+func minimalBundledPluginEnvironment() []string {
+	// Bundled executables are part of TL Studio's trusted release, but they
+	// should not inherit unrelated user secrets (cloud keys, tokens, etc.) from
+	// the launcher process. Keep only ordinary OS/runtime variables; explicit
+	// plugin credentials are appended separately by the MCP client.
+	names := []string{
+		"PATH", "HOME", "USER", "USERPROFILE",
+		"SYSTEMROOT", "WINDIR", "COMSPEC",
+		"TEMP", "TMP", "TMPDIR",
+		"LANG", "LC_ALL", "LC_CTYPE",
+		"XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME",
+		"SSL_CERT_FILE", "SSL_CERT_DIR",
+	}
+	result := make([]string, 0, len(names))
+	seen := map[string]bool{}
+	for _, name := range names {
+		lookup := name
+		if runtime.GOOS == "windows" {
+			lookup = strings.ToUpper(name)
+		}
+		if seen[lookup] {
+			continue
+		}
+		value, ok := os.LookupEnv(name)
+		if !ok && runtime.GOOS == "windows" {
+			for _, entry := range os.Environ() {
+				key, valuePart, found := strings.Cut(entry, "=")
+				if found && strings.EqualFold(key, name) {
+					value = valuePart
+					ok = true
+					break
+				}
+			}
+		}
+		if ok {
+			seen[lookup] = true
+			result = append(result, name+"="+value)
+		}
+	}
+	return result
+}
+
 func readBundledPluginStatesLocked() (bundledPluginStateFile, error) {
 	stored := bundledPluginStateFile{Version: bundledPluginStateVersion, Plugins: map[string]bundledPluginState{}}
 	data, err := os.ReadFile(bundledPluginStatePath())
