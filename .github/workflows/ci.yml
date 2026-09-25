@@ -67,7 +67,10 @@ jobs:
             scripts/check-kilo-product-contract.py \
             scripts/check-kilo-project-routing.py \
             scripts/fake-openai-server.py \
-            scripts/check-kilo-prompt-e2e.py
+            scripts/check-kilo-prompt-e2e.py \
+            scripts/stage-bundled-plugins.py
+      - name: Validate bundled plugin release manifest
+        run: python3 scripts/stage-bundled-plugins.py --validate-only
       - name: Cross-compile supported launchers
         shell: bash
         run: |
