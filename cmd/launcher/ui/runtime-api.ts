@@ -95,6 +95,15 @@ import { K } from "./kernel";
         ...body({ provider, ...(apiKey ? { apiKey } : {}) }),
       })),
       remove: async (providerID: any) => unwrapData(await request(`/providers/config/${enc(providerID)}`, { method: "DELETE" })),
+      discover: async ({ providerID, protocol, baseURL, apiKey }: any = {}) => unwrapData(await request("/providers/discover", {
+        method: "POST",
+        ...body({
+          ...(providerID ? { providerID } : {}),
+          protocol,
+          baseURL,
+          ...(apiKey ? { apiKey } : {}),
+        }),
+      })),
     },
 
     tools: {
