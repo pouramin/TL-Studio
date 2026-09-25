@@ -154,7 +154,11 @@ func (c *mcpClient) Start(ctx context.Context) error {
 	cmd := exec.Command(c.config.Command, c.config.Arguments...)
 	configureManagedCommand(cmd)
 	cmd.Dir = c.cwd
-	cmd.Env = append([]string(nil), os.Environ()...)
+	baseEnvironment := os.Environ()
+	if pluginOrigin(c.config) == "bundled" {
+		baseEnvironment = minimalBundledPluginEnvironment()
+	}
+	cmd.Env = append([]string(nil), baseEnvironment...)
 	for key, value := range c.env {
 		cmd.Env = append(cmd.Env, key+"="+value)
 	}
