@@ -174,12 +174,17 @@ The browser uses only TL Studio routes for this surface:
 - `GET /runtime/providers/config`
 - `PUT /runtime/providers/config/{id}`
 - `DELETE /runtime/providers/config/{id}`
+- `POST /runtime/providers/discover`
 - `GET /runtime/hosted/status`
 - `POST /runtime/hosted/authorize`
 - `POST /runtime/hosted/callback`
 - `DELETE /runtime/hosted`
 
 The launcher translates managed definitions to the current engine's provider config internally. Hosted provider IDs and preferred hosted models (including the current Auto Free route) are returned as runtime metadata rather than hard-coded by the browser.
+
+Model discovery is a TL Studio-owned edge service, not a Kilo capability. A draft provider can call `POST /runtime/providers/discover` before it has been saved. OpenAI-compatible and OpenAI Responses protocols first use the generic `<baseURL>/models` contract; Anthropic Messages uses a provider-specific model-list adapter with pagination and Anthropic authentication headers. Both paths normalize results into one discovered-model shape. Unknown tool/reasoning/vision capabilities stay unknown during discovery rather than being invented from model names.
+
+Discovered catalogs and configured models are deliberately separate concepts. The Browser can search a large discovered catalog and select only the models that should enter `providers.json`. Manual model IDs remain available for providers with no listing endpoint or private/unlisted models. For saved providers, TL Studio keeps a private last-good model-catalog cache with no credentials. Transient discovery failures may fall back to that cache with a stale warning; authentication failures remain explicit. Configured models that disappear from a later provider response are shown as unavailable instead of being silently deleted.
 
 API keys are deliberately excluded from TL Studio's provider registry and browser storage. TL Studio now owns custom-provider credentials in a separate local credential vault. Windows uses user-scoped DPAPI; macOS uses Keychain; Linux uses Secret Service when available; environments without a usable keyring use an AES-GCM encrypted private-file fallback with a separate `0600` local master key. The launcher restores owned credentials into the active runtime's execution store when needed. Existing legacy runtime-only credentials cannot be reverse-read or silently imported because the engine does not expose their plaintext; saving that provider again moves the credential under TL Studio ownership.
 
@@ -224,6 +229,27 @@ Graphify-specific convenience behavior is kept at the product edge:
 - open the generated interactive HTML using the existing TL Studio Preview surface.
 
 These conveniences are not part of the generic Plugin core and do not change how the Agent executes MCP tools.
+
+### Bundled plugins
+
+The generic Plugin domain now has two origins:
+
+- `bundled`: version-pinned MCP sidecar executables shipped inside the TL Studio release package;
+- `user`: externally installed/configured MCP commands supplied by the user.
+
+Origin only affects configuration ownership and executable resolution. Once a process starts, both origins use the same MCP Client Manager, dynamic `tools/list`, Tool Registry, Permission Engine, Native Tool Executor, and Native Agent path. Bundled tools do not receive an Agent bypass or a privileged tool-execution path.
+
+Bundled plugin metadata is loaded from the versioned embedded `cmd/launcher/bundled_plugins.json` manifest. User plugin metadata cannot claim reserved bundled origin/version/license fields or shadow a bundled plugin ID. Bundled enable/disable state is stored separately from user `plugins.json`; bundled plugins cannot be removed through Settings.
+
+Release archives resolve bundled executables from:
+
+```text
+plugins/<plugin-id>/bin/<executable>
+```
+
+The release staging script validates that each third-party bundled plugin declares every TL Studio-supported platform, HTTPS artifact URLs, exact SHA-256 checksums, and a repository-retained license before packaging. The same staging path is used by stable release and Windows Preview Build workflows. The current alpha manifest is intentionally empty until a real candidate passes those packaging/security gates.
+
+Bundled plugin child processes inherit a reduced ordinary OS/runtime environment rather than the launcher's entire environment, limiting accidental exposure of unrelated user secrets. This is defense in depth only: a bundled executable is still part of TL Studio's trusted computing base and is not OS-sandboxed by the Permission Engine.
 
 ## Tool Registry ownership
 
