@@ -558,6 +558,47 @@ func loadProviderDiscoveryCache(providerID, protocol, baseURL string) (providerD
 	return providerDiscoveryCacheEntry{}, false
 }
 
+func removeProviderDiscoveryCache(providerID string) error {
+	providerID = strings.TrimSpace(providerID)
+	if providerID == "" {
+		return nil
+	}
+	providerDiscoveryCacheMu.Lock()
+	defer providerDiscoveryCacheMu.Unlock()
+
+	path := providerDiscoveryCachePath()
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var stored providerDiscoveryCacheFile
+	if err := json.Unmarshal(data, &stored); err != nil {
+		return fmt.Errorf("decode provider discovery cache: %w", err)
+	}
+	next := stored.Entries[:0]
+	for _, entry := range stored.Entries {
+		if entry.ProviderID != providerID {
+			next = append(next, entry)
+		}
+	}
+	stored.Entries = next
+	if len(stored.Entries) == 0 {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	stored.Version = providerDiscoveryCacheVersion
+	encoded, err := json.MarshalIndent(stored, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, encoded, 0o600)
+}
+
 func saveProviderDiscoveryCache(entry providerDiscoveryCacheEntry) error {
 	if entry.ProviderID == "" || len(entry.Models) == 0 {
 		return nil
