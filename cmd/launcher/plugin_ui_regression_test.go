@@ -92,3 +92,22 @@ func TestPluginEditorResetsAfterCompletion(t *testing.T) {
 		}
 	}
 }
+
+
+func TestPluginsUIDistinguishesBundledAndUserAddedWithoutForkingExecution(t *testing.T) {
+	source := readBrowserSource(t, "plugins.ts")
+	for _, expected := range []string{
+		`plugin.origin === "bundled"`,
+		`Included with TL Studio`,
+		`Added by you`,
+		`actionButton(plugin.enabled ? "Disable" : "Enable"`,
+		`actionButton("Test Connection", "test", plugin.id)`,
+	} {
+		if !strings.Contains(source, expected) {
+			t.Fatalf("bundled/user Plugin UI distinction is missing %q", expected)
+		}
+	}
+	if strings.Contains(source, "bundledPluginExecute") || strings.Contains(source, "executeBundled") {
+		t.Fatal("bundled plugins must not gain a browser-side execution path")
+	}
+}
