@@ -13,6 +13,8 @@ func writePluginError(w http.ResponseWriter, err error) {
 	case errors.Is(err, os.ErrNotExist):
 		writeJSON(w, http.StatusNotFound, jsonError{Error: "plugin not found"})
 	case strings.Contains(err.Error(), "required"),
+		strings.Contains(err.Error(), "plugin ID is reserved"),
+		strings.Contains(err.Error(), "bundled plugins cannot be removed"),
 		strings.Contains(err.Error(), "must use"),
 		strings.Contains(err.Error(), "only stdio"),
 		strings.Contains(err.Error(), "only MCP"),
