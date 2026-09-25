@@ -12,7 +12,7 @@ This file is a durable operating instruction for future TL Studio development se
 ## Branch and release discipline
 
 - `main` is stable production only and is promoted to the stable `v0.3.0` line after Phase 2 validation.
-- `dev` is the next private alpha line and currently starts from `0.4.0-alpha.3`.
+- `dev` is the next private alpha line; the current feature line targets `0.4.0-alpha.4`.
 - Feature/fix branches start from `dev`.
 - Experimental work must not be merged into `main`.
 - Private alpha builds use the GitHub Actions Preview Build artifact flow.
@@ -24,23 +24,21 @@ Current stable baseline after Phase 2 promotion:
 
 `0.3.0`
 
-Current private development line:
+Current private development target:
 
-`0.4.0-alpha.1`
+`0.4.0-alpha.4`
 
-The next private milestone is the generic Plugin/MCP architecture. It is being implemented on:
+Active feature branch:
 
-`feature/plugin-mcp`
+`feature/model-discovery-bundled-plugins`
 
-Merged PR:
+Active draft PR:
 
-`#93 — Add generic Plugin and MCP architecture`
+`#95 — Provider discovery and bundled plugin foundation`
 
-Squash merge commit:
+The generic Plugin/MCP architecture from PR #93 is already merged into `dev`. The alpha.4 work extends that architecture rather than replacing it: provider model discovery is TL Studio-owned, and bundled/default plugins differ from user-added plugins only at configuration/release/executable-resolution boundaries. Both Plugin origins still enter the same MCP → Tool Registry → Permission → Native Tool Executor → Native Agent path.
 
-`f69b3c49288558ee42b6adb5cd468ffcefe3e9c0`
-
-Graphify is the first real integration used to validate the architecture, but the Plugin core is intentionally configuration-driven and supports arbitrary user-added stdio MCP servers without a new Agent integration.
+Graphify remains the first real external integration used to validate generic MCP behavior. It is **not** bundled in alpha.4 because its current Python/runtime/dependency distribution would add disproportionate release complexity.
 
 Phase 2 native execution milestone was squash-merged through PR:
 
@@ -290,6 +288,64 @@ Post-merge private Windows Preview Build:
 - checksum was independently recomputed after downloading the Actions artifact and matched `SHA256SUMS.txt`.
 
 The implementation/build milestone is therefore complete. The remaining product-validation step is hands-on Windows testing of `0.4.0-alpha.3`, especially Settings → Plugins, arbitrary stdio MCP add/test/enable/disable, and Graphify build/query/open behavior. Do not start the separate runtime-independence phase until this hands-on milestone is validated.
+
+## Model discovery + bundled plugin foundation — alpha.4
+
+The `0.4.0-alpha.4` feature line adds two product-level capabilities without changing Native Agent architecture.
+
+### Provider model discovery
+
+Implemented:
+
+- TL Studio-owned `POST /runtime/providers/discover` draft/discovery contract
+- generic OpenAI-compatible/OpenAI Responses discovery through `<baseURL>/models`
+- provider-specific Anthropic Messages discovery with `x-api-key`, Anthropic version header, and pagination
+- normalized discovered-model metadata for ID/name, context/output limits, and optional tool/reasoning/vision capability signals when the upstream actually provides them
+- explicit unknown capability state in discovery rather than guessing from model names
+- pre-save **Test / Discover Models**
+- searchable multi-model selection with bounded Browser rendering for large catalogs
+- explicit user control over whether models with unknown tool capability should be treated as tool-capable when saved
+- manual Model ID entry retained as fallback
+- configured models preserved when a later provider refresh stops returning them
+- saved-provider last-good catalog cache with stale warnings
+- 401/403 authentication failures never hidden by stale-cache fallback
+- discovery cache contains no API keys and is removed with the provider
+- response-size, model-count, timeout, URL, and cross-origin redirect guards
+
+Discovered catalogs are not automatically copied into `providers.json`; only selected/configured models become execution definitions. Automatic background polling and giant hardcoded provider/model catalogs remain intentionally out of scope.
+
+### Bundled/default plugin foundation
+
+Implemented:
+
+- generic Plugin origin distinction: `bundled` vs `user`
+- bundled metadata from an embedded versioned `cmd/launcher/bundled_plugins.json`
+- package-relative bundled executable resolution under `plugins/<id>/bin`
+- separate bundled enable/disable state; bundled identities cannot be removed or shadowed by user config
+- Settings grouping: **Included with TL Studio** and **Added by you**
+- no separate Agent/runtime executor for bundled tools
+- bundled and user-added MCP tools share dynamic discovery, Tool Registry, Permission Engine, Native Tool Executor, and Native Agent
+- project switch restarts all MCP clients so global clients do not retain the previous project working directory
+- bundled child processes receive a reduced ordinary environment rather than inheriting unrelated launcher secrets
+- stable-release and Windows Preview workflows call the same bundled-plugin staging script
+- staging manifest requires all supported TL Studio targets, HTTPS artifacts, exact SHA-256, pinned version, upstream metadata, and a repository-retained license for each third-party bundled plugin
+- deterministic release-staging regression coverage for raw/ZIP/tar.gz artifact member handling
+
+The alpha.4 bundled-plugin manifest is intentionally empty. No third-party executable is added merely to populate Settings. A real bundled candidate should be added only after its platform artifacts, dependency footprint, license, update model, and user value pass these gates.
+
+### Validation on feature branch
+
+The feature PR has passed the existing **CI** and **Custom Provider Contract** workflows repeatedly during implementation, including after the initial model-discovery/UI work and after the generic bundled-plugin release foundation. Re-check the current PR head before merge.
+
+Remaining before merge:
+
+- final CI on the documentation/version head
+- update PR summary/readiness
+- merge only into `dev`
+- run the private `0.4.0-alpha.4` Windows Preview Build
+- perform hands-on Windows validation of Provider discovery and Plugins grouping/lifecycle
+
+Stable `main` remains `v0.3.0`.
 
 ## Next product phase
 
