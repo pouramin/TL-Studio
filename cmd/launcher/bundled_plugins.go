@@ -21,6 +21,7 @@ type bundledPluginManifest struct {
 	Version     string
 	Executable  string
 	Arguments   []string
+	Environment []string
 	Transport   string
 	License     string
 	Upstream    string
@@ -74,6 +75,20 @@ func normalizeBundledPluginManifest(input bundledPluginManifest) (bundledPluginM
 		return bundledPluginManifest{}, errors.New("bundled plugin transport is unsupported")
 	}
 	input.Arguments = append([]string(nil), input.Arguments...)
+	seenEnv := map[string]bool{}
+	environment := make([]string, 0, len(input.Environment))
+	for _, rawName := range input.Environment {
+		name := normalizePluginEnvName(rawName)
+		if name == "" {
+			return bundledPluginManifest{}, fmt.Errorf("bundled plugin environment variable %q is invalid", rawName)
+		}
+		if !seenEnv[name] {
+			seenEnv[name] = true
+			environment = append(environment, name)
+		}
+	}
+	sort.Strings(environment)
+	input.Environment = environment
 	return input, nil
 }
 
@@ -246,7 +261,10 @@ func setBundledPluginEnabled(id string, enabled bool) error {
 }
 
 func bundledPluginConfig(manifest bundledPluginManifest, enabled bool) pluginConfig {
-	env := []pluginEnvironmentRef{}
+	env := make([]pluginEnvironmentRef, 0, len(manifest.Environment))
+	for _, name := range manifest.Environment {
+		env = append(env, pluginEnvironmentRef{Name: name, Configured: true})
+	}
 	return pluginConfig{
 		ID:          manifest.ID,
 		Name:        manifest.Name,
