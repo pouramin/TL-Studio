@@ -303,3 +303,38 @@ func TestProviderDiscoveryDoesNotMaskAuthenticationFailureWithCache(t *testing.T
 		t.Fatalf("expected 401 discovery error, got %v", err)
 	}
 }
+
+
+func TestRemoveProviderDiscoveryCacheDeletesProviderEntry(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("TL_STUDIO_STATE_DIR", stateDir)
+
+	if err := saveProviderDiscoveryCache(providerDiscoveryCacheEntry{
+		ProviderID: "remove-me",
+		Protocol: "openai-compatible",
+		BaseURL: "https://remove.example/v1",
+		Models: []providerDiscoveredModel{{ID: "remove-model", Name: "Remove Model"}},
+		FetchedAt: "2026-09-25T00:00:00Z",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := saveProviderDiscoveryCache(providerDiscoveryCacheEntry{
+		ProviderID: "keep-me",
+		Protocol: "openai-compatible",
+		BaseURL: "https://keep.example/v1",
+		Models: []providerDiscoveredModel{{ID: "keep-model", Name: "Keep Model"}},
+		FetchedAt: "2026-09-25T00:00:00Z",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := removeProviderDiscoveryCache("remove-me"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := loadProviderDiscoveryCache("remove-me", "openai-compatible", "https://remove.example/v1"); ok {
+		t.Fatal("removed provider catalog remained in cache")
+	}
+	if cached, ok := loadProviderDiscoveryCache("keep-me", "openai-compatible", "https://keep.example/v1"); !ok || len(cached.Models) != 1 {
+		t.Fatalf("unrelated provider cache should remain: %#v %v", cached, ok)
+	}
+}
