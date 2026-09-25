@@ -30,6 +30,7 @@ import "./attachments";
 import "./diagnostics-ui";
 import "./provider-recovery-ui";
 import "./providers-ui";
+import "./provider-discovery-ui";
 import "./providers-settings-bridge";
 import "./legacy-sessions";
 
