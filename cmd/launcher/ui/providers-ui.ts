@@ -31,33 +31,56 @@ import { K } from "./kernel";
     if (!clean(draft.name)) return "Display name is required.";
     if (!PROTOCOLS.has(draft.protocol)) return "Choose a supported provider API.";
     if (!safeURL(draft.baseURL)) return "Enter a valid http(s) Base URL.";
-    if (!clean(draft.modelID)) return "Model ID is required.";
-    const context = positiveInt(draft.contextLimit);
-    const output = positiveInt(draft.outputLimit);
-    if (Number.isNaN(context)) return "Context limit must be a positive whole number.";
-    if (Number.isNaN(output)) return "Max output must be a positive whole number.";
+    const discoveredModels = Array.isArray(draft.models) ? draft.models.filter((model: any) => clean(model?.id)) : [];
+    if (!discoveredModels.length && !clean(draft.modelID)) return "Select at least one discovered model or enter a Model ID manually.";
+    if (!discoveredModels.length) {
+      const context = positiveInt(draft.contextLimit);
+      const output = positiveInt(draft.outputLimit);
+      if (Number.isNaN(context)) return "Context limit must be a positive whole number.";
+      if (Number.isNaN(output)) return "Max output must be a positive whole number.";
+    }
     return "";
   };
 
   const buildProviderDefinition = (draft: any, existing: any = {}) => {
-    const modelID = clean(draft.modelID);
-    const context = positiveInt(draft.contextLimit);
-    const output = positiveInt(draft.outputLimit);
-    const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model: any) => model?.id && model.id !== modelID) : [];
-    const model = {
-      id: modelID,
-      name: clean(draft.modelName) || modelID,
-      toolCall: draft.toolCall !== false,
-      reasoning: draft.reasoning === true,
-      ...(context ? { contextLimit: context } : {}),
-      ...(output ? { outputLimit: output } : {}),
-    };
+    const discoveredModels = Array.isArray(draft.models)
+      ? draft.models
+        .filter((model: any) => clean(model?.id))
+        .map((model: any) => ({
+          id: clean(model.id),
+          name: clean(model.name) || clean(model.id),
+          toolCall: model.toolCall !== false,
+          reasoning: model.reasoning === true,
+          ...(positiveInt(model.contextLimit) ? { contextLimit: positiveInt(model.contextLimit) } : {}),
+          ...(positiveInt(model.outputLimit) ? { outputLimit: positiveInt(model.outputLimit) } : {}),
+        }))
+      : [];
+    let models: any[];
+    if (discoveredModels.length) {
+      const deduped = new Map<string, any>();
+      for (const model of discoveredModels) deduped.set(model.id, model);
+      models = [...deduped.values()];
+    } else {
+      const modelID = clean(draft.modelID);
+      const context = positiveInt(draft.contextLimit);
+      const output = positiveInt(draft.outputLimit);
+      const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model: any) => model?.id && model.id !== modelID) : [];
+      const model = {
+        id: modelID,
+        name: clean(draft.modelName) || modelID,
+        toolCall: draft.toolCall !== false,
+        reasoning: draft.reasoning === true,
+        ...(context ? { contextLimit: context } : {}),
+        ...(output ? { outputLimit: output } : {}),
+      };
+      models = [...previousModels, model];
+    }
     return {
       id: clean(draft.providerID),
       name: clean(draft.name),
       protocol: draft.protocol,
       baseURL: safeURL(draft.baseURL),
-      models: [...previousModels, model].sort((a, b) => String(a.id).localeCompare(String(b.id))),
+      models: models.sort((a, b) => String(a.id).localeCompare(String(b.id))),
     };
   };
 
@@ -187,6 +210,7 @@ import { K } from "./kernel";
     protocol: els.protocol.value,
     baseURL: els.baseURL.value,
     apiKey: els.apiKey.value,
+    models: K.__providersUi?.discoverySelection?.modelsForSave?.() || [],
     modelID: els.modelID.value,
     modelName: els.modelName.value,
     contextLimit: els.context.value,
@@ -203,6 +227,7 @@ import { K } from "./kernel";
     els.reasoning.checked = false;
     els.id.disabled = false;
     els.title.textContent = "Add provider";
+    K.__providersUi?.discoverySelection?.reset?.();
     els.form.classList.add("hidden");
   };
 
@@ -328,11 +353,14 @@ import { K } from "./kernel";
       await K.loadCatalog();
       providerConfig = await K.api.providers.config();
       renderList();
+      const savedModelIDs = provider.models.map((model: any) => String(model.id));
+      const loadedModelIDs = savedModelIDs.filter((modelID: string) =>
+        K.state.models.some((model) => model.providerID === id && model.id === modelID));
       clearForm();
-      const loaded = K.state.models.some((model) => model.providerID === id && model.id === clean(value.modelID));
-      notice(loaded
-        ? `${value.name} saved. ${clean(value.modelID)} is now available in the model selector.`
-        : `${value.name} was saved by TL Studio, but the active runtime did not load ${clean(value.modelID)}. Check the endpoint, protocol, and model ID.`, !loaded);
+      notice(loadedModelIDs.length === savedModelIDs.length
+        ? `${value.name} saved. ${savedModelIDs.length} model${savedModelIDs.length === 1 ? "" : "s"} available in the model selector.`
+        : `${value.name} was saved, but the active runtime loaded ${loadedModelIDs.length} of ${savedModelIDs.length} selected models. Refresh models or check the endpoint and protocol.`,
+        loadedModelIDs.length !== savedModelIDs.length);
     } catch (err) {
       notice(`Could not save provider: ${err instanceof Error ? err.message : String(err)}`, true);
       try { providerConfig = await K.api.providers.config(); renderList(); } catch {}
