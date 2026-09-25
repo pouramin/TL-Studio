@@ -178,6 +178,12 @@ html[data-resolved-theme="light"] dialog::backdrop { background: rgba(31,41,55,.
 /* Plugins */
 .settings-panel-head-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .plugin-list { display: grid; gap: 10px; }
+.plugin-section { display: grid; gap: 8px; }
+.plugin-section + .plugin-section { margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.plugin-section-head { display: grid; gap: 3px; padding: 0 2px 2px; }
+.plugin-section-head strong { font-size: 11px; }
+.plugin-section-head span { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.plugin-card-bundled { background: color-mix(in srgb, var(--panel-2), var(--accent) 3%); }
 .plugin-empty { display: grid; gap: 5px; padding: 18px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); }
 .plugin-empty strong { color: var(--text); font-size: 12px; }
 .plugin-empty span { font-size: 10px; line-height: 1.5; }
