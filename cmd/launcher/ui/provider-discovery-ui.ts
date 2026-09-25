@@ -29,6 +29,7 @@ import { K } from "./kernel";
     .provider-discovery-block{grid-column:1/-1;display:grid;gap:9px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
     .provider-discovery-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.provider-discovery-head strong{font-size:10px}.provider-discovery-head span{display:block;margin-top:2px;color:var(--muted);font-size:9px;line-height:1.45}
     .provider-discovery-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.provider-discovery-status{min-width:0;color:var(--muted);font-size:9px;line-height:1.45}.provider-discovery-status.error{color:var(--danger)}.provider-discovery-status.warn{color:color-mix(in srgb,var(--warning,#d9a441),var(--text) 30%)}
+    .provider-discovery-capability-default{display:flex;align-items:flex-start;gap:7px;color:var(--muted);font-size:9px;line-height:1.45}.provider-discovery-capability-default input{margin-top:2px}
     .provider-model-catalog{display:grid;gap:8px}.provider-model-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px}.provider-model-toolbar input{width:100%;height:32px}.provider-model-summary{color:var(--muted);font-size:9px}
     .provider-model-list{display:grid;gap:5px;max-height:290px;overflow:auto;padding-right:2px}.provider-model-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);cursor:pointer}.provider-model-row:hover{border-color:color-mix(in srgb,var(--accent),var(--line) 55%)}.provider-model-row.unavailable{opacity:.72}.provider-model-copy{min-width:0}.provider-model-name{display:flex;align-items:baseline;gap:6px;min-width:0}.provider-model-name strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.provider-model-name code{font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.provider-model-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.provider-model-chip{padding:2px 5px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:8px}.provider-model-chip.negative{color:var(--danger)}
     .provider-manual-toggle-row{display:flex;align-items:center;gap:7px;margin-top:2px;color:var(--muted);font-size:9px}.provider-manual-model-field.hidden,.provider-toggles.provider-manual-hidden{display:none!important}
@@ -46,6 +47,10 @@ import { K } from "./kernel";
       <button id="providerDiscoverModelsButton" type="button" class="ghost small">Test / Discover Models</button>
       <span id="providerDiscoveryStatus" class="provider-discovery-status"></span>
     </div>
+    <label class="provider-discovery-capability-default">
+      <input id="providerAssumeUnknownTools" type="checkbox" checked />
+      <span>Assume tool calling when the provider does not publish tool capability metadata.</span>
+    </label>
     <div id="providerModelCatalog" class="provider-model-catalog hidden">
       <div class="provider-model-toolbar">
         <input id="providerModelSearch" type="search" autocomplete="off" placeholder="Search discovered models…" />
@@ -73,6 +78,7 @@ import { K } from "./kernel";
   const summary = document.getElementById("providerModelSummary") as HTMLElement;
   const list = document.getElementById("providerModelList") as HTMLElement;
   const manualToggle = document.getElementById("providerManualModelToggle") as HTMLButtonElement;
+  const assumeUnknownTools = document.getElementById("providerAssumeUnknownTools") as HTMLInputElement;
 
   let catalog: TLStudioDynamicRecord[] = [];
   let selectedIDs = new Set<string>();
@@ -237,6 +243,7 @@ import { K } from "./kernel";
     discoverButton.textContent = "Test / Discover Models";
     discoverButton.disabled = false;
     lastConnectionKey = "";
+    assumeUnknownTools.checked = true;
     setStatus();
     setManualVisible(false);
   };
@@ -248,7 +255,7 @@ import { K } from "./kernel";
       .map((model) => ({
         id: model.id,
         name: model.name || model.id,
-        toolCall: model.toolCall !== false,
+        toolCall: typeof model.toolCall === "boolean" ? model.toolCall : assumeUnknownTools.checked,
         reasoning: model.reasoning === true,
         ...(Number(model.contextLimit) > 0 ? { contextLimit: Number(model.contextLimit) } : {}),
         ...(Number(model.outputLimit) > 0 ? { outputLimit: Number(model.outputLimit) } : {}),
