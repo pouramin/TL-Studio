@@ -28,15 +28,17 @@ Current private development target:
 
 `0.4.0-alpha.4`
 
-Active feature branch:
+The alpha.4 provider-discovery and bundled-plugin foundation is merged into `dev`.
 
-`feature/model-discovery-bundled-plugins`
+Merged PR:
 
-Active draft PR:
+`#95 — Add provider discovery and bundled plugin foundation`
 
-`#95 — Provider discovery and bundled plugin foundation`
+Squash merge commit:
 
-The generic Plugin/MCP architecture from PR #93 is already merged into `dev`. The alpha.4 work extends that architecture rather than replacing it: provider model discovery is TL Studio-owned, and bundled/default plugins differ from user-added plugins only at configuration/release/executable-resolution boundaries. Both Plugin origins still enter the same MCP → Tool Registry → Permission → Native Tool Executor → Native Agent path.
+`679ae8663a984be2ba7a95a93d35268fd1acbc75`
+
+The generic Plugin/MCP architecture from PR #93 remains the foundation. The alpha.4 work extends it rather than replacing it: provider model discovery is TL Studio-owned, and bundled/default plugins differ from user-added plugins only at configuration/release/executable-resolution boundaries. Both Plugin origins still enter the same MCP → Tool Registry → Permission → Native Tool Executor → Native Agent path.
 
 Graphify remains the first real external integration used to validate generic MCP behavior. It is **not** bundled in alpha.4 because its current Python/runtime/dependency distribution would add disproportionate release complexity.
 
@@ -337,15 +339,20 @@ The alpha.4 bundled-plugin manifest is intentionally empty. No third-party execu
 
 The feature PR has passed the existing **CI** and **Custom Provider Contract** workflows repeatedly during implementation, including after the initial model-discovery/UI work and after the generic bundled-plugin release foundation. Re-check the current PR head before merge.
 
-Remaining before merge:
+Merge validation completed:
 
-- final CI on the documentation/version head
-- update PR summary/readiness
-- merge only into `dev`
-- run the private `0.4.0-alpha.4` Windows Preview Build
-- perform hands-on Windows validation of Provider discovery and Plugins grouping/lifecycle
+- final feature-head **CI**: success
+- final **Custom Provider Contract**: success
+- final **npm Package Contract**: success
+- PR #95 marked ready and squash-merged into `dev`
+- `dev` version: `0.4.0-alpha.4`
+- stable `main` version remains `0.3.0`
 
-Stable `main` remains `v0.3.0`.
+Remaining product validation:
+
+- verify the push-triggered private `0.4.0-alpha.4` Windows Preview Build artifact
+- hands-on Windows validation of Provider discovery, multi-model selection/refresh/manual fallback, bundled-vs-user Plugins grouping, and MCP enable/disable lifecycle
+- do not promote alpha.4 work to stable `main` before those hands-on checks pass
 
 ## Next product phase
 
