@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,16 +16,21 @@ import (
 const bundledPluginStateVersion = 1
 
 type bundledPluginManifest struct {
-	ID          string
-	Name        string
-	Description string
-	Version     string
-	Executable  string
-	Arguments   []string
-	Environment []string
-	Transport   string
-	License     string
-	Upstream    string
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Version     string   `json:"version"`
+	Executable  string   `json:"executable"`
+	Arguments   []string `json:"arguments,omitempty"`
+	Environment []string `json:"environment,omitempty"`
+	Transport   string   `json:"transport"`
+	License     string   `json:"license,omitempty"`
+	Upstream    string   `json:"upstream,omitempty"`
+}
+
+type bundledPluginCatalog struct {
+	Version int                     `json:"version"`
+	Plugins []bundledPluginManifest `json:"plugins"`
 }
 
 type bundledPluginState struct {
@@ -36,10 +42,38 @@ type bundledPluginStateFile struct {
 	Plugins map[string]bundledPluginState `json:"plugins"`
 }
 
+//go:embed bundled_plugins.json
+var bundledPluginManifestJSON []byte
+
+func loadBundledPluginManifestCatalog() []bundledPluginManifest {
+	var catalog bundledPluginCatalog
+	if err := json.Unmarshal(bundledPluginManifestJSON, &catalog); err != nil {
+		panic(fmt.Sprintf("decode embedded bundled plugin manifest: %v", err))
+	}
+	if catalog.Version != 1 {
+		panic(fmt.Sprintf("unsupported embedded bundled plugin manifest version %d", catalog.Version))
+	}
+	seen := map[string]bool{}
+	result := make([]bundledPluginManifest, 0, len(catalog.Plugins))
+	for _, raw := range catalog.Plugins {
+		manifest, err := normalizeBundledPluginManifest(raw)
+		if err != nil {
+			panic(fmt.Sprintf("invalid embedded bundled plugin manifest: %v", err))
+		}
+		if seen[manifest.ID] {
+			panic(fmt.Sprintf("duplicate bundled plugin ID %q", manifest.ID))
+		}
+		seen[manifest.ID] = true
+		result = append(result, manifest)
+	}
+	return result
+}
+
 // Intentionally small. Shipping a new bundled plugin is a release-engineering
-// decision: add a reviewed, version-pinned manifest here and place the matching
-// executable under plugins/<id>/bin in each platform release package.
-var bundledPluginManifests = []bundledPluginManifest{}
+// decision: add a reviewed, version-pinned entry to bundled_plugins.json. The
+// release workflow stages the matching verified executable under
+// plugins/<id>/bin; runtime execution still enters the generic MCP manager.
+var bundledPluginManifests = loadBundledPluginManifestCatalog()
 
 var bundledPluginStateMu sync.Mutex
 
