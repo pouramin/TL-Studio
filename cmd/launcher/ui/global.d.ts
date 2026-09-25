@@ -186,6 +186,8 @@ interface TLStudioPluginView {
   workingDirectory?: string;
   environment?: TLStudioPluginEnvironmentRef[];
   metadata?: Record<string, string>;
+  origin: "bundled" | "user" | string;
+  version?: string;
   status: string;
   error?: string;
   discoveredTools: number;
