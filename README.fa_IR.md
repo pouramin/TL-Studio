@@ -4,7 +4,7 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
-<p align="center"><strong>Development branch: 0.4.0-alpha.3</strong> · نسخه Stable: v0.3.0.</p>
+<p align="center"><strong>Development branch: 0.4.0-alpha.4</strong> · نسخه Stable: v0.3.0.</p>
 
 <p align="center">
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
@@ -57,8 +57,8 @@ Runtime لوکال سازگار از قبل داخل Release قرار دارد.
 - **محیط توسعه‌ی مستقل و لوکال** — Editor، File Explorer، Search، Terminal، Preview و Agent در یک Workspace مرورگری.
 - **انتخاب مستقیم Project** — بازکردن فولدر با Folder Picker خود سیستم‌عامل.
 - **انتخاب Agent و Model** — تغییر Agent و مدل‌های Providerها از داخل Composer.
-- **Custom Provider** — اتصال Endpointهای سازگار با OpenAI، OpenAI Responses و Anthropic با Credential خود کاربر.
-- **Plugin و MCP** — اضافه‌کردن MCP serverهای دلخواه با transport نوع stdio از داخل Settings، بدون ویرایش دستی فایل تنظیمات؛ TL Studio ابزارها را به‌صورت Dynamic کشف و namespace می‌کند و از همان Tool Registry، Permission Engine و Native Agent موجود عبور می‌دهد.
+- **Custom Provider و کشف مدل** — اتصال Endpointهای سازگار با OpenAI، OpenAI Responses و Anthropic، تست و کشف مدل قبل از Save، جست‌وجو و انتخاب چند مدل، Refresh کردن Catalog و نگه‌داشتن ورود دستی Model ID به‌عنوان fallback.
+- **Plugin و MCP** — اضافه‌کردن MCP serverهای دلخواه و پشتیبانی از Pluginهای bundled و version-pinned از همان Plugin Manager؛ Toolها به‌صورت Dynamic کشف و namespace می‌شوند و همگی از همان Tool Registry، Permission Engine و Native Agent موجود عبور می‌کنند.
 - **File attachment** — ارسال تصویر، PDF و فایل‌های متنی/کد؛ همراه با Multi-select، Drag & Drop و Paste از Clipboard.
 - **اجرای Native Agent متعلق به TL Studio** — برای Custom Providerهای پشتیبانی‌شده، حلقه‌ی Model/Tool/Model، توقف، Loop guard، Session persistence و Live Event مستقیماً توسط TL Studio اجرا می‌شود؛ مسیر Hosted Kilo همچنان از Adapter سازگاری استفاده می‌کند.
 - **Tool Executor خود TL Studio** — Toolهای اصلی کدنویسی شامل Read/List/Write/Edit فایل، Project Search و Terminal Command با Handlerهای خود TL Studio، محدودیت Project، Validation، Cancellation و Permission اجرا می‌شوند.
@@ -102,6 +102,25 @@ mcp.<plugin-id>.<tool-name>
 
 این معماری مخصوص Graphify نیست؛ یک MCP server دلخواه دیگر هم باید از همین صفحه و بدون Agent integration اختصاصی قابل اضافه‌شدن باشد.
 
+### Pluginهای همراه TL Studio
+
+در Settings دو گروه جدا نمایش داده می‌شوند:
+
+```text
+Included with TL Studio
+Added by you
+```
+
+Plugin همراه TL Studio یک Sidecar MCP version-pinned است که executable آن از داخل همان Release پیدا می‌شود و به PATH کاربر وابسته نیست. بعد از شروع Process هیچ مسیر جداگانه‌ای برای Agent ندارد و از همان MCP Client Manager، Tool Registry، Permission Engine و Native Tool Executor عبور می‌کند.
+
+Manifest مربوط به این Pluginها هم داخل Launcher قرار می‌گیرد و هم در Release pipeline استفاده می‌شود. برای هر Plugin شخص ثالث، Artifact تمام Platformهای پشتیبانی‌شده، SHA-256 دقیق و License نگه‌داری‌شده در Repository اجباری است. در نسخه `0.4.0-alpha.4` هنوز هیچ Plugin شخص ثالثی به‌صورت پیش‌فرض Bundle نشده است؛ زیرساخت کامل شده ولی حجم Release و Trusted Computing Base بی‌دلیل بزرگ نشده است.
+
+### رفتار کشف مدل
+
+برای Endpointهای OpenAI-compatible و OpenAI Responses ابتدا مسیر `/models` امتحان می‌شود. برای Anthropic Messages از Adapter مخصوص و Pagination رسمی Model List استفاده می‌شود. Discovery قبل از Save انجام می‌شود، API Key در Browser storage یا Catalog cache ذخیره نمی‌شود و فقط Modelهایی که کاربر انتخاب می‌کند وارد `providers.json` می‌شوند.
+
+برای Provider ذخیره‌شده، آخرین Catalog موفق Cache می‌شود. خطای موقت Network یا Rate Limit می‌تواند Catalog قبلی را با هشدار نمایش دهد، اما خطای Authentication هرگز با Cache پنهان نمی‌شود. مدلی که قبلاً انتخاب شده ولی در Refresh بعدی برنگردد نیز خودکار حذف نمی‌شود.
+
 ### نمونه‌ی Graphify
 
 اگر Graphify و MCP executable آن از قبل روی سیستم نصب باشند، یک Plugin در Scope پروژه می‌تواند چنین تنظیمی داشته باشد:
@@ -123,8 +142,14 @@ Browser workspace
     ▼
 TL Studio launcher (Go)
     │
-    ├─ provider/model registry + credential vault
+    ├─ provider registry + credential vault
+    │    └─ Model Discovery Service
+    │         ├─ generic OpenAI-compatible adapter
+    │         └─ provider-specific edge adapters
+    │
     ├─ Plugin Manager
+    │    ├─ bundled executable resolver
+    │    ├─ user command resolver
     │    └─ MCP Client Manager
     │         ├─ stdio MCP servers
     │         └─ transportهای آینده پشت MCP client interface
@@ -171,6 +196,10 @@ tl-studio/
 ├─ tl-studio[.exe]
 ├─ bin/
 │  └─ kilo[.exe]
+├─ plugins/                 # فقط وقتی Release شامل Bundled Plugin باشد
+│  └─ <plugin-id>/
+│     ├─ bin/
+│     └─ LICENSE
 ├─ LICENSE
 ├─ THIRD_PARTY_NOTICES.md
 └─ third_party/
