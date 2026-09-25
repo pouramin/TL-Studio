@@ -115,6 +115,11 @@ jobs:
           cp LICENSE THIRD_PARTY_NOTICES.md staging/package/
           mkdir -p staging/package/third_party
           cp -R third_party/. staging/package/third_party/
+      - name: Stage version-pinned bundled plugins
+        run: |
+          python3 scripts/stage-bundled-plugins.py \
+            --target "${{ matrix.name }}" \
+            --package-dir staging/package
       - name: Real bundled-runtime product API contract test
         if: matrix.name == 'linux-x64'
         shell: bash
