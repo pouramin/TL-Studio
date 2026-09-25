@@ -249,6 +249,7 @@ func newServerWithRuntime(state *appState, backendURL string, credentials runtim
 	registerProjectSearchRoutes(mux, state)
 	registerLocalProcessRoutesWithManager(mux, state, processes)
 	registerRuntimeProviderRoutes(mux, providerManager)
+	registerProviderDiscoveryRoutes(mux, providerManager)
 	registerPluginRoutes(mux, state, plugins)
 	registerToolRegistryRoutesWithPlugins(mux, plugins, state.projectPath)
 	registerSessionReadRoutes(mux, sessionRead)

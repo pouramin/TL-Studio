@@ -7,6 +7,7 @@ const { loadBrowserModule, readBrowserTypeScript } = require("./browser-source-h
 const source = loadBrowserModule("providers-ui.ts");
 const productSource = readBrowserTypeScript("product-ui.ts");
 const providerTsSource = readBrowserTypeScript("providers-ui.ts");
+const discoveryTsSource = readBrowserTypeScript("provider-discovery-ui.ts");
 
 const K = { __providersUiInstalled: false };
 const context = vm.createContext({
@@ -80,6 +81,25 @@ assert.equal(merged.baseURL, "https://api.example.com/v1");
 assert.ok(merged.models.some((model) => model.id === "other-model"), "editing one model must preserve other TL Studio model definitions");
 assert.ok(merged.models.some((model) => model.id === "example-model"));
 
+const discoveredDraft = {
+  ...draft,
+  modelID: "",
+  modelName: "",
+  contextLimit: "",
+  outputLimit: "",
+  models: [
+    { id: "auto-a", name: "Auto A", toolCall: true, reasoning: true, contextLimit: 200000, outputLimit: 32000 },
+    { id: "auto-b", name: "Auto B", toolCall: undefined, reasoning: false },
+  ],
+};
+assert.equal(hooks.validateDraft(discoveredDraft), "", "discovered model selection should satisfy provider validation");
+const discoveredDefinition = hooks.buildProviderDefinition(discoveredDraft, existing);
+assert.deepEqual(Array.from(discoveredDefinition.models, (model) => model.id), ["auto-a", "auto-b"]);
+assert.equal(discoveredDefinition.models[0].contextLimit, 200000);
+assert.equal(discoveredDefinition.models[0].outputLimit, 32000);
+assert.equal(discoveredDefinition.models[1].toolCall, true, "unknown discovered tool support keeps the existing optimistic manual default");
+assert.equal(discoveredDefinition.models[1].reasoning, false);
+
 const entries = hooks.customProviderEntries({
   providers: [
     definition,
@@ -103,5 +123,8 @@ assert.match(hooks.validateDraft({ ...draft, providerID: "Bad ID" }), /Provider 
 assert.match(hooks.validateDraft({ ...draft, baseURL: "not-a-url" }), /Base URL/);
 assert.match(hooks.validateDraft({ ...draft, modelID: "" }), /Model ID/);
 assert.match(hooks.validateDraft({ ...draft, contextLimit: "12.5" }), /Context limit/);
+
+assert.equal(discoveryTsSource.includes('id="providerAssumeUnknownTools"'), true, "unknown tool capability must be an explicit UI choice");
+assert.equal(discoveryTsSource.includes('typeof model.toolCall === "boolean" ? model.toolCall : assumeUnknownTools.checked'), true, "unknown tool support must follow the explicit user setting");
 
 console.log("custom provider UI regressions: ok");

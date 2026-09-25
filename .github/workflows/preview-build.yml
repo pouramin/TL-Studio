@@ -66,6 +66,12 @@ jobs:
           mkdir -p staging/package/third_party
           cp -R third_party/. staging/package/third_party/
 
+      - name: Stage version-pinned bundled plugins
+        run: |
+          python3 scripts/stage-bundled-plugins.py \
+            --target windows-x64 \
+            --package-dir staging/package
+
       - name: Package Windows preview
         shell: bash
         run: |

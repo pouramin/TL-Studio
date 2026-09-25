@@ -110,77 +110,106 @@ import { K } from "./kernel";
     return button;
   };
 
+  const renderCard = (plugin: TLStudioPluginView) => {
+    const bundled = plugin.origin === "bundled";
+    const card = document.createElement("article");
+    card.className = `plugin-card${bundled ? " plugin-card-bundled" : ""}`;
+    card.dataset.pluginId = plugin.id;
+
+    const head = document.createElement("div");
+    head.className = "plugin-card-head";
+    const copy = document.createElement("div");
+    copy.className = "plugin-card-copy";
+    const title = document.createElement("strong");
+    title.textContent = plugin.name;
+    const description = document.createElement("span");
+    description.textContent = plugin.description || `${plugin.type.toUpperCase()} · ${plugin.transport}`;
+    copy.append(title, description);
+
+    const state = document.createElement("span");
+    state.className = `plugin-status ${statusClass(plugin.status)}`;
+    state.textContent = plugin.status || (plugin.enabled ? "Starting" : "Disabled");
+    head.append(copy, state);
+
+    const meta = document.createElement("div");
+    meta.className = "plugin-meta";
+    const scope = plugin.scope === "global" ? "All projects" : "Current project";
+    meta.textContent = bundled
+      ? `Included with TL Studio${plugin.version ? ` · v${plugin.version}` : ""} · ${plugin.discoveredTools || 0} tools`
+      : `${plugin.transport} · ${scope} · ${plugin.discoveredTools || 0} tools`;
+
+    const command = document.createElement("code");
+    command.className = "plugin-command";
+    command.textContent = [plugin.command, ...(plugin.arguments || [])].join(" ");
+
+    card.append(head, meta);
+    if (!bundled) card.appendChild(command);
+
+    if (plugin.error) {
+      const error = document.createElement("div");
+      error.className = "plugin-error";
+      error.textContent = plugin.error;
+      card.appendChild(error);
+    }
+
+    if (plugin.integration?.summary) {
+      const integration = document.createElement("div");
+      integration.className = "plugin-integration-meta";
+      integration.textContent = plugin.integration.summary;
+      card.appendChild(integration);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "plugin-card-actions";
+    actions.append(
+      actionButton(plugin.enabled ? "Disable" : "Enable", "toggle", plugin.id, plugin.enabled ? "ghost small" : "primary small"),
+      actionButton("Test Connection", "test", plugin.id),
+    );
+    if (!bundled) {
+      actions.append(
+        actionButton("Configure", "configure", plugin.id),
+        actionButton("Remove", "remove", plugin.id, "ghost small danger-text"),
+      );
+    }
+    for (const integrationAction of plugin.integration?.actions || []) {
+      const extra = actionButton(integrationAction.label, "integration", plugin.id);
+      extra.dataset.integrationActionId = integrationAction.id;
+      actions.insertBefore(extra, actions.children[1] || null);
+    }
+    card.appendChild(actions);
+    return card;
+  };
+
+  const appendSection = (titleText: string, subtitleText: string, plugins: TLStudioPluginView[]) => {
+    if (!plugins.length) return;
+    const section = document.createElement("section");
+    section.className = "plugin-section";
+    const head = document.createElement("div");
+    head.className = "plugin-section-head";
+    const title = document.createElement("strong");
+    title.textContent = titleText;
+    const subtitle = document.createElement("span");
+    subtitle.textContent = subtitleText;
+    head.append(title, subtitle);
+    section.appendChild(head);
+    for (const plugin of plugins) section.appendChild(renderCard(plugin));
+    list.appendChild(section);
+  };
+
   const render = () => {
     list.textContent = "";
     if (!K.state.plugins.length) {
       const empty = document.createElement("div");
       empty.className = "plugin-empty";
-      empty.innerHTML = "<strong>No plugins configured</strong><span>Add any stdio MCP server. TL Studio will discover its tools dynamically.</span>";
+      empty.innerHTML = "<strong>No plugins configured</strong><span>Add any stdio MCP server. Bundled plugins will also appear here when included in a TL Studio release.</span>";
       list.appendChild(empty);
       return;
     }
 
-    for (const plugin of K.state.plugins) {
-      const card = document.createElement("article");
-      card.className = "plugin-card";
-      card.dataset.pluginId = plugin.id;
-
-      const head = document.createElement("div");
-      head.className = "plugin-card-head";
-      const copy = document.createElement("div");
-      copy.className = "plugin-card-copy";
-      const title = document.createElement("strong");
-      title.textContent = plugin.name;
-      const description = document.createElement("span");
-      description.textContent = plugin.description || `${plugin.type.toUpperCase()} · ${plugin.transport}`;
-      copy.append(title, description);
-
-      const state = document.createElement("span");
-      state.className = `plugin-status ${statusClass(plugin.status)}`;
-      state.textContent = plugin.status || (plugin.enabled ? "Starting" : "Disabled");
-      head.append(copy, state);
-
-      const meta = document.createElement("div");
-      meta.className = "plugin-meta";
-      const scope = plugin.scope === "global" ? "All projects" : "Current project";
-      meta.textContent = `${plugin.transport} · ${scope} · ${plugin.discoveredTools || 0} tools`;
-
-      const command = document.createElement("code");
-      command.className = "plugin-command";
-      command.textContent = [plugin.command, ...(plugin.arguments || [])].join(" ");
-
-      if (plugin.error) {
-        const error = document.createElement("div");
-        error.className = "plugin-error";
-        error.textContent = plugin.error;
-        card.append(head, meta, command, error);
-      } else {
-        card.append(head, meta, command);
-      }
-
-      if (plugin.integration?.summary) {
-        const integration = document.createElement("div");
-        integration.className = "plugin-integration-meta";
-        integration.textContent = plugin.integration.summary;
-        card.appendChild(integration);
-      }
-
-      const actions = document.createElement("div");
-      actions.className = "plugin-card-actions";
-      actions.append(
-        actionButton(plugin.enabled ? "Disable" : "Enable", "toggle", plugin.id, plugin.enabled ? "ghost small" : "primary small"),
-        actionButton("Test Connection", "test", plugin.id),
-        actionButton("Configure", "configure", plugin.id),
-        actionButton("Remove", "remove", plugin.id, "ghost small danger-text"),
-      );
-      for (const integrationAction of plugin.integration?.actions || []) {
-        const extra = actionButton(integrationAction.label, "integration", plugin.id);
-        extra.dataset.integrationActionId = integrationAction.id;
-        actions.insertBefore(extra, actions.children[1] || null);
-      }
-      card.appendChild(actions);
-      list.appendChild(card);
-    }
+    const bundled = K.state.plugins.filter((plugin) => plugin.origin === "bundled");
+    const userAdded = K.state.plugins.filter((plugin) => plugin.origin !== "bundled");
+    appendSection("Included with TL Studio", "Version-pinned plugins shipped inside this TL Studio package.", bundled);
+    appendSection("Added by you", "External MCP servers configured by you for this project or globally.", userAdded);
   };
 
   const load = async () => {

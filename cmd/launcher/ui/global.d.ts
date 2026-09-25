@@ -186,6 +186,8 @@ interface TLStudioPluginView {
   workingDirectory?: string;
   environment?: TLStudioPluginEnvironmentRef[];
   metadata?: Record<string, string>;
+  origin: "bundled" | "user" | string;
+  version?: string;
   status: string;
   error?: string;
   discoveredTools: number;
@@ -258,6 +260,7 @@ interface TLStudioRuntimeContract {
     config(): Promise<{ providers: TLStudioDynamicRecord[] }>;
     upsert(providerID: string, input?: TLStudioDynamicRecord): Promise<any>;
     remove(providerID: string): Promise<any>;
+    discover(input?: TLStudioDynamicRecord): Promise<TLStudioDynamicRecord>;
   };
   tools: { registry(): Promise<TLStudioToolRegistry> };
   plugins: {

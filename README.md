@@ -4,7 +4,7 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
-<p align="center"><strong>Development branch: 0.4.0-alpha.3</strong> · Stable release: v0.3.0.</p>
+<p align="center"><strong>Development branch: 0.4.0-alpha.4</strong> · Stable release: v0.3.0.</p>
 
 <p align="center">
   A fast local development workspace with AI built in.
@@ -57,8 +57,8 @@ The release already includes the pinned local agent runtime.
 - **Standalone local development workspace** — edit files, search the project, run commands, preview the app, and work with an AI agent in one browser workspace.
 - **Local project picker** — open project folders with the operating-system folder picker.
 - **Agent & model selection** — switch agents and available provider models from the composer.
-- **Custom providers** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints with your own credentials.
-- **Plugins & MCP** — add arbitrary stdio MCP servers from Settings without editing config files; TL Studio discovers their tools dynamically, namespaces them, routes them through the native Tool Registry and permission engine, and exposes enabled tools to the native Agent.
+- **Custom providers + model discovery** — connect OpenAI-compatible, OpenAI Responses, and Anthropic-compatible endpoints, test/discover models before saving, search and select multiple models, refresh the catalog, and keep manual model IDs as a fallback.
+- **Plugins & MCP** — add arbitrary stdio MCP servers and support version-pinned bundled plugins through the same Plugin Manager; TL Studio discovers tools dynamically, namespaces them, routes them through the native Tool Registry and permission engine, and exposes enabled tools to the native Agent.
 - **File attachments** — attach images, PDFs, and text/code files; multi-select, drag/drop, and clipboard paste are supported.
 - **TL Studio-native Agent execution** — supported custom providers now run through a TL Studio-owned model/tool/model loop with cancellation, loop guards, semantic persistence, and live events; hosted Kilo remains available through the compatibility adapter.
 - **TL Studio Tool Executor** — core coding tools for project file read/list/write/edit, project search, and terminal commands execute through TL Studio-owned handlers with project confinement, validation, cancellation, and permission enforcement.
@@ -102,6 +102,18 @@ mcp.<plugin-id>.<tool-name>
 
 This is a generic plugin path, not a Graphify-specific integration. Another stdio MCP server can be added through the same screen without adding a custom Agent adapter.
 
+### Bundled plugins
+
+Settings separates **Included with TL Studio** from **Added by you**. Bundled plugins are version-pinned sidecar MCP executables resolved from the TL Studio release package, not from the user's PATH. They still use the same MCP Client Manager, Tool Registry, Permission Engine, Native Tool Executor, and Native Agent path as user-added plugins.
+
+The bundled-plugin manifest is embedded in the launcher and also consumed by release engineering. Every third-party bundled plugin must declare all supported TL Studio platform artifacts, exact SHA-256 checksums, and a repository-retained license file before packaging succeeds. The current `0.4.0-alpha.4` manifest intentionally contains no third-party bundled plugin yet; the infrastructure is ready without increasing the release size or silently adding a new trusted executable.
+
+### Model discovery behavior
+
+For OpenAI-compatible and OpenAI Responses endpoints, TL Studio first tries the provider's `/models` endpoint. Anthropic Messages uses a provider-specific paginated model-list adapter. Discovery occurs before save, API keys stay transient or in the credential vault, large catalogs are searchable, and only selected models enter `providers.json`.
+
+A last-good catalog cache is kept for saved providers. Temporary network/rate-limit failures can display that stale catalog with a warning; authentication failures remain explicit and are never hidden by cache fallback. Models already configured by the user are not silently deleted when a later refresh stops returning them.
+
 ### Graphify example
 
 If Graphify and its MCP executable are already installed, a project-scoped plugin can use:
@@ -123,8 +135,14 @@ Browser workspace
     ▼
 TL Studio launcher (Go)
     │
-    ├─ provider/model registry + credential vault
+    ├─ provider registry + credential vault
+    │    └─ Model Discovery Service
+    │         ├─ generic OpenAI-compatible adapter
+    │         └─ provider-specific edge adapters
+    │
     ├─ Plugin Manager
+    │    ├─ bundled executable resolver
+    │    ├─ user command resolver
     │    └─ MCP Client Manager
     │         ├─ stdio MCP servers
     │         └─ future transports behind the MCP client interface
@@ -171,6 +189,10 @@ tl-studio/
 ├─ tl-studio[.exe]
 ├─ bin/
 │  └─ kilo[.exe]
+├─ plugins/                 # present when the release includes bundled plugins
+│  └─ <plugin-id>/
+│     ├─ bin/
+│     └─ LICENSE
 ├─ LICENSE
 ├─ THIRD_PARTY_NOTICES.md
 └─ third_party/

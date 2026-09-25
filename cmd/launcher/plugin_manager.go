@@ -57,11 +57,13 @@ type pluginStore struct {
 
 type pluginView struct {
 	pluginConfig
-	Status          string            `json:"status"`
-	Error           string            `json:"error,omitempty"`
-	DiscoveredTools int               `json:"discoveredTools"`
-	Resources       int               `json:"resources"`
-	Tools           []string          `json:"tools,omitempty"`
+	Origin          string                 `json:"origin"`
+	Version         string                 `json:"version,omitempty"`
+	Status          string                 `json:"status"`
+	Error           string                 `json:"error,omitempty"`
+	DiscoveredTools int                    `json:"discoveredTools"`
+	Resources       int                    `json:"resources"`
+	Tools           []string               `json:"tools,omitempty"`
 	Integration     *pluginIntegrationView `json:"integration,omitempty"`
 }
 
@@ -217,9 +219,15 @@ func normalizePluginConfig(input pluginConfig, currentProject string) (pluginCon
 	}
 	sort.Slice(env, func(i, j int) bool { return env[i].Name < env[j].Name })
 	input.Environment = env
-	if input.Metadata == nil {
-		input.Metadata = map[string]string{}
+	metadata := map[string]string{}
+	for key, value := range input.Metadata {
+		switch strings.ToLower(strings.TrimSpace(key)) {
+		case "origin", "bundledversion", "license", "upstream":
+			continue
+		}
+		metadata[key] = value
 	}
+	input.Metadata = metadata
 	return input, nil
 }
 
@@ -514,12 +522,12 @@ func (m *pluginManager) Close() {
 func (m *pluginManager) SwitchProject(project string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// Global MCP servers are launched with the active project as their working
+	// directory too. Restart every client on project switch so no plugin process
+	// accidentally keeps operating from the previous project.
 	for key, client := range m.clients {
-		config := client.Config()
-		if config.Scope == "project" && !pluginMatchesProject(config, project) {
-			client.Close()
-			delete(m.clients, key)
-		}
+		client.Close()
+		delete(m.clients, key)
 	}
 }
 
@@ -567,6 +575,9 @@ func (m *pluginManager) Upsert(project string, request pluginUpsertRequest) (plu
 	if err != nil {
 		return pluginView{}, err
 	}
+	if _, reserved := bundledPluginManifestByID(config.ID); reserved {
+		return pluginView{}, errors.New("plugin ID is reserved by a bundled plugin")
+	}
 	previous, found, err := m.store.find(project, config.ID)
 	if err != nil {
 		return pluginView{}, err
@@ -595,6 +606,9 @@ func (m *pluginManager) Upsert(project string, request pluginUpsertRequest) (plu
 }
 
 func (m *pluginManager) Remove(project, id string) error {
+	if _, bundled := bundledPluginManifestByID(id); bundled {
+		return errors.New("bundled plugins cannot be removed")
+	}
 	config, found, err := m.store.remove(project, id)
 	if err != nil {
 		return err
@@ -613,6 +627,24 @@ func (m *pluginManager) Remove(project, id string) error {
 }
 
 func (m *pluginManager) SetEnabled(project, id string, enabled bool) (pluginView, error) {
+	if config, bundled, err := bundledPluginConfigByID(id); err != nil {
+		return pluginView{}, err
+	} else if bundled {
+		if enabled {
+			if err := validatePluginIntegrationStart(config, project); err != nil {
+				return m.viewConfig(project, config, false), err
+			}
+		}
+		if err := setBundledPluginEnabled(config.ID, enabled); err != nil {
+			return pluginView{}, err
+		}
+		config.Enabled = enabled
+		m.mu.Lock()
+		m.stopLocked(config)
+		m.mu.Unlock()
+		return m.viewConfig(project, config, true), nil
+	}
+
 	config, found, err := m.store.find(project, id)
 	if err != nil {
 		return pluginView{}, err
@@ -679,12 +711,18 @@ func (m *pluginManager) TestConfig(ctx context.Context, project string, request 
 }
 
 func (m *pluginManager) TestSaved(ctx context.Context, project, id string) (pluginView, error) {
-	config, found, err := m.store.find(project, id)
+	config, found, err := bundledPluginConfigByID(id)
 	if err != nil {
 		return pluginView{}, err
 	}
 	if !found {
-		return pluginView{}, os.ErrNotExist
+		config, found, err = m.store.find(project, id)
+		if err != nil {
+			return pluginView{}, err
+		}
+		if !found {
+			return pluginView{}, os.ErrNotExist
+		}
 	}
 	config.Enabled = true
 	env, err := m.configEnvironment(config)
@@ -711,7 +749,13 @@ func (m *pluginManager) TestSaved(ctx context.Context, project, id string) (plug
 }
 
 func (m *pluginManager) viewConfig(project string, config pluginConfig, start bool) pluginView {
-	view := pluginView{pluginConfig: config, Status: "Disabled", Integration: pluginIntegrationSnapshot(config, project)}
+	view := pluginView{
+		pluginConfig: config,
+		Origin: pluginOrigin(config),
+		Version: pluginVersion(config),
+		Status: "Disabled",
+		Integration: pluginIntegrationSnapshot(config, project),
+	}
 	if !config.Enabled {
 		return view
 	}
@@ -753,7 +797,7 @@ func (m *pluginManager) viewConfig(project string, config pluginConfig, start bo
 }
 
 func (m *pluginManager) List(project string, start bool) ([]pluginView, error) {
-	configs, err := m.store.list(project)
+	configs, err := m.configsForProject(project)
 	if err != nil {
 		return nil, err
 	}
@@ -765,6 +809,11 @@ func (m *pluginManager) List(project string, start bool) ([]pluginView, error) {
 }
 
 func (m *pluginManager) View(project, id string, start bool) (pluginView, error) {
+	if config, bundled, err := bundledPluginConfigByID(id); err != nil {
+		return pluginView{}, err
+	} else if bundled {
+		return m.viewConfig(project, config, start), nil
+	}
 	config, found, err := m.store.find(project, id)
 	if err != nil {
 		return pluginView{}, err
@@ -776,7 +825,7 @@ func (m *pluginManager) View(project, id string, start bool) (pluginView, error)
 }
 
 func (m *pluginManager) ToolDescriptors(project string) []toolDescriptor {
-	configs, err := m.store.list(project)
+	configs, err := m.configsForProject(project)
 	if err != nil {
 		return nil
 	}
@@ -797,7 +846,7 @@ func (m *pluginManager) ToolDescriptors(project string) []toolDescriptor {
 }
 
 func (m *pluginManager) ToolDefinitions(project string) []nativeModelToolDefinition {
-	configs, err := m.store.list(project)
+	configs, err := m.configsForProject(project)
 	if err != nil {
 		return nil
 	}
@@ -830,7 +879,7 @@ func (m *pluginManager) Execute(ctx context.Context, sessionID, project string, 
 	if !strings.HasPrefix(strings.TrimSpace(call.ID), "mcp.") {
 		return nativeToolResult{}, false
 	}
-	configs, err := m.store.list(project)
+	configs, err := m.configsForProject(project)
 	if err != nil {
 		return nativeToolResult{ToolID: call.ID, CallID: call.CallID, Error: err.Error()}, true
 	}
