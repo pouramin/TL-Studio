@@ -7,6 +7,7 @@ const { loadBrowserModule, readBrowserTypeScript } = require("./browser-source-h
 const source = loadBrowserModule("providers-ui.ts");
 const productSource = readBrowserTypeScript("product-ui.ts");
 const providerTsSource = readBrowserTypeScript("providers-ui.ts");
+const discoveryTsSource = readBrowserTypeScript("provider-discovery-ui.ts");
 
 const K = { __providersUiInstalled: false };
 const context = vm.createContext({
@@ -122,5 +123,8 @@ assert.match(hooks.validateDraft({ ...draft, providerID: "Bad ID" }), /Provider 
 assert.match(hooks.validateDraft({ ...draft, baseURL: "not-a-url" }), /Base URL/);
 assert.match(hooks.validateDraft({ ...draft, modelID: "" }), /Model ID/);
 assert.match(hooks.validateDraft({ ...draft, contextLimit: "12.5" }), /Context limit/);
+
+assert.equal(discoveryTsSource.includes('id="providerAssumeUnknownTools"'), true, "unknown tool capability must be an explicit UI choice");
+assert.equal(discoveryTsSource.includes('typeof model.toolCall === "boolean" ? model.toolCall : assumeUnknownTools.checked'), true, "unknown tool support must follow the explicit user setting");
 
 console.log("custom provider UI regressions: ok");
