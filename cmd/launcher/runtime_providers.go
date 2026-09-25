@@ -977,6 +977,10 @@ func registerRuntimeProviderRoutes(mux *http.ServeMux, manager *runtimeProviderM
 			writeProviderManagerError(w, err)
 			return
 		}
+		if err := removeProviderDiscoveryCache(id); err != nil {
+			writeProviderManagerError(w, err)
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]any{"removed": id})
 	})
 
