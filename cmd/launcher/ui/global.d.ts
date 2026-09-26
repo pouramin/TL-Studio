@@ -21,6 +21,7 @@ interface TLStudioModelRef {
 interface TLStudioModelOption extends TLStudioModelRef {
   name: string;
   providerName: string;
+  kind?: "router" | string;
 }
 
 interface TLStudioAgentOption {
@@ -261,6 +262,11 @@ interface TLStudioRuntimeContract {
     upsert(providerID: string, input?: TLStudioDynamicRecord): Promise<any>;
     remove(providerID: string): Promise<any>;
     discover(input?: TLStudioDynamicRecord): Promise<TLStudioDynamicRecord>;
+  };
+  decisionEngine: {
+    status(): Promise<TLStudioDynamicRecord>;
+    configure(engine: "off" | "jev"): Promise<TLStudioDynamicRecord>;
+    evaluate(input: TLStudioDynamicRecord): Promise<TLStudioDynamicRecord>;
   };
   tools: { registry(): Promise<TLStudioToolRegistry> };
   plugins: {
