@@ -65,10 +65,13 @@ import { K } from "./kernel";
       const modelID = clean(draft.modelID);
       const context = positiveInt(draft.contextLimit);
       const output = positiveInt(draft.outputLimit);
-      const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model: any) => model?.id && model.id !== modelID) : [];
+      const existingModels = Array.isArray(existing?.models) ? existing.models : [];
+      const previousModel = existingModels.find((model: any) => model?.id === modelID);
+      const previousModels = existingModels.filter((model: any) => model?.id && model.id !== modelID);
       const model = {
         id: modelID,
         name: clean(draft.modelName) || modelID,
+        ...(clean(previousModel?.kind) ? { kind: clean(previousModel.kind) } : {}),
         toolCall: draft.toolCall !== false,
         reasoning: draft.reasoning === true,
         ...(context ? { contextLimit: context } : {}),
