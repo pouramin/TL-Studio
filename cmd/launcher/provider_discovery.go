@@ -34,6 +34,7 @@ type providerDiscoveryRequest struct {
 type providerDiscoveredModel struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
+	Kind         string `json:"kind,omitempty"`
 	ToolCall     *bool  `json:"toolCall,omitempty"`
 	Reasoning    *bool  `json:"reasoning,omitempty"`
 	Vision       *bool  `json:"vision,omitempty"`
@@ -241,6 +242,25 @@ func providerDiscoveryString(record map[string]any, keys ...string) string {
 	return ""
 }
 
+func providerDiscoveryStringListContains(value any, candidates ...string) bool {
+	items, ok := value.([]any)
+	if !ok {
+		return false
+	}
+	for _, item := range items {
+		text, ok := item.(string)
+		if !ok {
+			continue
+		}
+		for _, candidate := range candidates {
+			if strings.EqualFold(strings.TrimSpace(text), candidate) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func providerDiscoveryContainsImage(value any) bool {
 	items, ok := value.([]any)
 	if !ok {
@@ -320,6 +340,10 @@ func normalizeProviderDiscoveredModel(record map[string]any) (providerDiscovered
 		[]string{"capabilities", "tools"},
 		[]string{"capabilities", "tool_use"},
 	)
+	if toolCall == nil && providerDiscoveryStringListContains(record["supported_parameters"], "tools", "tool_choice") {
+		value := true
+		toolCall = &value
+	}
 	reasoning := providerDiscoveryFirstBool(record,
 		[]string{"reasoning"},
 		[]string{"supportsReasoning"},
@@ -328,9 +352,19 @@ func normalizeProviderDiscoveredModel(record map[string]any) (providerDiscovered
 		[]string{"capabilities", "thinking"},
 		[]string{"thinking"},
 	)
+	if reasoning == nil && providerDiscoveryStringListContains(record["supported_parameters"], "reasoning", "reasoning_effort", "include_reasoning") {
+		value := true
+		reasoning = &value
+	}
+	kind := ""
+	if id == jevRouterModelID {
+		name = jevRouterDisplayName
+		kind = "router"
+	}
 	return providerDiscoveredModel{
 		ID:           id,
 		Name:         name,
+		Kind:         kind,
 		ToolCall:     toolCall,
 		Reasoning:    reasoning,
 		Vision:       providerDiscoveryVision(record),
