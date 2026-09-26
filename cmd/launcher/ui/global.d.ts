@@ -518,4 +518,5 @@ interface TLStudioKernel {
   __terminalInstalled?: boolean;
   __toolRegistryInstalled?: boolean;
   __pluginsInstalled?: boolean;
+  __jevUiInstalled?: boolean;
 }
