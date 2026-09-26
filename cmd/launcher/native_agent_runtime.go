@@ -178,6 +178,28 @@ func nativeToolSignature(call nativeModelToolCall) string {
 	return strings.TrimSpace(call.Name) + "\x00" + strings.TrimSpace(string(call.Arguments))
 }
 
+func nativeRoutedModelActivity(provider tlProviderDefinition, model tlProviderModel, response nativeModelResponse) []sessionActivityView {
+	routed := strings.TrimSpace(response.RoutedModel)
+	if model.Kind != "router" || routed == "" || routed == model.ID {
+		return []sessionActivityView{}
+	}
+	title := "Routed model"
+	if model.ID == jevRouterModelID {
+		title = "Routed by Jev"
+	}
+	return []sessionActivityView{{
+		Kind:   "model",
+		Status: "completed",
+		Title:  title,
+		Model:  &sessionModelRef{ProviderID: provider.ID, ID: routed},
+		Usage:  &response.Usage,
+		Metadata: map[string]any{
+			"routerModel": model.ID,
+			"source":      "provider-response",
+		},
+	}}
+}
+
 func nativeToolResultMessage(result nativeToolResult) string {
 	payload := map[string]any{
 		"ok":      result.Error == "",
@@ -248,7 +270,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				CreatedAt:   now,
 				CompletedAt: now,
 				Text:        strings.TrimSpace(response.Text),
-				Activities:  []sessionActivityView{},
+				Activities:  nativeRoutedModelActivity(provider, model, response),
 				Attachments: []sessionAttachmentView{},
 				Usage:       response.Usage,
 				Changes:     []sessionChangeView{},
@@ -283,7 +305,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			Model:       &sessionModelRef{ProviderID: provider.ID, ID: model.ID},
 			CreatedAt:   now,
 			Text:        strings.TrimSpace(response.Text),
-			Activities:  []sessionActivityView{},
+			Activities:  nativeRoutedModelActivity(provider, model, response),
 			Attachments: []sessionAttachmentView{},
 			Usage:       response.Usage,
 			Changes:     []sessionChangeView{},
