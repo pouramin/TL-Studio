@@ -144,6 +144,7 @@ assert.equal(jevTsSource.includes('const JEV_ROUTER_MODEL = "typesafe/jev-router
 assert.equal(jevTsSource.includes('const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"'), true, "Jev setup must use the official OpenRouter API");
 assert.equal(jevTsSource.includes('providers.find((provider: TLStudioDynamicRecord) => isOpenRouter(provider?.baseURL))'), true, "Jev setup must reuse an existing OpenRouter provider");
 assert.equal(jevTsSource.includes('Jev via OpenRouter (paid)'), true, "direct Jev Decision Engine must be clearly labeled paid");
+assert.equal(jevTsSource.includes('setAssumeUnknownTools?.(false)'), true, "Jev setup must not silently assume unknown tool support");
 assert.equal(jevTsSource.includes("typesafe/jev-1.13"), false, "normal Jev Router UI must not silently fall back to a paid direct model");
 assert.equal(jevTsSource.includes("~typesafe/jev-latest"), false, "normal Jev Router UI must not silently invoke the paid latest decision alias");
 
