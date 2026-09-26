@@ -4,7 +4,7 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
-<p align="center"><strong>Development branch: 0.4.0-alpha.4</strong> · Stable release: v0.3.0.</p>
+<p align="center"><strong>Development branch: 0.4.0-alpha.5</strong> · Stable release: v0.3.0.</p>
 
 <p align="center">
   A fast local development workspace with AI built in.
@@ -113,6 +113,22 @@ The bundled-plugin manifest is embedded in the launcher and also consumed by rel
 For OpenAI-compatible and OpenAI Responses endpoints, TL Studio first tries the provider's `/models` endpoint. Anthropic Messages uses a provider-specific paginated model-list adapter. Discovery occurs before save, API keys stay transient or in the credential vault, large catalogs are searchable, and only selected models enter `providers.json`.
 
 A last-good catalog cache is kept for saved providers. Temporary network/rate-limit failures can display that stale catalog with a warning; authentication failures remain explicit and are never hidden by cache fallback. Models already configured by the user are not silently deleted when a later refresh stops returning them.
+
+### TypeSafe Jev
+
+TL Studio supports **Jev Router** through the existing provider/model architecture rather than through a separate Agent backend. Open **Settings → Providers → TypeSafe Jev → Set up Jev Router**. If an OpenRouter provider already points at `https://openrouter.ai/api/v1`, TL Studio reuses that provider and its existing credential. Otherwise the normal provider form is prefilled for OpenRouter and the user supplies the key once.
+
+The generative router model is:
+
+```text
+typesafe/jev-router
+```
+
+It is discovered from OpenRouter's live model catalog, saved like any other selected model, marked as a `router`, and appears in the normal model selector. TL Studio does not hard-code the models that Jev Router may choose underneath. Existing streaming, system prompt, conversation-history, and tool-call behavior stays on the normal OpenAI-compatible native path. If the provider response identifies an actual routed model, TL Studio can surface that provider-returned model in session activity; it does not invent routing metadata.
+
+**Jev Router and Jev Decision models are different integrations.** Direct Jev decisions use OpenRouter's separate Decisions API and return typed probabilities instead of generated text. TL Studio therefore exposes a small provider-independent Decision Engine boundary at `/local/decision-engine*`. Its default is **Off**. Enabling **Jev via OpenRouter (paid)** requires an already configured OpenRouter credential and does not enable any automatic model routing, tool routing, permission scoring, continuation, or output-verification calls. Selecting Jev Router never calls the paid Decisions API and never substitutes `typesafe/jev-1.13` or `~typesafe/jev-latest`.
+
+Decision Engine output is probabilistic. It may later provide a signal for routing or verification, but deterministic TL Studio security and permission rules remain authoritative. Direct System One input is currently text/JSON state; TL Studio does not claim multimodal Decision Engine support. The normal native Agent attachment path is also not expanded by this integration.
 
 ### Graphify example
 
