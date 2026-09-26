@@ -49,6 +49,7 @@ import { K } from "./kernel";
         .map((model: any) => ({
           id: clean(model.id),
           name: clean(model.name) || clean(model.id),
+          ...(clean(model.kind) ? { kind: clean(model.kind) } : {}),
           toolCall: model.toolCall !== false,
           reasoning: model.reasoning === true,
           ...(positiveInt(model.contextLimit) ? { contextLimit: positiveInt(model.contextLimit) } : {}),
@@ -64,10 +65,13 @@ import { K } from "./kernel";
       const modelID = clean(draft.modelID);
       const context = positiveInt(draft.contextLimit);
       const output = positiveInt(draft.outputLimit);
-      const previousModels = Array.isArray(existing?.models) ? existing.models.filter((model: any) => model?.id && model.id !== modelID) : [];
+      const existingModels = Array.isArray(existing?.models) ? existing.models : [];
+      const previousModel = existingModels.find((model: any) => model?.id === modelID);
+      const previousModels = existingModels.filter((model: any) => model?.id && model.id !== modelID);
       const model = {
         id: modelID,
         name: clean(draft.modelName) || modelID,
+        ...(clean(previousModel?.kind) ? { kind: clean(previousModel.kind) } : {}),
         toolCall: draft.toolCall !== false,
         reasoning: draft.reasoning === true,
         ...(context ? { contextLimit: context } : {}),
@@ -259,6 +263,8 @@ import { K } from "./kernel";
     els.form.scrollIntoView?.({ block: "nearest" });
   };
 
+  K.__providersUi.openProvider = fillForm;
+
   const modelCount = (provider: any) => Array.isArray(provider?.models) ? provider.models.length : 0;
   const renderList = () => {
     els.list.textContent = "";
@@ -316,6 +322,8 @@ import { K } from "./kernel";
       notice(`Could not load provider settings: ${error instanceof Error ? error.message : String(error)}`, true);
     }
   };
+
+  K.__providersUi.reload = load;
 
   const editEntry = (entry: any) => {
     const first = Array.isArray(entry?.models) && entry.models.length ? entry.models[0] : {};

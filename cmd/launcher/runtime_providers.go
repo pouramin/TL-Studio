@@ -39,6 +39,7 @@ var runtimePackageProtocols = func() map[string]string {
 type tlProviderModel struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
+	Kind         string `json:"kind,omitempty"`
 	ToolCall     bool   `json:"toolCall"`
 	Reasoning    bool   `json:"reasoning"`
 	ContextLimit int    `json:"contextLimit,omitempty"`
@@ -281,6 +282,10 @@ func normalizeProviderDefinition(input tlProviderDefinition) (tlProviderDefiniti
 	for _, model := range input.Models {
 		model.ID = strings.TrimSpace(model.ID)
 		model.Name = strings.TrimSpace(model.Name)
+		model.Kind = strings.ToLower(strings.TrimSpace(model.Kind))
+		if model.Kind != "" && model.Kind != "router" {
+			return tlProviderDefinition{}, fmt.Errorf("unsupported model kind %q", model.Kind)
+		}
 		if model.ID == "" {
 			return tlProviderDefinition{}, errors.New("model ID is required")
 		}
@@ -678,6 +683,7 @@ func (m *runtimeProviderManager) ensureBootstrapped(ctx context.Context) error {
 
 type catalogModel struct {
 	Name    string `json:"name"`
+	Kind    string `json:"kind,omitempty"`
 	Enabled *bool  `json:"enabled,omitempty"`
 	Variant any    `json:"variant,omitempty"`
 }
@@ -814,6 +820,26 @@ func (m *runtimeProviderManager) catalog(ctx context.Context, directory string) 
 	for _, rawProvider := range upstream.All {
 		if provider, ok := normalizeCatalogProvider(rawProvider, managed); ok {
 			result.All = append(result.All, provider)
+		}
+	}
+	managedByID := make(map[string]tlProviderDefinition, len(managedDefinitions))
+	for _, provider := range managedDefinitions {
+		managedByID[provider.ID] = provider
+	}
+	for providerIndex := range result.All {
+		definition, ok := managedByID[result.All[providerIndex].ID]
+		if !ok {
+			continue
+		}
+		for _, model := range definition.Models {
+			catalogModel, exists := result.All[providerIndex].Models[model.ID]
+			if !exists {
+				continue
+			}
+			if model.Kind != "" {
+				catalogModel.Kind = model.Kind
+			}
+			result.All[providerIndex].Models[model.ID] = catalogModel
 		}
 	}
 	sort.Slice(result.All, func(i, j int) bool {

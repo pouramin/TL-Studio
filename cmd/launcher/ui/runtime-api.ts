@@ -106,6 +106,18 @@ import { K } from "./kernel";
       })),
     },
 
+    decisionEngine: {
+      status: () => K.request("/local/decision-engine"),
+      configure: (engine: "off" | "jev") => K.request("/local/decision-engine", {
+        method: "PUT",
+        ...body({ engine }),
+      }),
+      evaluate: (input: TLStudioDynamicRecord) => K.request("/local/decision-engine/evaluate", {
+        method: "POST",
+        ...body(input),
+      }),
+    },
+
     tools: {
       registry: async () => {
         const payload = await K.request<any>("/local/tools");

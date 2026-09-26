@@ -8,6 +8,7 @@ const source = loadBrowserModule("providers-ui.ts");
 const productSource = readBrowserTypeScript("product-ui.ts");
 const providerTsSource = readBrowserTypeScript("providers-ui.ts");
 const discoveryTsSource = readBrowserTypeScript("provider-discovery-ui.ts");
+const jevTsSource = readBrowserTypeScript("jev-ui.ts");
 
 const K = { __providersUiInstalled: false };
 const context = vm.createContext({
@@ -100,6 +101,18 @@ assert.equal(discoveredDefinition.models[0].outputLimit, 32000);
 assert.equal(discoveredDefinition.models[1].toolCall, true, "unknown discovered tool support keeps the existing optimistic manual default");
 assert.equal(discoveredDefinition.models[1].reasoning, false);
 
+const routerDefinition = hooks.buildProviderDefinition({
+  ...draft,
+  modelID: "",
+  modelName: "",
+  contextLimit: "",
+  outputLimit: "",
+  models: [
+    { id: "typesafe/jev-router", name: "Jev Router", kind: "router", toolCall: true, reasoning: true },
+  ],
+}, existing);
+assert.equal(routerDefinition.models[0].kind, "router", "router metadata must persist into TL Studio provider configuration");
+
 const entries = hooks.customProviderEntries({
   providers: [
     definition,
@@ -126,5 +139,13 @@ assert.match(hooks.validateDraft({ ...draft, contextLimit: "12.5" }), /Context l
 
 assert.equal(discoveryTsSource.includes('id="providerAssumeUnknownTools"'), true, "unknown tool capability must be an explicit UI choice");
 assert.equal(discoveryTsSource.includes('typeof model.toolCall === "boolean" ? model.toolCall : assumeUnknownTools.checked'), true, "unknown tool support must follow the explicit user setting");
+assert.equal(discoveryTsSource.includes('providersUI.discoverySelection.discoverModel'), true, "integrations must reuse the generic discovery UI rather than bypass it");
+assert.equal(jevTsSource.includes('const JEV_ROUTER_MODEL = "typesafe/jev-router"'), true, "Jev setup must use the exact free router model ID");
+assert.equal(jevTsSource.includes('const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"'), true, "Jev setup must use the official OpenRouter API");
+assert.equal(jevTsSource.includes('providers.find((provider: TLStudioDynamicRecord) => isOpenRouter(provider?.baseURL))'), true, "Jev setup must reuse an existing OpenRouter provider");
+assert.equal(jevTsSource.includes('Jev via OpenRouter (paid)'), true, "direct Jev Decision Engine must be clearly labeled paid");
+assert.equal(jevTsSource.includes('setAssumeUnknownTools?.(false)'), true, "Jev setup must not silently assume unknown tool support");
+assert.equal(jevTsSource.includes("typesafe/jev-1.13"), false, "normal Jev Router UI must not silently fall back to a paid direct model");
+assert.equal(jevTsSource.includes("~typesafe/jev-latest"), false, "normal Jev Router UI must not silently invoke the paid latest decision alias");
 
 console.log("custom provider UI regressions: ok");

@@ -49,6 +49,7 @@ type nativeModelResponse struct {
 	Text         string
 	ToolCalls    []nativeModelToolCall
 	FinishReason string
+	RoutedModel  string
 	Usage        sessionUsage
 }
 
@@ -273,6 +274,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 			continue
 		}
 		var event struct {
+			Model   string `json:"model"`
 			Choices []struct {
 				Delta struct {
 					Content   string `json:"content"`
@@ -297,6 +299,9 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 		}
 		result.Usage.Input += event.Usage.PromptTokens
 		result.Usage.Output += event.Usage.CompletionTokens
+		if strings.TrimSpace(event.Model) != "" {
+			result.RoutedModel = strings.TrimSpace(event.Model)
+		}
 		for _, choice := range event.Choices {
 			if choice.Delta.Content != "" {
 				result.Text += choice.Delta.Content
@@ -346,6 +351,7 @@ func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, on
 		return nativeModelResponse{}, err
 	}
 	var payload struct {
+		Model   string `json:"model"`
 		Choices []struct {
 			Message struct {
 				Content   string `json:"content"`
@@ -367,7 +373,10 @@ func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, on
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nativeModelResponse{}, fmt.Errorf("decode OpenAI-compatible response: %w", err)
 	}
-	result := nativeModelResponse{Usage: sessionUsage{Input: payload.Usage.PromptTokens, Output: payload.Usage.CompletionTokens}}
+	result := nativeModelResponse{
+		RoutedModel: strings.TrimSpace(payload.Model),
+		Usage: sessionUsage{Input: payload.Usage.PromptTokens, Output: payload.Usage.CompletionTokens},
+	}
 	if len(payload.Choices) == 0 {
 		return result, errors.New("model response contained no choices")
 	}
@@ -516,6 +525,9 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 		case "response.completed":
 			responseValue, _ := event["response"].(map[string]any)
 			result.FinishReason = "completed"
+			if routed := sessionString(responseValue["model"]); routed != "" {
+				result.RoutedModel = routed
+			}
 			if usage, _ := responseValue["usage"].(map[string]any); usage != nil {
 				result.Usage.Input = int64(intFromAny(usage["input_tokens"]))
 				result.Usage.Output = int64(intFromAny(usage["output_tokens"]))
@@ -547,7 +559,7 @@ func parseOpenAIResponsesJSON(reader io.Reader, tools []nativeModelToolDefinitio
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nativeModelResponse{}, fmt.Errorf("decode OpenAI Responses payload: %w", err)
 	}
-	result := nativeModelResponse{FinishReason: "completed"}
+	result := nativeModelResponse{FinishReason: "completed", RoutedModel: sessionString(payload["model"])}
 	if text, _ := payload["output_text"].(string); text != "" {
 		result.Text = text
 		if onTextDelta != nil {
