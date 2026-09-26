@@ -188,6 +188,24 @@ Discovered catalogs and configured models are deliberately separate concepts. Th
 
 API keys are deliberately excluded from TL Studio's provider registry and browser storage. TL Studio now owns custom-provider credentials in a separate local credential vault. Windows uses user-scoped DPAPI; macOS uses Keychain; Linux uses Secret Service when available; environments without a usable keyring use an AES-GCM encrypted private-file fallback with a separate `0600` local master key. The launcher restores owned credentials into the active runtime's execution store when needed. Existing legacy runtime-only credentials cannot be reverse-read or silently imported because the engine does not expose their plaintext; saving that provider again moves the credential under TL Studio ownership.
 
+### Jev Router and Decision Engine
+
+TypeSafe Jev is integrated at two different architectural boundaries.
+
+**Jev Router** is a normal generative model from TL Studio's point of view. The model ID is `typesafe/jev-router` and the provider connection is the normal OpenRouter-compatible endpoint at `https://openrouter.ai/api/v1`. TL Studio does not introduce an OpenRouter-specific Agent implementation. An existing OpenRouter provider definition and credential are reused when present; otherwise the standard provider form is used. The discovered model is tagged with `kind: "router"`, but its underlying routed models are never hard-coded.
+
+The native OpenAI-compatible client preserves its existing streaming/messages/tools contract. It additionally records the provider-returned top-level model identifier when available. Router models can project that value as semantic `kind: "model"` activity. This is observability only; no routed model is inferred when the provider does not return one.
+
+Direct Jev System One models are not chat models and therefore do not enter `nativeModelClient`. TL Studio owns a small provider-independent `decisionEngine` interface with a Jev/OpenRouter implementation behind:
+
+- `GET /local/decision-engine`
+- `PUT /local/decision-engine`
+- `POST /local/decision-engine/evaluate`
+
+The persisted Decision Engine setting defaults to `off`. Enabling Jev is explicit and reuses the API key from an existing official OpenRouter provider. The Jev implementation targets the OpenRouter Decisions API and uses `~typesafe/jev-latest` by default. This direct path is paid and is never invoked merely because the user selected Jev Router. The current product has no automatic Decision Engine hooks in model routing, tool routing, permission decisions, loop continuation, or output verification.
+
+Decision answers normalize Choice, Score, and Noul results plus probabilities/confidence/usage. They are probabilistic signals, not security facts. The existing deterministic Permission Engine remains the authoritative boundary and is intentionally not replaced or bypassed by Jev.
+
 Semantic session persistence is now TL Studio-owned. The runtime remains the active execution binding for resumable Agent work, while TL Studio retains its own semantic history independently. Permission request generation and enforcement still happen in the runtime, but permission policy and remembered approval semantics are owned by TL Studio as described below.
 
 ## Plugin and MCP ownership
