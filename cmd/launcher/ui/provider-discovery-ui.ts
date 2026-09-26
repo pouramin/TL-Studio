@@ -265,7 +265,11 @@ import { K } from "./kernel";
       }));
   };
 
-  providersUI.discoverySelection = { modelsForSave, reset };
+  providersUI.discoverySelection = {
+    modelsForSave,
+    reset,
+    setAssumeUnknownTools: (value: boolean) => { assumeUnknownTools.checked = value; },
+  };
 
   const discover = async (preferredModelID = "") => {
     const protocol = clean(protocolInput.value);
