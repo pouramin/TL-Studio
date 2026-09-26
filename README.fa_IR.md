@@ -140,7 +140,7 @@ Settings
 typesafe/jev-router
 ```
 
-این مدل از Catalog زنده‌ی OpenRouter کشف می‌شود، در Provider Registry مثل بقیه‌ی Modelها ذخیره می‌شود و با metadata نوع `router` در Model Selector عادی ظاهر می‌شود. مدل‌های زیرین انتخاب‌شده توسط Jev در کد TL Studio هاردکد نمی‌شوند. Streaming، System Prompt، Conversation History و Tool Calling از همان مسیر OpenAI-compatible موجود استفاده می‌کنند. فقط اگر خود Provider مدل Routeشده را در Response برگرداند، TL Studio آن metadata را نمایش می‌دهد.
+این مدل از Catalog زنده‌ی OpenRouter کشف می‌شود، در Provider Registry مثل بقیه‌ی Modelها ذخیره می‌شود و با metadata نوع `router` در Model Selector عادی ظاهر می‌شود. در تاریخ `2026-09-26`، OpenRouter هزینه‌ی Prompt و Completion این Router را صفر اعلام می‌کند؛ TL Studio این وضعیت بیرونی را دائمی فرض نمی‌کند و «همیشه رایگان» را در منطق محصول هاردکد نمی‌کند. مدل‌های زیرین انتخاب‌شده توسط Jev در کد TL Studio هاردکد نمی‌شوند. Streaming، System Prompt، Conversation History و Tool Calling از همان مسیر OpenAI-compatible موجود استفاده می‌کنند. فقط اگر خود Provider مدل Routeشده را در Response برگرداند، TL Studio آن metadata را نمایش می‌دهد.
 
 Jev Router با Jev Decision Model یکی نیست. Decisionهای مستقیم از Endpoint جداگانه‌ی OpenRouter استفاده می‌کنند و خروجی‌شان typed probability است، نه متن تولیدی. برای همین یک abstraction کوچک و مستقل از Provider با نام Decision Engine اضافه شده است. مقدار پیش‌فرض آن **Off** است. فعال‌کردن گزینه‌ی **Jev via OpenRouter (paid)** فقط با Credential موجود OpenRouter ممکن است و به‌تنهایی هیچ Model Routing، Tool Routing، Permission Scoring، Agent Continuation یا Output Verification خودکاری را فعال نمی‌کند.
 
