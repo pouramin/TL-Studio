@@ -272,14 +272,14 @@ import { K } from "./kernel";
     const baseURL = clean(baseURLInput.value);
     if (!baseURL) {
       setStatus("Enter a Base URL first.", "error");
-      return;
+      return false;
     }
     try {
       const parsed = new URL(baseURL);
       if (!/^https?:$/.test(parsed.protocol)) throw new Error();
     } catch {
       setStatus("Enter a valid http(s) Base URL first.", "error");
-      return;
+      return false;
     }
 
     const providerID = clean(providerIDInput.value);
@@ -313,13 +313,19 @@ import { K } from "./kernel";
       const detail = stale
         ? `Showing the last successful catalog${timestamp ? ` from ${timestamp}` : ""}.`
         : `Discovered ${discovered.length} model${discovered.length === 1 ? "" : "s"}.`;
-      setStatus(result?.warning ? `${detail} ${result.warning}` : detail, stale ? "warn" : "");
+      const preferredFound = !preferredModelID || selectedIDs.has(preferredModelID);
+      setStatus(preferredModelID && !preferredFound
+        ? `${detail} Requested model ${preferredModelID} was not returned by the provider.`
+        : (result?.warning ? `${detail} ${result.warning}` : detail),
+        preferredModelID && !preferredFound ? "warn" : (stale ? "warn" : ""));
       discoverButton.textContent = "Refresh Models";
+      return preferredFound;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setStatus(message || "Model discovery failed.", "error");
       if (!catalog.length) catalogElement.classList.add("hidden");
       discoverButton.textContent = catalog.length ? "Refresh Models" : "Test / Discover Models";
+      return false;
     } finally {
       discoverButton.disabled = false;
     }
