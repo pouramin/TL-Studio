@@ -415,10 +415,25 @@ type decisionEngineService struct {
 	client    *http.Client
 }
 
+func newDecisionEngineHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: decisionEngineRequestTimeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return errors.New("too many Decision API redirects")
+			}
+			if len(via) > 0 && !sameOriginURL(via[0].URL, req.URL) {
+				return http.ErrUseLastResponse
+			}
+			return nil
+		},
+	}
+}
+
 func newDecisionEngineService(providers *runtimeProviderManager) *decisionEngineService {
 	return &decisionEngineService{
 		providers: providers,
-		client:    &http.Client{Timeout: decisionEngineRequestTimeout},
+		client:    newDecisionEngineHTTPClient(),
 	}
 }
 
