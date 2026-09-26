@@ -161,6 +161,10 @@ The launcher translates those definitions to the currently bundled engine intern
 
 Model discovery through `POST /runtime/providers/discover` is implemented by TL Studio itself. Generic OpenAI-compatible listing and provider-specific discovery adapters must not be translated into Kilo configuration or depend on Kilo's provider catalog. Only the selected configured model definitions are synchronized to the compatibility runtime.
 
+Jev Router support is also not a Kilo-specific integration. `typesafe/jev-router` is configured through the existing TL Studio OpenAI-compatible provider contract and may carry TL Studio metadata identifying it as a router. The normal native Agent sends that exact model ID through the configured OpenRouter provider; selecting it must not invoke a direct Jev decision model as a fallback.
+
+The optional direct Jev Decision Engine is entirely outside the Kilo compatibility contract. Its `/local/decision-engine*` routes, explicit default-off state, OpenRouter credential reuse, and structured Choice/Score/Noul responses are TL Studio-owned. Decision output is not permission authority and must not be translated into Kilo permission rules or Kilo provider configuration.
+
 Credentials remain intentionally excluded from `providers.json` and browser storage. Custom-provider API keys are now owned by TL Studio's credential vault and synchronized into Kilo's auth store only as an execution copy. Kilo's existing pre-migration secrets are not reverse-readable, so a legacy provider keeps working through the runtime store until the user saves a credential through TL Studio. Hosted Kilo OAuth remains an engine-specific account integration behind the hosted-provider adapter rather than part of the custom-provider API-key vault.
 
 ## Hosted provider mapping
