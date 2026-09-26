@@ -82,6 +82,7 @@ import { K } from "./kernel";
 
   const openExistingOpenRouter = async (provider: TLStudioDynamicRecord) => {
     providersUI.discoverySelection?.reset?.();
+    providersUI.discoverySelection?.setAssumeUnknownTools?.(false);
     const first = Array.isArray(provider?.models) && provider.models.length ? provider.models[0] : {};
     providersUI.openProvider?.({
       providerID: provider.id,
@@ -109,6 +110,7 @@ import { K } from "./kernel";
 
   const openNewOpenRouter = (providers: TLStudioDynamicRecord[]) => {
     providersUI.discoverySelection?.reset?.();
+    providersUI.discoverySelection?.setAssumeUnknownTools?.(false);
     providersUI.openProvider?.({
       providerID: nextProviderID(providers),
       name: "TypeSafe via OpenRouter",
