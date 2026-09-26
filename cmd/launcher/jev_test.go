@@ -42,6 +42,29 @@ func TestJevRouterDiscoveryMetadataUsesProviderCapabilities(t *testing.T) {
 	}
 }
 
+func TestJevRouterRegistersAndResolvesThroughExistingProviderRegistry(t *testing.T) {
+	stateDir := t.TempDir()
+	store := newProviderRegistryStore(filepath.Join(stateDir, "providers.json"))
+	if err := store.put(tlProviderDefinition{
+		ID: "openrouter", Name: "OpenRouter", Protocol: "openai-compatible", BaseURL: openRouterBaseURL,
+		Models: []tlProviderModel{{ID: jevRouterModelID, Name: jevRouterDisplayName, Kind: "router", ToolCall: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	credentials := newMemoryProviderCredentialStore()
+	if err := credentials.Put("openrouter", "shared-key"); err != nil {
+		t.Fatal(err)
+	}
+	manager := &runtimeProviderManager{store: store, credentials: credentials}
+	provider, model, key, err := manager.resolveNativeModel("openrouter", jevRouterModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider.BaseURL != openRouterBaseURL || model.ID != jevRouterModelID || model.Kind != "router" || key != "shared-key" {
+		t.Fatalf("unexpected Jev Router resolution: provider=%#v model=%#v key=%q", provider, model, key)
+	}
+}
+
 func TestJevRouterNativeRequestUsesExactFreeRouterModel(t *testing.T) {
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -115,6 +138,19 @@ func TestJevRouterProviderErrorsRemainErrors(t *testing.T) {
 	}, nil)
 	if err == nil || !strings.Contains(err.Error(), "503") {
 		t.Fatalf("expected normal provider error without runtime crash, got %v", err)
+	}
+}
+
+func TestOpenRouterDecisionEndpointIsSeparateFromChatAPI(t *testing.T) {
+	endpoint, err := openRouterDecisionEndpoint(openRouterBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if endpoint != "https://openrouter.ai/api/alpha/decisions" {
+		t.Fatalf("unexpected decision endpoint %q", endpoint)
+	}
+	if isOpenRouterBaseURL("https://example.com/api/v1") {
+		t.Fatal("non-OpenRouter endpoints must not be treated as the shared OpenRouter credential source")
 	}
 }
 
