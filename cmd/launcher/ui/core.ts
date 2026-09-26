@@ -76,6 +76,7 @@ import { K } from "./kernel";
           id: String(id),
           name: model?.name || String(id),
           providerName: provider.name || provider.id,
+          ...(model?.kind ? { kind: String(model.kind) } : {}),
           ...(model?.variant ? { variant: model.variant } : {}),
         });
       }
@@ -157,8 +158,10 @@ import { K } from "./kernel";
       }
       const option = document.createElement("option");
       option.value = K.modelValue(model);
-      option.textContent = model.name || model.id;
-      option.title = `${model.providerID}/${model.id}`;
+      option.textContent = model.kind === "router" ? `${model.name || model.id} · Router` : (model.name || model.id);
+      option.title = model.kind === "router"
+        ? `${model.providerName || model.providerID} · Router · ${model.id}`
+        : `${model.providerID}/${model.id}`;
       group!.appendChild(option);
     }
     const values = [...select.querySelectorAll("option")].map((option) => option.value);
