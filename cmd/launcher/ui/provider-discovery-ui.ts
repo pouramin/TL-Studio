@@ -116,6 +116,7 @@ import { K } from "./kernel";
   const normalizeExistingModel = (model: TLStudioDynamicRecord) => ({
     id: clean(model?.id),
     name: clean(model?.name) || clean(model?.id),
+    ...(clean(model?.kind) ? { kind: clean(model.kind) } : {}),
     toolCall: model?.toolCall !== false,
     reasoning: model?.reasoning === true,
     ...(Number(model?.contextLimit) > 0 ? { contextLimit: Number(model.contextLimit) } : {}),
@@ -204,6 +205,7 @@ import { K } from "./kernel";
       meta.className = "provider-model-meta";
       const chips = [
         model.unavailable ? "Not returned now" : "",
+        model.kind === "router" ? "Router" : "",
         formatTokenLimit(model.contextLimit, "ctx"),
         formatTokenLimit(model.outputLimit, "out"),
         boolLabel(model.toolCall, "Tools", "No tools", "Tools ?"),
@@ -255,6 +257,7 @@ import { K } from "./kernel";
       .map((model) => ({
         id: model.id,
         name: model.name || model.id,
+        ...(clean(model.kind) ? { kind: clean(model.kind) } : {}),
         toolCall: typeof model.toolCall === "boolean" ? model.toolCall : assumeUnknownTools.checked,
         reasoning: model.reasoning === true,
         ...(Number(model.contextLimit) > 0 ? { contextLimit: Number(model.contextLimit) } : {}),
@@ -264,7 +267,7 @@ import { K } from "./kernel";
 
   providersUI.discoverySelection = { modelsForSave, reset };
 
-  const discover = async () => {
+  const discover = async (preferredModelID = "") => {
     const protocol = clean(protocolInput.value);
     const baseURL = clean(baseURLInput.value);
     if (!baseURL) {
@@ -299,6 +302,7 @@ import { K } from "./kernel";
       const existingModels = Array.isArray(existing?.models) ? existing.models : [];
       catalog = mergeCatalog(discovered, existingModels);
       selectedIDs = new Set(existingModels.map((model: TLStudioDynamicRecord) => clean(model?.id)).filter(Boolean));
+      if (preferredModelID && catalog.some((model) => model.id === preferredModelID)) selectedIDs.add(preferredModelID);
       if (!existingModels.length && catalog.length === 1) selectedIDs.add(catalog[0].id);
       searchInput.value = "";
       lastConnectionKey = key;
@@ -321,7 +325,8 @@ import { K } from "./kernel";
     }
   };
 
-  discoverButton.addEventListener("click", discover);
+  providersUI.discoverySelection.discoverModel = (modelID: string) => discover(clean(modelID));
+  discoverButton.addEventListener("click", () => { void discover(); });
   searchInput.addEventListener("input", render);
   selectVisibleButton.addEventListener("click", () => {
     for (const model of visibleModels().slice(0, 100)) selectedIDs.add(model.id);
