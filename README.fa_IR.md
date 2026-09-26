@@ -4,7 +4,7 @@
   <img src="./media/tl-studio-logo.svg" width="360" alt="TL Studio">
 </p>
 
-<p align="center"><strong>Development branch: 0.4.0-alpha.4</strong> · نسخه Stable: v0.3.0.</p>
+<p align="center"><strong>Development branch: 0.4.0-alpha.5</strong> · نسخه Stable: v0.3.0.</p>
 
 <p align="center">
   یک محیط توسعه‌ی سریع و لوکال با AI داخلی.
@@ -120,6 +120,31 @@ Manifest مربوط به این Pluginها هم داخل Launcher قرار می�
 برای Endpointهای OpenAI-compatible و OpenAI Responses ابتدا مسیر `/models` امتحان می‌شود. برای Anthropic Messages از Adapter مخصوص و Pagination رسمی Model List استفاده می‌شود. Discovery قبل از Save انجام می‌شود، API Key در Browser storage یا Catalog cache ذخیره نمی‌شود و فقط Modelهایی که کاربر انتخاب می‌کند وارد `providers.json` می‌شوند.
 
 برای Provider ذخیره‌شده، آخرین Catalog موفق Cache می‌شود. خطای موقت Network یا Rate Limit می‌تواند Catalog قبلی را با هشدار نمایش دهد، اما خطای Authentication هرگز با Cache پنهان نمی‌شود. مدلی که قبلاً انتخاب شده ولی در Refresh بعدی برنگردد نیز خودکار حذف نمی‌شود.
+
+### پشتیبانی TypeSafe Jev
+
+برای استفاده از Router، مسیر زیر در همان بخش Providerها قرار دارد:
+
+```text
+Settings
+→ Providers
+→ TypeSafe Jev
+→ Set up Jev Router
+```
+
+اگر OpenRouter از قبل با Base URL رسمی خودش تنظیم شده باشد، TL Studio همان Provider و همان Credential را دوباره استفاده می‌کند و Provider تکراری نمی‌سازد. در غیر این صورت فرم عمومی Provider برای OpenRouter آماده می‌شود و API Key فقط یک‌بار در Credential Vault فعلی ذخیره می‌شود.
+
+مدل generative مورد استفاده:
+
+```text
+typesafe/jev-router
+```
+
+این مدل از Catalog زنده‌ی OpenRouter کشف می‌شود، در Provider Registry مثل بقیه‌ی Modelها ذخیره می‌شود و با metadata نوع `router` در Model Selector عادی ظاهر می‌شود. مدل‌های زیرین انتخاب‌شده توسط Jev در کد TL Studio هاردکد نمی‌شوند. Streaming، System Prompt، Conversation History و Tool Calling از همان مسیر OpenAI-compatible موجود استفاده می‌کنند. فقط اگر خود Provider مدل Routeشده را در Response برگرداند، TL Studio آن metadata را نمایش می‌دهد.
+
+Jev Router با Jev Decision Model یکی نیست. Decisionهای مستقیم از Endpoint جداگانه‌ی OpenRouter استفاده می‌کنند و خروجی‌شان typed probability است، نه متن تولیدی. برای همین یک abstraction کوچک و مستقل از Provider با نام Decision Engine اضافه شده است. مقدار پیش‌فرض آن **Off** است. فعال‌کردن گزینه‌ی **Jev via OpenRouter (paid)** فقط با Credential موجود OpenRouter ممکن است و به‌تنهایی هیچ Model Routing، Tool Routing، Permission Scoring، Agent Continuation یا Output Verification خودکاری را فعال نمی‌کند.
+
+انتخاب Jev Router هیچ تماس خودکاری با مدل‌های پولی `typesafe/jev-1.13` یا `~typesafe/jev-latest` ایجاد نمی‌کند. خروجی Decision Engine احتمالی است و تضمین امنیتی محسوب نمی‌شود؛ Permission Ruleها و کنترل‌های deterministic خود TL Studio همچنان مرجع نهایی هستند.
 
 ### نمونه‌ی Graphify
 
