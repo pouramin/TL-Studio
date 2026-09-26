@@ -31,6 +31,7 @@ import "./diagnostics-ui";
 import "./provider-recovery-ui";
 import "./providers-ui";
 import "./provider-discovery-ui";
+import "./jev-ui";
 import "./providers-settings-bridge";
 import "./legacy-sessions";
 
