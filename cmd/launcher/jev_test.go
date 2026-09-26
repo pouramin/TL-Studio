@@ -42,6 +42,23 @@ func TestJevRouterDiscoveryMetadataUsesProviderCapabilities(t *testing.T) {
 	}
 }
 
+func TestJevRouterPublishedCapabilitiesCanExplicitlyDisableTools(t *testing.T) {
+	model, ok := normalizeProviderDiscoveredModel(map[string]any{
+		"id": jevRouterModelID,
+		"name": "TypeSafe: Jev Router",
+		"supported_parameters": []any{"temperature"},
+	})
+	if !ok {
+		t.Fatal("expected Jev Router discovery record")
+	}
+	if model.ToolCall == nil || *model.ToolCall {
+		t.Fatalf("published OpenRouter parameters without tools must not be treated as tool support: %#v", model.ToolCall)
+	}
+	if model.Reasoning == nil || *model.Reasoning {
+		t.Fatalf("published OpenRouter parameters without reasoning must not be treated as reasoning support: %#v", model.Reasoning)
+	}
+}
+
 func TestJevRouterRegistersAndResolvesThroughExistingProviderRegistry(t *testing.T) {
 	stateDir := t.TempDir()
 	store := newProviderRegistryStore(filepath.Join(stateDir, "providers.json"))
