@@ -415,6 +415,31 @@ type decisionEngineService struct {
 	client    *http.Client
 }
 
+func sameDecisionOrigin(left, right *url.URL) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	leftPort := left.Port()
+	rightPort := right.Port()
+	if leftPort == "" {
+		if strings.EqualFold(left.Scheme, "https") {
+			leftPort = "443"
+		} else if strings.EqualFold(left.Scheme, "http") {
+			leftPort = "80"
+		}
+	}
+	if rightPort == "" {
+		if strings.EqualFold(right.Scheme, "https") {
+			rightPort = "443"
+		} else if strings.EqualFold(right.Scheme, "http") {
+			rightPort = "80"
+		}
+	}
+	return strings.EqualFold(left.Scheme, right.Scheme) &&
+		strings.EqualFold(left.Hostname(), right.Hostname()) &&
+		leftPort == rightPort
+}
+
 func newDecisionEngineHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: decisionEngineRequestTimeout,
@@ -422,7 +447,7 @@ func newDecisionEngineHTTPClient() *http.Client {
 			if len(via) >= 5 {
 				return errors.New("too many Decision API redirects")
 			}
-			if len(via) > 0 && !sameOriginURL(via[0].URL, req.URL) {
+			if len(via) > 0 && !sameDecisionOrigin(via[0].URL, req.URL) {
 				return http.ErrUseLastResponse
 			}
 			return nil
