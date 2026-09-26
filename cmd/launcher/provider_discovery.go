@@ -360,6 +360,16 @@ func normalizeProviderDiscoveredModel(record map[string]any) (providerDiscovered
 	if id == jevRouterModelID {
 		name = jevRouterDisplayName
 		kind = "router"
+		if _, published := record["supported_parameters"].([]any); published {
+			if toolCall == nil {
+				value := providerDiscoveryStringListContains(record["supported_parameters"], "tools", "tool_choice")
+				toolCall = &value
+			}
+			if reasoning == nil {
+				value := providerDiscoveryStringListContains(record["supported_parameters"], "reasoning", "reasoning_effort", "include_reasoning")
+				reasoning = &value
+			}
+		}
 	}
 	return providerDiscoveredModel{
 		ID:           id,
