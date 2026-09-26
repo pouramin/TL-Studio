@@ -97,8 +97,11 @@ import { K } from "./kernel";
     }, provider.id);
     setText(routerStatus, `Reusing existing OpenRouter provider “${provider.name || provider.id}” and its stored credential. Discovering Jev Router…`);
     try {
-      await providersUI.discoverySelection?.discoverModel?.(JEV_ROUTER_MODEL);
-      setText(routerStatus, "Jev Router was requested from the live OpenRouter catalog. Review the selected model metadata and Save provider.", "ok");
+      const found = await providersUI.discoverySelection?.discoverModel?.(JEV_ROUTER_MODEL);
+      setText(routerStatus, found
+        ? "Jev Router was found in the OpenRouter catalog and selected. Review the live capability metadata and Save provider."
+        : "OpenRouter responded, but Jev Router was not available in the returned catalog. Nothing paid was substituted automatically.",
+        found ? "ok" : "error");
     } catch (error) {
       setText(routerStatus, `OpenRouter is configured, but discovery failed: ${error instanceof Error ? error.message : String(error)}`, "error");
     }
