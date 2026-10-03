@@ -429,7 +429,9 @@ func TestClaudeWebUsesInferenceOnlyExtensionRelay(t *testing.T) {
 	accounts := readBrowserSource(t, "provider-account-ui.ts")
 	for _, required := range []string{
 		`CLAUDE_WEB_MODEL_ID = "claude-sonnet-5-5"`,
-		`CLAUDE_WEB_EXTENSION_ID = "hklkkfhbcohbfpojbcanhgmfanjhnfna"`,
+		`CLAUDE_WEB_EXTENSION_IDS = [`,
+		`"cpellhbmfdhcgkblnmnppndmeiigmjcg"`,
+		`"hklkkfhbcohbfpojbcanhgmfanjhnfna"`,
 		`CLAUDE_WEB_BRIDGE_VERSION = "0.6.3-persistent-page"`,
 		`clean(K.state.session.model.id || K.state.session.model.modelID) === "default"`,
 		`tlstudio-pair-direct`,

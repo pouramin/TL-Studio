@@ -165,8 +165,15 @@ func TestClaudeWebExtensionReusesPersistentPageContext(t *testing.T) {
 	} {
 		if strings.Contains(background, forbidden) { t.Fatalf("Claude Web transport contains forbidden browser/control path %q", forbidden) }
 	}
-	if !strings.Contains(accounts, `CLAUDE_WEB_EXTENSION_ID = "hklkkfhbcohbfpojbcanhgmfanjhnfna"`) {
-		t.Fatal("TL Studio must target the fixed review Claude Web extension ID")
+	for _, required := range []string{
+		`CLAUDE_WEB_EXTENSION_IDS = [`,
+		`"cpellhbmfdhcgkblnmnppndmeiigmjcg"`,
+		`"hklkkfhbcohbfpojbcanhgmfanjhnfna"`,
+		`let claudeWebExtensionID = ""`,
+	} {
+		if !strings.Contains(accounts, required) {
+			t.Fatalf("TL Studio Claude Web extension identity contract missing %q", required)
+		}
 	}
 	for _, required := range []string{
 		"tlstudio-ping", "tlstudio-pair-direct", "tlstudio-execute-direct", "tlstudio-unpair",

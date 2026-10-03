@@ -103,7 +103,11 @@ import { K } from "./kernel";
     "github-copilot": "github-copilot",
   };
 
-  const CLAUDE_WEB_EXTENSION_ID = "hklkkfhbcohbfpojbcanhgmfanjhnfna";
+  const CLAUDE_WEB_EXTENSION_IDS = [
+    "cpellhbmfdhcgkblnmnppndmeiigmjcg",
+    "hklkkfhbcohbfpojbcanhgmfanjhnfna",
+  ];
+  let claudeWebExtensionID = "";
   const CLAUDE_WEB_BRIDGE_VERSION = "0.6.3-persistent-page";
   let claudeWebRelayController: AbortController | null = null;
   let claudeWebRelayToken = "";
@@ -593,9 +597,10 @@ import { K } from "./kernel";
     }, { once: true });
   });
 
-  const sendClaudeWebExtensionMessage = (
+  const sendClaudeWebExtensionMessageTo = (
+    extensionID: string,
     message: TLStudioDynamicRecord,
-    timeoutMs = 8000,
+    timeoutMs: number,
   ) => new Promise<TLStudioDynamicRecord>((resolve, reject) => {
     const runtime = (window as any).chrome?.runtime;
     if (!runtime?.sendMessage) {
@@ -611,23 +616,21 @@ import { K } from "./kernel";
       callback();
     };
     const timer = window.setTimeout(() => {
-      finish(() => reject(new Error("TL Studio Claude Web Bridge did not answer in time.")));
+      finish(() => reject(new Error(`TL Studio Claude Web Bridge ${extensionID} did not answer in time.`)));
     }, timeoutMs);
 
     try {
       runtime.sendMessage(
-        CLAUDE_WEB_EXTENSION_ID,
+        extensionID,
         message,
         (response: TLStudioDynamicRecord | undefined) => {
           const lastError = runtime.lastError;
           if (lastError?.message) {
-            finish(() => reject(new Error(
-              `TL Studio Claude Web Bridge is unreachable: ${clean(lastError.message)}`,
-            )));
+            finish(() => reject(new Error(clean(lastError.message))));
             return;
           }
           if (!response) {
-            finish(() => reject(new Error("TL Studio Claude Web Bridge returned no response.")));
+            finish(() => reject(new Error(`TL Studio Claude Web Bridge ${extensionID} returned no response.`)));
             return;
           }
           finish(() => resolve(response));
@@ -637,6 +640,28 @@ import { K } from "./kernel";
       finish(() => reject(error instanceof Error ? error : new Error(String(error))));
     }
   });
+
+  const sendClaudeWebExtensionMessage = async (
+    message: TLStudioDynamicRecord,
+    timeoutMs = 8000,
+  ) => {
+    const ids = claudeWebExtensionID
+      ? [claudeWebExtensionID, ...CLAUDE_WEB_EXTENSION_IDS.filter((id) => id !== claudeWebExtensionID)]
+      : CLAUDE_WEB_EXTENSION_IDS;
+    let lastError: Error | null = null;
+    for (const extensionID of ids) {
+      try {
+        const response = await sendClaudeWebExtensionMessageTo(extensionID, message, timeoutMs);
+        claudeWebExtensionID = extensionID;
+        return response;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+    }
+    throw new Error(
+      `TL Studio Claude Web Bridge is unreachable. ${clean(lastError?.message) || "Install or enable the Chrome Web Store extension."}`,
+    );
+  };
 
   const stopClaudeWebRelay = () => {
     const token = claudeWebRelayToken;

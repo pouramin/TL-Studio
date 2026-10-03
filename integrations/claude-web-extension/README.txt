@@ -39,6 +39,11 @@ be tested manually:
 The fixed review extension ID is:
 hklkkfhbcohbfpojbcanhgmfanjhnfna
 
+The Chrome Web Store production extension ID is:
+cpellhbmfdhcgkblnmnppndmeiigmjcg
+
+TL Studio probes the Store ID first and keeps the fixed review ID as a fallback.
+
 Production distribution
 -----------------------
 Normal consumer Windows Chrome installs cannot silently install a self-hosted
