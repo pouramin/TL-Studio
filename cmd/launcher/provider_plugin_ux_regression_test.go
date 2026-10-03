@@ -5,20 +5,22 @@ import (
 	"testing"
 )
 
-func TestPluginSettingsAlwaysShowBundledAndUserSections(t *testing.T) {
+func TestPluginSettingsKeepCatalogAndUserSectionsVisible(t *testing.T) {
 	source := readBrowserSource(t, "plugins.ts")
 	for _, required := range []string{
-		`Included with TL Studio`,
-		`No bundled plugins in this build`,
+		`Available integrations`,
+		`All curated integrations are added`,
 		`Added by you`,
 		`No plugins added yet`,
+		`if (bundled.length) {`,
+		`Included with TL Studio`,
 	} {
 		if !strings.Contains(source, required) {
-			t.Fatalf("plugins UI must keep section visible when empty; missing %q", required)
+			t.Fatalf("plugins UI is missing section contract %q", required)
 		}
 	}
 	if strings.Contains(source, `if (!plugins.length) return;`) {
-		t.Fatal("empty plugin groups must not disappear from Settings")
+		t.Fatal("generic section renderer must not silently discard empty sections")
 	}
 }
 

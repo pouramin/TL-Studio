@@ -40,18 +40,57 @@ type graphifyFiles struct {
 	mcp        bool
 }
 
+func graphifyCLIInvocation(config pluginConfig) (string, []string, bool) {
+	if strings.EqualFold(config.Metadata["catalogRuntime"], "python") {
+		moduleIndex := -1
+		for index, arg := range config.Arguments {
+			if arg == "-m" {
+				moduleIndex = index
+				break
+			}
+		}
+		if moduleIndex >= 0 {
+			prefix := append([]string(nil), config.Arguments[:moduleIndex]...)
+			return config.Command, append(prefix, "-m", "graphify"), true
+		}
+	}
+	if explicit := strings.TrimSpace(config.Metadata["graphifyCLI"]); explicit != "" {
+		if path, ok := lookPathPluginExecutable(explicit); ok {
+			return path, nil, true
+		}
+	}
+	if strings.ContainsAny(config.Command, `/\\`) {
+		sibling := filepath.Join(filepath.Dir(config.Command), catalogExecutableName("graphify"))
+		if path, ok := lookPathPluginExecutable(sibling); ok {
+			return path, nil, true
+		}
+	}
+	if path, ok := lookPathPluginExecutable("graphify"); ok {
+		return path, nil, true
+	}
+	return "", nil, false
+}
+
+func graphifyGraphPath(config pluginConfig) string {
+	if value := strings.TrimSpace(config.Metadata["graphPath"]); value != "" {
+		return filepath.ToSlash(value)
+	}
+	if !strings.EqualFold(config.Metadata["catalogRuntime"], "python") &&
+		len(config.Arguments) > 0 && strings.TrimSpace(config.Arguments[0]) != "" {
+		return filepath.ToSlash(config.Arguments[0])
+	}
+	return "graphify-out/graph.json"
+}
+
 func graphifyFilesFor(config pluginConfig, project string) graphifyFiles {
 	if config.Scope == "project" {
 		project = config.Project
 	}
 	status := graphifyFiles{}
-	_, status.cli = lookPathPluginExecutable("graphify")
+	_, _, status.cli = graphifyCLIInvocation(config)
 	_, status.mcp = lookPathPluginExecutable(config.Command)
 
-	graphRel := "graphify-out/graph.json"
-	if len(config.Arguments) > 0 && strings.TrimSpace(config.Arguments[0]) != "" {
-		graphRel = filepath.ToSlash(config.Arguments[0])
-	}
+	graphRel := graphifyGraphPath(config)
 	if target, rel, err := resolveProjectEntry(project, graphRel); err == nil {
 		if info, statErr := os.Stat(target); statErr == nil && info.Mode().IsRegular() {
 			status.available = true
@@ -134,20 +173,30 @@ func (graphifyPluginIntegration) ValidateStart(config pluginConfig, project stri
 	return nil
 }
 
+func runGraphifyBuild(ctx context.Context, config pluginConfig, project string) (string, error) {
+	command, prefix, ok := graphifyCLIInvocation(config)
+	if !ok {
+		return "", errors.New("graphify executable was not found")
+	}
+	root := project
+	if config.Scope == "project" && strings.TrimSpace(config.Project) != "" {
+		root = config.Project
+	}
+	args := append(append([]string(nil), prefix...), "extract", ".", "--code-only")
+	output, err := runPluginCatalogCommand(ctx, root, command, args...)
+	if err != nil {
+		return output, err
+	}
+	return output, nil
+}
+
 func (graphifyPluginIntegration) RunAction(ctx context.Context, manager *pluginManager, config pluginConfig, project, actionID string) (any, error) {
 	if actionID != "build-graph" {
 		return nil, errors.New("unsupported Graphify integration action")
 	}
-	if _, ok := lookPathPluginExecutable("graphify"); !ok {
-		return nil, errors.New("graphify executable was not found in PATH")
-	}
-	root := project
-	if config.Scope == "project" {
-		root = config.Project
-	}
-	snapshot, runErr := manager.processes.run(ctx, "graphify extract . --code-only", root)
+	output, runErr := runGraphifyBuild(ctx, config, project)
 	manager.mu.Lock()
 	manager.stopLocked(config)
 	manager.mu.Unlock()
-	return snapshot, runErr
+	return map[string]any{"output": output}, runErr
 }

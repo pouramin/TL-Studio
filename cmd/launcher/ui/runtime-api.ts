@@ -136,6 +136,14 @@ import { K } from "./kernel";
     },
 
     plugins: {
+      catalog: async () => {
+        const payload = await K.request("/local/plugins/catalog");
+        return Array.isArray(payload) ? payload : [];
+      },
+      installCatalog: (pluginID: string) => K.request(`/local/plugin-catalog/${enc(pluginID)}/install`, {
+        method: "POST",
+        ...body({ confirmed: true }),
+      }),
       list: async () => {
         const payload = await K.request("/local/plugins");
         return Array.isArray(payload) ? payload : [];
