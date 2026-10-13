@@ -178,7 +178,9 @@ import { K } from "./kernel";
   };
 
   K.loadCatalog = async () => {
+    const scope = K.viewScope.captureProject();
     const [agents, providers] = await Promise.allSettled([K.api.agents(), K.api.providerState()]);
+    if (!K.viewScope.isProjectCurrent(scope)) return;
     if (agents.status === "fulfilled") {
       K.state.agents = K.normalizeAgents(agents.value);
       K.renderAgents();
