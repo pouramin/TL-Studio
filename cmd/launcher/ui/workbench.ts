@@ -288,6 +288,66 @@ import { K } from "./kernel";
   const composerWrap = mainPane.querySelector<HTMLElement>(".composer-wrap");
   if (conversation) conversation.classList.add("workspace-agent-thread");
   if (composerWrap) composerWrap.classList.add("workspace-agent-composer-wrap");
+
+  // Per-run Agent budget and per-provider timeout preferences. These are
+  // preferences only: the Go session contract validates and caps every value.
+  if (composerWrap) {
+    const budget = node("details", "workspace-agent-run-controls");
+    budget.id = "agentRunControls";
+    budget.innerHTML = `<summary title="Adjust tool rounds and provider timeouts">Agent limits</summary>
+      <div class="workspace-agent-limits-grid">
+        <label>Tool rounds<select id="agentMaxToolRounds" aria-label="Maximum tool rounds per Agent run">
+          <option value="24">24 · Standard</option><option value="50">50 · Extended</option>
+          <option value="100">100 · Heavy</option></select></label>
+        <label>Model request<select id="agentModelTimeoutSeconds" aria-label="Model request timeout for selected provider">
+          <option value="0">Default · 4–6 min</option><option value="120">2 min</option>
+          <option value="240">4 min</option><option value="360">6 min</option>
+          <option value="600">10 min</option></select></label>
+        <label>Stream idle<select id="agentStreamIdleSeconds" aria-label="Maximum gap between streaming events for selected provider">
+          <option value="0">Off · Default</option><option value="30">30 sec</option>
+          <option value="60">60 sec</option><option value="120">120 sec</option></select></label>
+        <label>Token budget<select id="agentMaxRunTokens" aria-label="Per-run total model token budget">
+          <option value="0">No token cap</option><option value="200000">200K</option>
+          <option value="1000000">1M</option><option value="2000000">2M</option></select></label>
+      </div>
+      <small>Round and token limits are saved per Agent and apply to each run. Timeouts are saved per provider. Idle applies to streamed HTTP providers.</small>`;
+    composerWrap.insertBefore(budget, composerWrap.firstChild);
+    const rounds = budget.querySelector<HTMLSelectElement>("#agentMaxToolRounds")!;
+    const tokens = budget.querySelector<HTMLSelectElement>("#agentMaxRunTokens")!;
+    const timeout = budget.querySelector<HTMLSelectElement>("#agentModelTimeoutSeconds")!;
+    const idle = budget.querySelector<HTMLSelectElement>("#agentStreamIdleSeconds")!;
+    const safeValue = (select: HTMLSelectElement, value: string) =>
+      [...select.options].some((option) => option.value === value) ? value : select.options[0].value;
+    const read = (key: string, fallback: string) => {
+      try { return localStorage.getItem(key) || fallback; } catch { return fallback; }
+    };
+    const store = (key: string, value: string) => {
+      try { localStorage.setItem(key, value); } catch {}
+    };
+    const agentKey = () => String(byId<HTMLSelectElement>("agentSelect")?.value || "default").trim().toLowerCase();
+    const providerKey = () => String(K.selectedModel?.()?.providerID || "default").trim().toLowerCase();
+    const loadBudgets = () => {
+      const key = agentKey();
+      rounds.value = safeValue(rounds, read("tl-studio.agent.rounds." + key, "24"));
+      tokens.value = safeValue(tokens, read("tl-studio.agent.tokens." + key, "0"));
+    };
+    const loadTimeouts = () => {
+      const key = providerKey();
+      timeout.value = safeValue(timeout, read("tl-studio.agent.timeout." + key, "0"));
+      idle.value = safeValue(idle, read("tl-studio.agent.idle." + key, "0"));
+    };
+    loadBudgets();
+    rounds.addEventListener("change", () => store("tl-studio.agent.rounds." + agentKey(), rounds.value));
+    tokens.addEventListener("change", () => store("tl-studio.agent.tokens." + agentKey(), tokens.value));
+    byId<HTMLSelectElement>("agentSelect")?.addEventListener("change", loadBudgets);
+    timeout.addEventListener("change", () => store("tl-studio.agent.timeout." + providerKey(), timeout.value));
+    idle.addEventListener("change", () => store("tl-studio.agent.idle." + providerKey(), idle.value));
+    byId<HTMLSelectElement>("modelSelect")?.addEventListener("change", loadTimeouts);
+    window.addEventListener("tl-studio:agent-run-selection", () => { loadBudgets(); loadTimeouts(); });
+    budget.addEventListener("toggle", () => { if (budget.open) { loadBudgets(); loadTimeouts(); } });
+    loadTimeouts();
+  }
+
   agentExpanded.appendChild(agentHeader);
   if (conversation) agentExpanded.appendChild(conversation);
   if (composerWrap) agentExpanded.appendChild(composerWrap);

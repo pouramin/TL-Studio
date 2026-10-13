@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,8 +17,8 @@ const (
 	nativeAgentMaxToolRounds      = 24
 	nativeAgentMaxToolsPerRound   = 16
 	nativeAgentMaxRepeatedCalls       = 4
-	nativeAgentModelTurnTimeout       = 2 * time.Minute
-	nativeAgentLayaModelTurnTimeout   = 4 * time.Minute
+	nativeAgentModelTurnTimeout       = 4 * time.Minute
+	nativeAgentLayaModelTurnTimeout   = 6 * time.Minute
 )
 
 type nativeModelResolver interface {
@@ -83,6 +84,9 @@ func (r *nativeAgentRuntime) supports(input sessionRunInput) bool {
 }
 
 func (r *nativeAgentRuntime) Start(directory, sessionID string, input sessionRunInput) error {
+	if err := validateNativeRunLimits(input); err != nil {
+		return err
+	}
 	if !r.supports(input) {
 		return errors.New("native Agent runtime requires a supported custom provider and model")
 	}
@@ -459,7 +463,10 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 	}
 
 	repeated := map[string]int{}
+	recentToolRounds := []string{}
 	toolRounds := 0
+	var runTokens int64
+	maxToolRounds := nativeRunToolRoundLimit(input)
 	routeActivitiesPending := []sessionActivityView{}
 	if routeSelection != nil {
 		routeActivitiesPending = append(routeActivitiesPending, nativeRequestRouteActivity(*routeSelection))
@@ -475,35 +482,91 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 	executionRequired := nativePromptRequiresExecution(routingPrompt)
 	executionWorkObserved := false
 	executionGuardRetries := 0
+
 	const maxRouteFallbacks = 8
 
-	for iteration := 1; iteration <= nativeAgentMaxIterations; iteration++ {
+	// When a tool or token budget is exhausted, request one final model
+	// checkpoint with no executable tools. Failure of that last request never
+	// discards earlier persisted tool results.
+	writeBudgetCheckpoint := func(reason string) error {
+		if err := ctx.Err(); err != nil { return err }
+		prompt := nativeRunBudgetReportPrompt(reason)
+		turnCtx, cancel := context.WithTimeout(ctx, nativeRunTurnTimeout(input, r.modelRequestTimeout(routeSelection != nil, executionRequired)))
+		defer cancel()
+		summary, summaryErr := r.model.Complete(turnCtx, nativeModelRequest{
+			System: "You are preparing a truthful checkpoint of unfinished work. Never claim success without verification. " + prompt,
+			Provider: provider, Model: model, APIKey: apiKey,
+			CacheKey: "tlstudio-" + sessionID,
+			Messages: nativeCheckpointConversation(conversation, routingPrompt),
+			Tools: nil, ToolsDisabled: true,
+		}, nil)
+		text := fmt.Sprintf("TL Studio paused this Agent run: %s. The task is not verified complete. Earlier file changes are preserved.", reason)
+		if summaryErr == nil && len(summary.ToolCalls) == 0 && strings.TrimSpace(summary.Text) != "" {
+			text += "\n\n" + strings.TrimSpace(summary.Text)
+		} else {
+			text += " Inspect the current workspace, then send a new instruction to continue the remaining work."
+		}
+		now := time.Now().UnixMilli()
+		messageID, _ := randomSecret(10)
+		if err := r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
+			ID: "tlsm_" + messageID, SessionID: sessionID,
+			Role: "assistant", Agent: firstSessionString(input.Agent, "code"),
+			Model: displayModel, CreatedAt: now, CompletedAt: now,
+			Text: text, Activities: responseActivities(summary),
+			Attachments: []sessionAttachmentView{}, Usage: summary.Usage,
+			Changes: []sessionChangeView{},
+		}); err != nil {
+			return err
+		}
+		r.publish(liveEventView{Type: "message.changed", Action: "changed", SessionID: sessionID})
+		return nil
+	}
+
+	for iteration := 1; iteration <= nativeRunIterationLimit(input); iteration++ {
+		if toolRounds >= maxToolRounds {
+			return writeBudgetCheckpoint(fmt.Sprintf("%d tool rounds", maxToolRounds))
+		}
+		if input.MaxRunTokens > 0 && runTokens >= input.MaxRunTokens {
+			return writeBudgetCheckpoint(fmt.Sprintf("%d or more model tokens", input.MaxRunTokens))
+		}
+
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
 		var response nativeModelResponse
 		for {
-			modelTurnTimeout := r.modelRequestTimeout(routeSelection != nil, executionRequired)
+			modelTurnTimeout := nativeRunTurnTimeout(input, r.modelRequestTimeout(routeSelection != nil, executionRequired))
 			modelCtx, cancelModel := context.WithTimeout(ctx, modelTurnTimeout)
+			var idleExceeded atomic.Bool
+			var idleTimer *time.Timer
+			pingIdle := func() {
+				if idleTimer != nil { idleTimer.Reset(nativeRunIdleTimeout(input)) }
+			}
+			// Idle watchdog is meaningful only for streamed protocols.
+			if idle := nativeRunIdleTimeout(input); idle > 0 &&
+				(provider.Protocol == "openai-compatible" || provider.Protocol == "openai-responses" || provider.Protocol == "anthropic-messages") {
+				idleTimer = time.AfterFunc(idle, func() { idleExceeded.Store(true); cancelModel() })
+			}
 			response, err = r.model.Complete(modelCtx, nativeModelRequest{
-				System:   nativeAgentTurnSystemPrompt(routingPrompt, executionGuardRetries > 0),
-				Provider: provider,
-				Model:    model,
-				APIKey:   apiKey,
+				System: nativeAgentTurnSystemPrompt(routingPrompt, executionGuardRetries > 0),
+				Provider: provider, Model: model, APIKey: apiKey,
 				CacheKey: "tlstudio-" + sessionID,
 				Messages: append([]nativeConversationMessage(nil), conversation...),
-				Tools:    tools,
+				Tools: tools, OnStreamActivity: pingIdle,
 			}, func(delta string) {
+				pingIdle()
 				if delta != "" {
 					r.publish(liveEventView{
-						Type:      "message.changed",
-						Action:    "content",
-						SessionID: sessionID,
+						Type: "message.changed", Action: "content", SessionID: sessionID,
 					})
 				}
 			})
+			if idleTimer != nil { idleTimer.Stop() }
 			cancelModel()
+			if idleExceeded.Load() && ctx.Err() == nil {
+				err = fmt.Errorf("model stream idle for more than %s", nativeRunIdleTimeout(input))
+			}
 			if err == nil && len(response.ToolCalls) == 0 && strings.TrimSpace(response.Text) == "" {
 				err = errors.New("model returned an empty response")
 			}
@@ -559,6 +622,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				return &nativeRoutedRunError{cause: err, activities: append([]sessionActivityView(nil), routeActivitiesPending...)}
 			}
 		}
+		runTokens += nativeRunBillableTokens(response.Usage)
 		if len(response.ToolCalls) == 0 {
 			if strings.TrimSpace(response.Text) == "" {
 				return errors.New("model returned an empty response")
@@ -585,24 +649,6 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			return nil
 		}
 
-		if toolRounds >= nativeAgentMaxToolRounds {
-			// The per-run budget is a safety boundary, not a claim that work
-			// completed. Preserve the project and give an explicit continuation
-			// checkpoint instead of exposing a raw internal counter error.
-			now := time.Now().UnixMilli()
-			messageID, _ := randomSecret(10)
-			if err := r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
-				ID: "tlsm_" + messageID, SessionID: sessionID,
-				Role: "assistant", Agent: firstSessionString(input.Agent, "code"),
-				Model: displayModel, CreatedAt: now, CompletedAt: now,
-				Text: fmt.Sprintf("TL Studio paused this Agent run after %d tool rounds to limit excessive requests. The task is not verified complete. Earlier file changes are preserved. Inspect the current workspace, then send a new instruction to continue the remaining work.", nativeAgentMaxToolRounds),
-				Activities: responseActivities(response),
-				Attachments: []sessionAttachmentView{}, Usage: response.Usage,
-				Changes: []sessionChangeView{},
-			}); err != nil { return err }
-			r.publish(liveEventView{Type: "message.changed", Action: "changed", SessionID: sessionID})
-			return nil
-		}
 		toolRounds++
 		if len(response.ToolCalls) > nativeAgentMaxToolsPerRound {
 			return fmt.Errorf("native Agent requested %d tools in one round; maximum is %d", len(response.ToolCalls), nativeAgentMaxToolsPerRound)
@@ -613,6 +659,10 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		nextRepeats, repeatErr := nativeNextToolRepeatStreaks(repeated, response.ToolCalls, nativeAgentMaxRepeatedCalls)
 		if repeatErr != nil {
 			return repeatErr
+		}
+		nextHistory, cycleErr := nativeNextToolLoopHistory(recentToolRounds, response.ToolCalls)
+		if cycleErr != nil {
+			return cycleErr
 		}
 		conversation = append(conversation, nativeConversationMessage{
 			Role:      "assistant",
@@ -642,6 +692,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		}
 		executionWorkObserved = executionWorkObserved || roundObserved
 		repeated = nextRepeats
+		recentToolRounds = nextHistory
 
 		semantic.CompletedAt = time.Now().UnixMilli()
 		semantic.Changes = mergeSessionChanges(semantic.Changes)

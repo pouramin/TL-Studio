@@ -46,7 +46,10 @@ type nativeModelRequest struct {
 	CacheKey string
 	Messages []nativeConversationMessage
 	Tools    []nativeModelToolDefinition
+	ToolsDisabled bool
+	OnStreamActivity func()
 }
+
 
 type nativeModelResponse struct {
 	Text         string
@@ -327,7 +330,9 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 			payload["prompt_cache_key"] = cacheKey
 		}
 	}
-	if len(request.Tools) > 0 {
+	if request.ToolsDisabled {
+		payload["tool_choice"] = "none"
+	} else if len(request.Tools) > 0 {
 		payload["tools"] = openAITools(request.Tools)
 		payload["tool_choice"] = "auto"
 	}
@@ -348,6 +353,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 	scanner := bufio.NewScanner(response.Body)
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	for scanner.Scan() {
+		if request.OnStreamActivity != nil { request.OnStreamActivity() }
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -606,7 +612,9 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 		"input":  responseInput(request),
 		"stream": true,
 	}
-	if len(request.Tools) > 0 {
+	if request.ToolsDisabled {
+		payload["tool_choice"] = "none"
+	} else if len(request.Tools) > 0 {
 		payload["tools"] = responseTools(request.Tools)
 	}
 	response, err := c.doJSON(ctx, endpoint, map[string]string{"Authorization": "Bearer " + request.APIKey}, payload)
@@ -631,6 +639,7 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 	scanner := bufio.NewScanner(response.Body)
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	for scanner.Scan() {
+		if request.OnStreamActivity != nil { request.OnStreamActivity() }
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -797,7 +806,9 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 	if request.System != "" {
 		payload["system"] = request.System
 	}
-	if len(request.Tools) > 0 {
+	if request.ToolsDisabled {
+		payload["tool_choice"] = map[string]string{"type":"none"}
+	} else if len(request.Tools) > 0 {
 		payload["tools"] = anthropicTools(request.Tools)
 	}
 	response, err := c.doJSON(ctx, endpoint, map[string]string{
@@ -825,6 +836,7 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	var eventName string
 	for scanner.Scan() {
+		if request.OnStreamActivity != nil { request.OnStreamActivity() }
 		line := scanner.Text()
 		if strings.HasPrefix(line, "event:") {
 			eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))

@@ -27,6 +27,10 @@ type sessionRunInput struct {
 	Model     *sessionModelRef `json:"model,omitempty"`
 	Variant   string           `json:"variant,omitempty"`
 	MessageID string           `json:"messageID,omitempty"`
+	MaxToolRounds int          `json:"maxToolRounds,omitempty"`
+	ModelTimeoutSeconds int    `json:"modelTimeoutSeconds,omitempty"`
+	StreamIdleTimeoutSeconds int `json:"streamIdleTimeoutSeconds,omitempty"`
+	MaxRunTokens int64         `json:"maxRunTokens,omitempty"`
 }
 
 type sessionAbortInput struct {
@@ -152,6 +156,9 @@ func (c *sessionCommandContract) run(_ context.Context, directory, sessionID str
 	}
 	if input.Text == "" && len(input.Parts) == 0 {
 		return errors.New("prompt text or parts are required")
+	}
+	if err := validateNativeRunLimits(input); err != nil {
+		return err
 	}
 	return c.native.Start(directory, sessionID, input)
 }

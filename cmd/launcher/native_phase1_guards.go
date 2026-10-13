@@ -55,3 +55,29 @@ func nativeToolCallAllowed(tools []nativeModelToolDefinition, toolID string) boo
 	}
 	return false
 }
+
+// Detect repeated A/B/A/B patterns in addition to identical consecutive calls.
+// Requiring six full alternations avoids blocking short intentional comparisons.
+func nativeNextToolLoopHistory(history []string, calls []nativeModelToolCall) ([]string, error) {
+    signature := ""
+    for _, call := range calls {
+        signature += nativeToolSignature(call) + "\x01"
+    }
+    next := append(append([]string(nil), history...), signature)
+    if len(next) > 12 {
+        next = next[len(next)-12:]
+    }
+    if len(next) == 12 && next[0] != next[1] {
+        repeating := true
+        for i := 2; i < len(next); i++ {
+            if next[i] != next[i%2] {
+                repeating = false
+                break
+            }
+        }
+        if repeating {
+            return nil, fmt.Errorf("native Agent detected a repeated alternating tool-call loop (ABAB)")
+        }
+    }
+    return next, nil
+}
