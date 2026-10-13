@@ -1,0 +1,76 @@
+name: Acceptance Feedback Fix Validation
+
+on:
+  push:
+    branches:
+      - fix/foundation-acceptance-issues-20261013
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Format new Go regression test
+        shell: bash
+        run: |
+          gofmt -w cmd/launcher/foundation_feedback_regression_test.go
+          if ! git diff --quiet -- cmd/launcher/foundation_feedback_regression_test.go; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add cmd/launcher/foundation_feedback_regression_test.go
+            git commit -m 'style(test): format foundation feedback regression cases'
+            git push origin HEAD:refs/heads/fix/foundation-acceptance-issues-20261013
+          fi
+      - name: Frontend dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Focused regression
+        run: go test -count=1 -v ./cmd/launcher -run 'TestFoundationFeedback'
+      - name: Full Go tests
+        run: go test -count=1 ./...
+      - name: Go vet
+        run: go vet ./...
+      - name: Typecheck and production build
+        run: |
+          npm run check:web
+          npm run build:web
+      - name: Browser regressions
+        run: |
+          node scripts/check-frontend-view-state.cjs
+          node scripts/check-message-render-lifecycle.cjs
+          node scripts/check-status-ui-regressions.cjs
+          node scripts/check-status-diagnostics.cjs
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Frontend dependencies
+        shell: pwsh
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Foundation regression
+        shell: pwsh
+        run: go test -count=1 -v ./cmd/launcher -run 'TestFoundationFeedback'
+      - name: Windows full Go tests
+        shell: pwsh
+        run: go test -count=1 ./...
+      - name: Typecheck
+        shell: pwsh
+        run: npm run check:web
