@@ -362,10 +362,10 @@ func nativePromptRequiresExecution(prompt string) bool {
 		"fix ", "fix them", "fix the", "implement ", "modify ", "refactor ",
 		"update ", "change ", "create ", "write ", "edit ", "remove ",
 		"add ", "apply ", "build ", "generate ", "develop ",
-		"rename ", "move ", "replace ", "redesign", "redesign ", "finish ", "complete ", "continue ", "try again", "do it", "make it", "implement it", "apply changes", "not done",
+		"rename ", "move ", "replace ", "delete ", "erase ", "redesign", "finish ", "complete ", "continue ", "try again", "do it", "make it", "implement it", "apply changes", "not done",
 		"run tests", "run the tests", "run relevant tests", "run the relevant tests",
 		"بساز", "ایجاد کن", "بنویس", "ویرایش کن", "اصلاح کن", "تغییر بده",
-		"تغییرش بده", "حذف کن", "اضافه کن", "اعمال کن", "جایگزین کن",
+		"تغییرش بده", "حذف کن", "حذفش کن", "پاک کن", "پاکش کن", "اضافه کن", "اعمال کن", "جایگزین کن",
 		"منتقل کن", "اجرا کن", "تست کن", "درستش کن", "رفع کن",
 		"فیکس کن", "کامیت کن", "مرج کن",
 	)

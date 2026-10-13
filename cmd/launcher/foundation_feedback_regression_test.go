@@ -159,7 +159,7 @@ func TestFoundationFeedbackReadOnlyIntentStillBlocksMutation(t *testing.T) {
 			t.Fatalf("read-only request unexpectedly classified as write: %q", text)
 		}
 	}
-	for _, text := range []string{"Redesign my website", "Please finish the redesign", "No, the redesign didn't happen. Continue and fix it"} {
+	for _, text := range []string{"Redesign my website", "Please finish the redesign", "No, the redesign didn't happen. Continue and fix it", "Delete test_pam.txt", "پاک کن فایل test_pam.txt"} {
 		if !nativePromptRequiresExecution(text) {
 			t.Fatalf("follow-up edit request was classified read-only: %q", text)
 		}
