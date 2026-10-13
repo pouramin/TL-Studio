@@ -29,7 +29,7 @@ func (r *nativeAgentRuntime) executeNativeToolRound(
 			PermissionClass: descriptor.PermissionClass,
 			Input:           decodedInput, StartAt: started,
 		})
-		if err := r.store.putNativeMessage(sessionID, directory, semantic); err != nil {
+		if err := r.store.putNativeMessage(sessionID, directory, *semantic); err != nil {
 			return false, err
 		}
 		r.publish(liveEventView{Type: "message.changed", Action: "content", SessionID: sessionID})
@@ -72,7 +72,7 @@ func (r *nativeAgentRuntime) executeNativeToolRound(
 		semantic.Activities[len(semantic.Activities)-1] = activity
 		semantic.Changes = append(semantic.Changes, result.Changes...)
 		// Persist each completed result before starting the next operation.
-		if err := r.store.putNativeMessage(sessionID, directory, semantic); err != nil {
+		if err := r.store.putNativeMessage(sessionID, directory, *semantic); err != nil {
 			return false, err
 		}
 		for _, change := range result.Changes {
