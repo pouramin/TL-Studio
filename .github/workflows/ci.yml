@@ -205,6 +205,34 @@ jobs:
           test -n "$LOCAL_URL"
           node scripts/check-workbench-browser-runtime.mjs "$LOCAL_URL"
 
+  windows-editor-save-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Browser and native Windows application
+        shell: pwsh
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run check:web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build:web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -trimpath -o "$env:RUNNER_TEMP/tl-studio-editor.exe" ./cmd/launcher
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Real Windows Editor / file conflict / in-flight save acceptance
+        shell: pwsh
+        run: |
+          node scripts/check-windows-editor-save-runtime.mjs "$env:RUNNER_TEMP/tl-studio-editor.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
   windows-review-package:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
