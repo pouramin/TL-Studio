@@ -278,5 +278,8 @@ import { K } from "./kernel";
       const value = K.modelValue({ ...session.model, id: session.model.id || session.model.modelID });
       K.els.modelSelect.value = [...K.els.modelSelect.querySelectorAll("option")].some((option) => option.value === value) ? value : "";
     }
+    if (typeof Event !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new Event("tl-studio:agent-run-selection"));
+    }
   };
 })();
