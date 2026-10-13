@@ -325,49 +325,63 @@ func nativeRoutingPrompt(input sessionRunInput) string {
 	return strings.TrimSpace(strings.Join(parts, "\n"))
 }
 
+func nativePromptContainsAny(text string, phrases ...string) bool {
+	for _, phrase := range phrases {
+		if strings.Contains(text, phrase) {
+			return true
+		}
+	}
+	return false
+}
+
 func nativePromptRequiresExecution(prompt string) bool {
 	text := strings.ToLower(strings.TrimSpace(prompt))
 	if text == "" {
 		return false
 	}
-	for _, readOnly := range []string{
-		"do not modify",
-		"don't modify",
-		"without modifying",
-		"do not change",
-		"don't change",
-		"read-only",
-		"read only",
-	} {
-		if strings.Contains(text, readOnly) {
-			return false
-		}
+	// Explicit read-only instructions take precedence over action keywords.
+	if nativePromptContainsAny(text,
+		"do not modify", "don't modify", "without modifying",
+		"do not change", "don't change", "do not write", "don't write",
+		"do not edit", "don't edit", "without editing",
+		"read-only", "read only",
+		"هیچ فایلی را تغییر نده", "هیچ فایلی رو تغییر نده",
+		"فایلی را تغییر نده", "فایلی رو تغییر نده", "بدون تغییر فایل",
+		"فقط بخوان", "فقط بررسی کن", "فقط تحلیل کن", "تغییری نده",
+	) {
+		return false
 	}
-	for _, action := range []string{
-		"fix ",
-		"fix them",
-		"fix the",
-		"implement ",
-		"modify ",
-		"refactor ",
-		"update ",
-		"change ",
-		"create ",
-		"write ",
-		"edit ",
-		"remove ",
-		"add ",
-		"apply ",
-		"run tests",
-		"run the tests",
-		"run relevant tests",
-		"run the relevant tests",
-	} {
-		if strings.Contains(text, action) {
-			return true
-		}
+	return nativePromptContainsAny(text,
+		"fix ", "fix them", "fix the", "implement ", "modify ", "refactor ",
+		"update ", "change ", "create ", "write ", "edit ", "remove ",
+		"add ", "apply ", "build ", "generate ", "develop ",
+		"rename ", "move ", "replace ",
+		"run tests", "run the tests", "run relevant tests", "run the relevant tests",
+		"بساز", "ایجاد کن", "بنویس", "ویرایش کن", "اصلاح کن", "تغییر بده",
+		"تغییرش بده", "حذف کن", "اضافه کن", "اعمال کن", "جایگزین کن",
+		"منتقل کن", "اجرا کن", "تست کن", "درستش کن", "رفع کن",
+		"فیکس کن", "کامیت کن", "مرج کن",
+	)
+}
+
+// Advertise only tools permitted for this turn.
+func nativeToolDefinitionsForPrompt(executor *nativeToolExecutor, project, prompt string) []nativeModelToolDefinition {
+	if executor == nil {
+		return nil
 	}
-	return false
+	definitions := executor.ToolDefinitionsForProject(project)
+	if nativePromptRequiresExecution(prompt) {
+		return definitions
+	}
+	filtered := make([]nativeModelToolDefinition, 0, len(definitions))
+	for _, definition := range definitions {
+		descriptor, ok := executor.Descriptor(project, definition.ID)
+		if !ok || descriptor.Capabilities.Write || descriptor.Capabilities.Execute {
+			continue
+		}
+		filtered = append(filtered, definition)
+	}
+	return filtered
 }
 
 func nativeAgentTurnSystemPrompt(prompt string, retryExecution bool) string {
@@ -398,7 +412,7 @@ func nativeToolResultMessage(result nativeToolResult) string {
 	if err != nil {
 		return fmt.Sprintf(`{"ok":false,"error":%q}`, err.Error())
 	}
-	return string(encoded)
+	return nativeBoundedToolResultMessage(encoded, result)
 }
 
 func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID string, input sessionRunInput) error {
@@ -432,7 +446,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		return err
 	}
 	conversation := nativeConversationFromMessages(messages)
-	tools := r.tools.ToolDefinitionsForProject(directory)
+	tools := nativeToolDefinitionsForPrompt(r.tools, directory, routingPrompt)
 	if len(tools) == 0 {
 		return errors.New("native Agent runtime has no executable tools")
 	}
@@ -470,6 +484,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				Provider: provider,
 				Model:    model,
 				APIKey:   apiKey,
+				CacheKey: "tlstudio-" + sessionID,
 				Messages: append([]nativeConversationMessage(nil), conversation...),
 				Tools:    tools,
 			}, func(delta string) {
@@ -571,6 +586,12 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			return fmt.Errorf("native Agent requested %d tools in one round; maximum is %d", len(response.ToolCalls), nativeAgentMaxToolsPerRound)
 		}
 
+		// Preflight a whole round: no partial side effects if the guard rejects it.
+		nativeNormalizeTurnToolCallIDs(response.ToolCalls, iteration)
+		nextRepeats, repeatErr := nativeNextToolRepeatStreaks(repeated, response.ToolCalls, nativeAgentMaxRepeatedCalls)
+		if repeatErr != nil {
+			return repeatErr
+		}
 		conversation = append(conversation, nativeConversationMessage{
 			Role:      "assistant",
 			Text:      response.Text,
@@ -593,25 +614,23 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			Changes:     []sessionChangeView{},
 		}
 
-		for index, modelCall := range response.ToolCalls {
-			if strings.TrimSpace(modelCall.ID) == "" {
-				modelCall.ID = fmt.Sprintf("native-call-%d-%d", iteration, index+1)
-			}
-			signature := nativeToolSignature(modelCall)
-			repeated[signature]++
-			if repeated[signature] > nativeAgentMaxRepeatedCalls {
-				return fmt.Errorf("native Agent repeated the same tool call more than %d times", nativeAgentMaxRepeatedCalls)
-			}
-
+		for _, modelCall := range response.ToolCalls {
 			descriptor, _ := r.tools.Descriptor(directory, modelCall.Name)
 			decodedInput, _ := decodeNativeToolArguments(modelCall.Arguments)
 			started := time.Now().UnixMilli()
 			r.publish(liveEventView{Type: "message.changed", Action: "content", SessionID: sessionID})
-			result := r.tools.Execute(ctx, sessionID, directory, nativeToolCall{
-				ID:        modelCall.Name,
-				CallID:    modelCall.ID,
-				Arguments: modelCall.Arguments,
-			})
+			allowed := nativeToolCallAllowed(tools, modelCall.Name)
+			var result nativeToolResult
+			if !allowed {
+				result = nativeToolResult{
+					ToolID: modelCall.Name, CallID: modelCall.ID,
+					Error: "tool blocked by TL Studio: this tool is not available in the current turn; use advertised tools",
+				}
+			} else {
+				result = r.tools.Execute(ctx, sessionID, directory, nativeToolCall{
+					ID: modelCall.Name, CallID: modelCall.ID, Arguments: modelCall.Arguments,
+				})
+			}
 			ended := time.Now().UnixMilli()
 
 			activity := sessionActivityView{
@@ -644,7 +663,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			// Shell commands and MCP/plugin write-capable tools may mutate project files
 			// without returning structured file-change metadata. Conservatively invalidate
 			// the workspace after those calls so Explorer/Editor/Preview reconcile from disk.
-			if descriptor.ID == "terminal.command" || (descriptor.Source == "mcp" && descriptor.Capabilities.Write) {
+			if allowed && (descriptor.ID == "terminal.command" || (descriptor.Source == "mcp" && descriptor.Capabilities.Write)) {
 				r.publish(liveEventView{Type: "workspace.changed", Action: "changed", SessionID: sessionID})
 			}
 			conversation = append(conversation, nativeConversationMessage{
@@ -654,6 +673,8 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				Text:       nativeToolResultMessage(result),
 			})
 		}
+
+		repeated = nextRepeats
 
 		semantic.CompletedAt = time.Now().UnixMilli()
 		semantic.Changes = mergeSessionChanges(semantic.Changes)

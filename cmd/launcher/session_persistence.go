@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,7 +16,8 @@ import (
 
 const (
 	sessionPersistenceVersion = 1
-	maxPersistedSessions       = 300
+	// Listing limit only; stored session history is never automatically pruned.
+	maxPersistedSessions = 300
 	maxPersistedMessages       = 1200
 	maxSessionSnapshotBytes    = 32 << 20
 )
@@ -31,6 +33,8 @@ type persistedSessionSnapshot struct {
 	Session sessionView          `json:"session"`
 	Messages []sessionMessageView `json:"messages,omitempty"`
 	Changes []sessionChangeView  `json:"changes,omitempty"`
+	ArchivedBatches int `json:"archivedBatches,omitempty"`
+	PendingRun *persistedSessionPendingRun `json:"pendingRun,omitempty"`
 	SavedAt int64                `json:"savedAt"`
 }
 
@@ -92,10 +96,10 @@ func writePrivateJSONAtomic(path string, value any) error {
 	if err := temp.Close(); err != nil {
 		return err
 	}
+	// Never fall back to an in-place write: a crash during that fallback
+	// could corrupt the only persisted copy of a session.
 	if err := os.Rename(tempName, path); err != nil {
-		if writeErr := os.WriteFile(path, data, 0o600); writeErr != nil {
-			return err
-		}
+		return fmt.Errorf("atomically replace session data: %w", err)
 	}
 	return nil
 }
@@ -104,10 +108,11 @@ func (s *sessionPersistenceStore) loadLocked() error {
 	if s.loaded {
 		return nil
 	}
-	s.loaded = true
-	s.sessions = map[string]sessionView{}
+	sessions := map[string]sessionView{}
 	data, err := os.ReadFile(s.indexPath())
 	if errors.Is(err, os.ErrNotExist) {
+		s.sessions = sessions
+		s.loaded = true
 		return nil
 	}
 	if err != nil {
@@ -126,8 +131,47 @@ func (s *sessionPersistenceStore) loadLocked() error {
 		if session.ID == "" || session.Directory == "" {
 			continue
 		}
-		s.sessions[session.ID] = session
+		sessions[session.ID] = session
 	}
+	// This executes once per process/store instance. A previous process cannot
+	// have left a live native run here; mark it interrupted but never replay
+	// proposed or possibly completed tool calls.
+	for id := range sessions {
+		snapshot, err := s.loadSnapshotLocked(id)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			// Preserve damaged snapshots for diagnosis; their direct read will
+			// report the error, without blocking unrelated sessions.
+			continue
+		}
+		if snapshot.PendingRun == nil {
+			continue
+		}
+		started := snapshot.PendingRun.StartedAt
+		snapshot.PendingRun = nil
+		// Persisted "running" tool activities belong to the dead process.
+		// The tool might have completed before its reply was recorded.
+		for messageIndex := range snapshot.Messages {
+			for activityIndex := range snapshot.Messages[messageIndex].Activities {
+				activity := &snapshot.Messages[messageIndex].Activities[activityIndex]
+				if activity.Kind == "tool" && activity.Status == "running" {
+					activity.Status = "failed"
+					activity.Error = &sessionErrorView{
+						Type: "interrupted",
+						Message: "TL Studio stopped before the tool outcome was recorded. The operation may have completed; inspect the workspace before retrying.",
+					}
+				}
+			}
+		}
+		snapshot.Messages = append(snapshot.Messages, interruptedNativeRunMessage(id, started))
+		if err := s.saveSnapshotLocked(snapshot); err != nil {
+			return fmt.Errorf("recover interrupted session %s: %w", id, err)
+		}
+	}
+	s.sessions = sessions
+	s.loaded = true
 	return nil
 }
 
@@ -142,13 +186,8 @@ func (s *sessionPersistenceStore) persistIndexLocked() error {
 		}
 		return items[i].UpdatedAt > items[j].UpdatedAt
 	})
-	if len(items) > maxPersistedSessions {
-		for _, stale := range items[maxPersistedSessions:] {
-			delete(s.sessions, stale.ID)
-			_ = os.Remove(s.snapshotPath(stale.ID))
-		}
-		items = items[:maxPersistedSessions]
-	}
+	// Never delete historical sessions to satisfy a display/listing limit.
+	// Explicit session deletion is the only path that removes user history.
 	return writePrivateJSONAtomic(s.indexPath(), persistedSessionIndex{
 		Version:  sessionPersistenceVersion,
 		Sessions: items,
@@ -156,9 +195,6 @@ func (s *sessionPersistenceStore) persistIndexLocked() error {
 }
 
 func sanitizePersistedMessages(messages []sessionMessageView) []sessionMessageView {
-	if len(messages) > maxPersistedMessages {
-		messages = messages[len(messages)-maxPersistedMessages:]
-	}
 	result := make([]sessionMessageView, len(messages))
 	for index, message := range messages {
 		result[index] = message
@@ -196,15 +232,8 @@ func (s *sessionPersistenceStore) saveSnapshotLocked(snapshot persistedSessionSn
 	snapshot.SavedAt = time.Now().UnixMilli()
 	snapshot.Messages = sanitizePersistedMessages(snapshot.Messages)
 
-	for len(snapshot.Messages) > 1 {
-		data, err := json.Marshal(snapshot)
-		if err != nil {
-			return err
-		}
-		if len(data) <= maxSessionSnapshotBytes {
-			break
-		}
-		snapshot.Messages = snapshot.Messages[len(snapshot.Messages)/4:]
+	if err := s.archiveExcessSnapshotMessagesLocked(&snapshot); err != nil {
+		return err
 	}
 	return writePrivateJSONAtomic(s.snapshotPath(snapshot.Session.ID), snapshot)
 }
@@ -357,7 +386,11 @@ func (s *sessionPersistenceStore) getMessages(sessionID string) ([]sessionMessag
 	if err != nil {
 		return nil, false, err
 	}
-	return append([]sessionMessageView(nil), snapshot.Messages...), true, nil
+	messages, err := s.readArchivedSnapshotMessagesLocked(snapshot)
+	if err != nil {
+		return nil, false, err
+	}
+	return append(messages, snapshot.Messages...), true, nil
 }
 
 func (s *sessionPersistenceStore) getChanges(sessionID string) ([]sessionChangeView, bool, error) {
@@ -433,6 +466,7 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 		}
 	}
 
+	snapshot.PendingRun = &persistedSessionPendingRun{StartedAt: now, MessageID: input.MessageID}
 	snapshot.Messages = append(snapshot.Messages, sessionMessageView{
 		ID:          input.MessageID,
 		SessionID:   sessionID,
@@ -492,6 +526,11 @@ func (s *sessionPersistenceStore) remove(sessionID string) error {
 		return err
 	}
 	delete(s.sessions, sessionID)
+	if err := s.persistIndexLocked(); err != nil {
+		return err
+	}
+	// Remove the snapshot and its archived history only after the index no
+	// longer references the session.
 	_ = os.Remove(s.snapshotPath(sessionID))
-	return s.persistIndexLocked()
+	return s.removeSessionArchives(sessionID)
 }
