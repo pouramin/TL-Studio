@@ -62,30 +62,44 @@ import { K } from "./kernel";
     K.state.attentionKey = key;
     reset("Permission request");
 
-    const text = document.createElement("div");
-    const meta = document.createElement("div");
-    text.textContent = `Agent wants permission to ${item.permission || item.action || "perform an action"}.`;
-    meta.className = "attention-meta";
+    const action = document.createElement("p");
+    action.className = "attention-summary";
+    action.textContent = `Agent requests permission: ${item.action || item.permission || "perform an action"}`;
 
     const patterns = Array.isArray(item.patterns) ? item.patterns : Array.isArray(item.resources) ? item.resources : [];
     const alwaysRules = Array.isArray(item.always) ? item.always.filter(Boolean) : [];
     const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata : {};
     const sensitive = metadata.skillShell === true || metadata.sandboxEscalation === true;
     const canAlways = !sensitive && metadata.disableAlways !== true && alwaysRules.length > 0;
-    const always = canAlways ? `TL Studio can remember these rules for this project:\n${alwaysRules.join("\n")}` : "";
+    const taskScope = metadata.taskScope === "project-files" || metadata.taskScope === "project-shell" ? metadata.taskScope : "";
 
-    meta.textContent = [
-      patterns.length ? patterns.join("\n") : "",
-      Object.keys(metadata).length ? JSON.stringify(metadata, null, 2) : "",
-      always,
-    ].filter(Boolean).join("\n\n") || "No additional details.";
-    K.els.attentionBody.append(text, meta);
+    const details = document.createElement("div");
+    details.className = "attention-permission-details";
+    const label = document.createElement("strong");
+    label.className = "attention-detail-label";
+    label.textContent = "Requested operation";
+    const command = document.createElement("pre");
+    command.className = "attention-command-preview";
+    command.textContent = patterns.join("\n") || item.action || "Workspace operation";
+    details.append(label, command);
+    K.els.attentionBody.append(action, details);
+
+    if (taskScope) {
+      const scopeInfo = document.createElement("p");
+      scopeInfo.className = taskScope === "project-shell" ? "attention-scope-note attention-scope-warning" : "attention-scope-note";
+      scopeInfo.textContent = metadata.taskScopeDescription || "Approval applies to this Agent run only.";
+      K.els.attentionBody.appendChild(scopeInfo);
+    }
 
     const actions = [
       actionButton("Reject", "ghost", () => replyPermission(item, "reject", sessionID, scope)),
-      actionButton(sensitive ? "Allow" : "Allow once", "ghost", () => replyPermission(item, "once", sessionID, scope)),
+      actionButton("Allow once", "ghost", () => replyPermission(item, "once", sessionID, scope)),
     ];
-    if (canAlways) actions.push(actionButton("Always allow in this project", "primary", () => replyPermission(item, "always", sessionID, scope)));
+    if (taskScope) {
+      actions.push(actionButton(taskScope === "project-shell" ? "Allow commands for this task" : "Allow file edits for this task", "primary", () => replyPermission(item, "task", sessionID, scope)));
+    } else if (canAlways) {
+      actions.push(actionButton("Always allow this operation", "primary", () => replyPermission(item, "always", sessionID, scope)));
+    }
     K.els.attentionActions.append(...actions);
 
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
@@ -131,9 +145,11 @@ import { K } from "./kernel";
         const span = document.createElement("span");
         label.className = "question-option";
         input.type = question.multiple ? "checkbox" : "radio";
+        input.className = "question-choice-input";
         input.name = name;
         input.value = option.label;
         if (!question.multiple && question.default && option.label === question.default) input.checked = true;
+        span.className = "question-choice-text";
         span.textContent = option.description ? `${option.label} — ${option.description}` : option.label;
         label.append(input, span);
         block.appendChild(label);
