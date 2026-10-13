@@ -391,7 +391,6 @@ func (s *sessionPersistenceStore) putChanges(session sessionView, changes []sess
 	if session.ID == "" || session.Directory == "" {
 		return nil
 	}
-	s.sessions[session.ID] = session
 	snapshot, err := s.loadSnapshotLocked(session.ID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
