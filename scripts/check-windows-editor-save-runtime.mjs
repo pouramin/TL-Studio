@@ -155,7 +155,7 @@ try {
   // 1. The live editor writes through the actual HTTP endpoint and updates SHA.
   assert(await setEditor("saved-on-windows\n"), "Editor did not mark basic save dirty");
   await clickSave();
-  await waitFor('document.getElementById("saveFile")?.disabled === true', "normal save completion");
+  await waitFor('document.getElementById("saveFile")?.disabled === true && document.getElementById("editorStatus")?.textContent === "Saved"', "normal save completion");
   assert(disk() === "saved-on-windows\n", "Normal Editor save did not reach Windows disk");
   outcomes.push("basic editor save and revision refresh");
 
@@ -183,7 +183,7 @@ try {
   await waitFor('globalThis.__saveHeld === true', "actual write completed before deferred response");
   assert(disk() === "snapshot-written\n", "Pending response test failed to write snapshot on disk");
   await setEditor("snapshot-written\nlater-keystrokes\n");
-  await evaluate('globalThis.__saveRelease()');
+  await evaluate('(() => { const release=globalThis.__saveRelease; globalThis.__saveRelease=null; globalThis.__saveHeld=false; release(); })()');
   await waitFor('document.getElementById("saveFile")?.disabled === false && document.getElementById("editorStatus")?.textContent.includes("Unsaved")', "late save preserves dirty buffer");
   assert((await editorContent()) === "snapshot-written\nlater-keystrokes\n", "Late response discarded new keystrokes");
   assert(disk() === "snapshot-written\n", "Late response unexpectedly wrote unsaved keystrokes");
@@ -192,8 +192,8 @@ try {
   // 5. A second save must use the new revision and persist the later edit.
   await clickSave();
   await waitFor('globalThis.__saveHeld === true && globalThis.__saveRelease !== null', "second write held");
-  await evaluate('globalThis.__saveRelease()');
-  await waitFor('document.getElementById("saveFile")?.disabled === true', "second save completion");
+  await evaluate('(() => { const release=globalThis.__saveRelease; globalThis.__saveRelease=null; globalThis.__saveHeld=false; release(); })()');
+  await waitFor('document.getElementById("saveFile")?.disabled === true && document.getElementById("editorStatus")?.textContent === "Saved"', "second save completion");
   assert(disk() === "snapshot-written\nlater-keystrokes\n", "Second save did not preserve latest edits");
   outcomes.push("second save commits later edit using updated SHA");
 
