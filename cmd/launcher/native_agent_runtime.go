@@ -489,18 +489,19 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 	// checkpoint with no executable tools. Failure of that last request never
 	// discards earlier persisted tool results.
 	writeBudgetCheckpoint := func(reason string) error {
+		if err := ctx.Err(); err != nil { return err }
 		prompt := nativeRunBudgetReportPrompt(reason)
 		turnCtx, cancel := context.WithTimeout(ctx, nativeRunTurnTimeout(input, r.modelRequestTimeout(routeSelection != nil, executionRequired)))
 		defer cancel()
 		summary, summaryErr := r.model.Complete(turnCtx, nativeModelRequest{
-			System: nativeAgentTurnSystemPrompt(routingPrompt, false) + "\n" + prompt,
+			System: "You are preparing a truthful checkpoint of unfinished work. Never claim success without verification. " + prompt,
 			Provider: provider, Model: model, APIKey: apiKey,
 			CacheKey: "tlstudio-" + sessionID,
-			Messages: append(append([]nativeConversationMessage(nil), conversation...), nativeConversationMessage{Role: "user", Text: prompt}),
+			Messages: nativeCheckpointConversation(conversation, routingPrompt),
 			Tools: nil, ToolsDisabled: true,
 		}, nil)
 		text := fmt.Sprintf("TL Studio paused this Agent run: %s. The task is not verified complete. Earlier file changes are preserved.", reason)
-		if summaryErr == nil && strings.TrimSpace(summary.Text) != "" {
+		if summaryErr == nil && len(summary.ToolCalls) == 0 && strings.TrimSpace(summary.Text) != "" {
 			text += "\n\n" + strings.TrimSpace(summary.Text)
 		} else {
 			text += " Inspect the current workspace, then send a new instruction to continue the remaining work."
