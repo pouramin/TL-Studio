@@ -13,10 +13,18 @@ const source = transformSync(readBrowserTypeScript("kernel.ts"), {
   sourcefile: "kernel.ts",
 }).code;
 const moduleRef = { exports: {} };
+const viewScopeModule = { exports: {} };
+vm.runInNewContext(transformSync(readBrowserTypeScript("view-scope.ts"), {
+  loader: "ts", format: "cjs", target: "es2020",
+}).code, { module: viewScopeModule, exports: viewScopeModule.exports });
 const logged = [];
 vm.runInNewContext(source, {
   module: moduleRef,
   exports: moduleRef.exports,
+  require: (name) => {
+    if (name === "./view-scope") return viewScopeModule.exports;
+    throw new Error(`Unexpected kernel dependency: ${name}`);
+  },
   document: { getElementById: () => null },
   console: { error: (...args) => logged.push(args) },
 }, { filename: "kernel.ts" });
