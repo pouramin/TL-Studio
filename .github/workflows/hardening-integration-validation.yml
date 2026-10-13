@@ -4,10 +4,11 @@ on:
   push:
     branches:
       - hardening/integration-agent-foundation
+      - refactor/native-agent-tool-round-runtime
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   linux-full:
@@ -21,6 +22,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Format extracted native tool runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          gofmt -w cmd/launcher/native_agent_tool_round.go
+          if ! git diff --quiet -- cmd/launcher/native_agent_tool_round.go; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add cmd/launcher/native_agent_tool_round.go
+            git commit -m 'style(agent): gofmt extracted tool runtime'
+            git push origin HEAD:refs/heads/refactor/native-agent-tool-round-runtime
+          fi
       - name: Install web dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Native / hardening focused tests
