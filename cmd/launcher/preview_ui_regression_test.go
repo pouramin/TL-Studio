@@ -37,7 +37,7 @@ func TestEmbeddedLivePreviewUIContract(t *testing.T) {
 		"tl-studio:editor-render",
 		"followActivePreviewEntry",
 		"entrySwitchGeneration",
-		"activeEntry !== entry",
+		"selectedEditorPath() !== entry",
 		"Preview file",
 		`capability?.kind === "html"`,
 		"tl-studio:project-file-changed",
