@@ -343,6 +343,8 @@ import { K } from "./kernel";
     timeout.addEventListener("change", () => store("tl-studio.agent.timeout." + providerKey(), timeout.value));
     idle.addEventListener("change", () => store("tl-studio.agent.idle." + providerKey(), idle.value));
     byId<HTMLSelectElement>("modelSelect")?.addEventListener("change", loadTimeouts);
+    window.addEventListener("tl-studio:agent-run-selection", () => { loadBudgets(); loadTimeouts(); });
+    budget.addEventListener("toggle", () => { if (budget.open) { loadBudgets(); loadTimeouts(); } });
     loadTimeouts();
   }
 
