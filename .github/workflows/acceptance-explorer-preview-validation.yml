@@ -23,7 +23,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: New acceptance tests
-        run: go test -count=1 -v ./cmd/launcher -run '^TestAcceptance'
+        run: |
+          node scripts/check-explorer-preview-feedback.cjs
+          go test -count=1 -v ./cmd/launcher -run '^TestAcceptance'
       - name: Full Go regression
         run: go test -count=1 ./...
       - name: Static analysis
@@ -56,7 +58,9 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: New acceptance tests
         shell: pwsh
-        run: go test -count=1 -v ./cmd/launcher -run '^TestAcceptance'
+        run: |
+          node scripts/check-explorer-preview-feedback.cjs
+          go test -count=1 -v ./cmd/launcher -run '^TestAcceptance'
       - name: Windows full Go tests
         shell: pwsh
         run: go test -count=1 ./...
