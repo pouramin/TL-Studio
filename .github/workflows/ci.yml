@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 permissions:
@@ -78,6 +78,34 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /tmp/tl-studio-linux-arm64 ./cmd/launcher
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o /tmp/tl-studio-darwin-x64 ./cmd/launcher
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o /tmp/tl-studio-darwin-arm64 ./cmd/launcher
+
+  # Run the full Go suite natively where process cancellation, file writes,
+  # credential stores and filesystem semantics differ from Ubuntu.
+  # Ubuntu's full suite is already covered by the "test" job above.
+  native-platform-go-tests:
+    name: native-go-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install UI build tools
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Build Browser UI
+        run: npm run build:web
+      - name: Run full native Go suite
+        run: go test ./... -count=1
+      - name: Vet native Go packages
+        run: go vet ./...
 
   windows-codex-app-server:
     runs-on: windows-latest
