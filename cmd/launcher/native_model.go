@@ -235,6 +235,17 @@ func modelHTTPError(response *http.Response, request nativeModelRequest) error {
 		_, _ = saveJevRouterConfig(jevRouterConfig{Enabled: false, Blocked: "openrouter-credits", BlockMessage: message})
 		return errors.New(message)
 	}
+	// Do not leak provider response metadata (account identifiers, headers,
+	// internal request IDs) into chat. Quota exhaustion cannot be recovered by
+	// retrying the same key, and Laya uses the marker for provider-wide cooldown.
+	if response.StatusCode == http.StatusTooManyRequests {
+		lower := strings.ToLower(detail)
+		if strings.Contains(lower, "free-models-per-day") || strings.Contains(lower, "openrouter_free_tier_daily") {
+			return errors.New("OpenRouter free-models-per-day quota exhausted for the active API key (429). Use an account with available quota or wait for reset.")
+		}
+		return errors.New("Model provider rate limit reached (429). Retry later or select another available model.")
+	}
+	if len(detail) > 768 { detail = detail[:768] + "…" }
 	return fmt.Errorf("model request failed with status %d: %s", response.StatusCode, detail)
 }
 
