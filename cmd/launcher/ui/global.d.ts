@@ -125,6 +125,10 @@ interface TLStudioSessionRunInput {
   model?: TLStudioSessionModelRef;
   variant?: string;
   messageID?: string;
+  maxToolRounds?: number;
+  modelTimeoutSeconds?: number;
+  streamIdleTimeoutSeconds?: number;
+  maxRunTokens?: number;
 }
 
 interface TLStudioToolCapabilities {
