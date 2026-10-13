@@ -76,6 +76,7 @@ func nativeExecutableToolIDs() []string {
 		"files.list",
 		"files.write",
 		"files.edit",
+		"files.delete",
 		"search.content",
 		"terminal.command",
 		"interaction.question",
@@ -128,6 +129,7 @@ func nativeToolInputSchema(id string) map[string]any {
 			"properties": map[string]any{
 				"path":    stringProperty("Project-relative file path."),
 				"content": stringProperty("Complete file content to write."),
+				"expectedSha256": stringProperty("Required when overwriting an existing file: exact sha256 from a recent files.read result. Omit only for creating a new file. If a conflict occurs, read again before retrying."),
 			},
 			"required": []string{"path", "content"},
 			"additionalProperties": false,
@@ -139,9 +141,20 @@ func nativeToolInputSchema(id string) map[string]any {
 				"path": stringProperty("Project-relative file path."),
 				"old":  stringProperty("Exact text to replace."),
 				"new":  stringProperty("Replacement text."),
+				"expectedSha256": stringProperty("Required sha256 from a recent files.read result for this file. Prevents edits based on stale content. If a conflict occurs, read again before retrying."),
 				"all":  map[string]any{"type": "boolean", "description": "Replace every exact occurrence instead of exactly one."},
 			},
-			"required": []string{"path", "old", "new"},
+			"required": []string{"path", "old", "new", "expectedSha256"},
+			"additionalProperties": false,
+		}
+	case "files.delete":
+		return map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"path": stringProperty("Project-relative path to one file (directories and symlinks are not supported)."),
+				"expectedSha256": stringProperty("Required SHA-256 from files.read for exactly this file. If it has changed, stop and read again."),
+			},
+			"required": []string{"path", "expectedSha256"},
 			"additionalProperties": false,
 		}
 	case "search.content":
@@ -403,6 +416,8 @@ func (e *nativeToolExecutor) Execute(ctx context.Context, sessionID, project str
 		result.Output, result.Changes, err = nativeWriteFile(project, input)
 	case "files.edit":
 		result.Output, result.Changes, err = nativeEditFile(project, input)
+	case "files.delete":
+		result.Output, result.Changes, err = nativeDeleteFile(project, input)
 	case "search.content":
 		result.Output, err = nativeSearchContent(ctx, project, input)
 	case "terminal.command":
@@ -545,6 +560,10 @@ func nativeWriteFile(project string, input map[string]any) (any, []sessionChange
 	if err != nil {
 		return nil, nil, err
 	}
+	expected, err := nativeOptionalString(input, "expectedSha256")
+	if err != nil {
+		return nil, nil, err
+	}
 	if int64(len([]byte(content))) > maxLocalWriteBytes {
 		return nil, nil, fmt.Errorf("file is too large to write (max %d MiB)", maxLocalWriteBytes/(1024*1024))
 	}
@@ -553,11 +572,15 @@ func nativeWriteFile(project string, input map[string]any) (any, []sessionChange
 		return nil, nil, err
 	}
 
+	workspaceFileMutationMu.Lock()
+	defer workspaceFileMutationMu.Unlock()
+
 	var previous []byte
 	mode := os.FileMode(0o600)
 	info, statErr := os.Lstat(target)
+	exists := statErr == nil
 	switch {
-	case statErr == nil:
+	case exists:
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 			return nil, nil, errors.New("requested path is not an editable regular file")
 		}
@@ -570,7 +593,10 @@ func nativeWriteFile(project string, input map[string]any) (any, []sessionChange
 	default:
 		return nil, nil, statErr
 	}
-	if err := os.WriteFile(target, []byte(content), mode); err != nil {
+	if err := validateWorkspaceExpectedSHA(expected, previous, exists, true); err != nil {
+		return nil, nil, err
+	}
+	if err := atomicWorkspaceFileWrite(target, []byte(content), mode, !exists, expected); err != nil {
 		return nil, nil, err
 	}
 	change := nativeFileChange(rel, string(previous), content)
@@ -578,7 +604,7 @@ func nativeWriteFile(project string, input map[string]any) (any, []sessionChange
 		"path": rel,
 		"sha256": fileSHA256([]byte(content)),
 		"bytes": len([]byte(content)),
-		"created": statErr != nil,
+		"created": !exists,
 	}, []sessionChangeView{change}, nil
 }
 
@@ -595,6 +621,10 @@ func nativeEditFile(project string, input map[string]any) (any, []sessionChangeV
 	if err != nil {
 		return nil, nil, err
 	}
+	expected, err := nativeRequiredString(input, "expectedSha256", false)
+	if err != nil {
+		return nil, nil, err
+	}
 	replaceAll, err := nativeOptionalBool(input, "all")
 	if err != nil {
 		return nil, nil, err
@@ -603,6 +633,10 @@ func nativeEditFile(project string, input map[string]any) (any, []sessionChangeV
 	if err != nil {
 		return nil, nil, err
 	}
+
+	workspaceFileMutationMu.Lock()
+	defer workspaceFileMutationMu.Unlock()
+
 	info, err := os.Lstat(target)
 	if err != nil {
 		return nil, nil, err
@@ -612,6 +646,9 @@ func nativeEditFile(project string, input map[string]any) (any, []sessionChangeV
 	}
 	data, err := os.ReadFile(target)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := validateWorkspaceExpectedSHA(expected, data, true, true); err != nil {
 		return nil, nil, err
 	}
 	original := string(data)
@@ -630,7 +667,7 @@ func nativeEditFile(project string, input map[string]any) (any, []sessionChangeV
 	if int64(len([]byte(updated))) > maxLocalWriteBytes {
 		return nil, nil, fmt.Errorf("edited file is too large (max %d MiB)", maxLocalWriteBytes/(1024*1024))
 	}
-	if err := os.WriteFile(target, []byte(updated), info.Mode().Perm()); err != nil {
+	if err := atomicWorkspaceFileWrite(target, []byte(updated), info.Mode().Perm(), false, expected); err != nil {
 		return nil, nil, err
 	}
 	change := nativeFileChange(rel, original, updated)
@@ -639,6 +676,32 @@ func nativeEditFile(project string, input map[string]any) (any, []sessionChangeV
 		"replacements": func() int { if replaceAll { return count }; return 1 }(),
 		"sha256": fileSHA256([]byte(updated)),
 	}, []sessionChangeView{change}, nil
+}
+
+// nativeDeleteFile deletes only a single regular file with a revision
+// read by the agent, never directories/symlinks. This is deliberately not a
+// general recursive delete or shell command bypass.
+func nativeDeleteFile(project string, input map[string]any) (any, []sessionChangeView, error) {
+	path, err := nativeRequiredString(input, "path", false)
+	if err != nil { return nil, nil, err }
+	expected, err := nativeRequiredString(input, "expectedSha256", false)
+	if err != nil { return nil, nil, err }
+	target, rel, err := resolveProjectMutationPath(project, path)
+	if err != nil { return nil, nil, err }
+	workspaceFileMutationMu.Lock()
+	defer workspaceFileMutationMu.Unlock()
+	info, err := os.Lstat(target)
+	if err != nil { return nil, nil, err }
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+		return nil, nil, errors.New("files.delete only supports regular files; directories and symlinks cannot be deleted by Agent")
+	}
+	previous, err := os.ReadFile(target)
+	if err != nil { return nil, nil, err }
+	if err := validateWorkspaceExpectedSHA(expected, previous, true, true); err != nil { return nil, nil, err }
+	// Protect from stale edits or deletion of a different file between Lstat
+	// and removal where possible; the path remains project-boundary checked.
+	if err := os.Remove(target); err != nil { return nil, nil, err }
+	return map[string]any{"path": rel, "deleted": true}, []sessionChangeView{nativeFileChange(rel, string(previous), "")}, nil
 }
 
 func nativeSearchContent(ctx context.Context, project string, input map[string]any) (any, error) {

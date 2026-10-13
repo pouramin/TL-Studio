@@ -294,6 +294,9 @@ type permissionEngine struct {
 	store         *permissionPolicyStore
 	nativeMu      sync.Mutex
 	nativePending map[string]*nativePermissionWaiter
+	// Run-only approvals are never written to disk; scoped by Session, project,
+	// and a finite built-in tool group, then dropped on finish/abort.
+	nativeRunGrants map[string]map[string]bool
 	events        *liveEventBus
 }
 
@@ -302,6 +305,7 @@ func newPermissionEngine(state *appState) *permissionEngine {
 		state:         state,
 		store:         newPermissionPolicyStore(permissionPolicyPath()),
 		nativePending: map[string]*nativePermissionWaiter{},
+		nativeRunGrants: map[string]map[string]bool{},
 	}
 }
 

@@ -119,7 +119,9 @@ func TestPreviewCapabilityRegistryCoversSupportedFileTypes(t *testing.T) {
 		"README.md":    "markdown",
 		"notes.txt":    "text",
 		"session.log":  "text",
-		"styles.css":   "",
+		"styles.css":   "text",
+		"script.js":    "text",
+		"tl":           "text",
 	}
 	for path, wantKind := range cases {
 		got, ok := previewCapabilityForPath(path)

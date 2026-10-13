@@ -127,6 +127,28 @@ func TestLocalFileWriteUsesOptimisticHashConflictProtection(t *testing.T) {
 	}
 }
 
+// Missing or malformed revision tokens must never bypass optimistic locking.
+func TestLocalFileWriteRejectsUnversionedAndMalformedSaves(t *testing.T) {
+	project := t.TempDir()
+	filePath := filepath.Join(project, "note.txt")
+	if err := os.WriteFile(filePath, []byte("original"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := newLocalFilesServer(t, project)
+	for _, hash := range []string{"", "not-a-sha256"} {
+		res, data := localJSONRequest(t, server, http.MethodPut, "/local/file", map[string]any{
+			"path": "note.txt", "content": "overwritten", "expectedSha256": hash,
+		})
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("unversioned save with hash %q returned %d, want 400: %s", hash, res.StatusCode, data)
+		}
+		content, err := os.ReadFile(filePath)
+		if err != nil || string(content) != "original" {
+			t.Fatalf("failed validation mutated file: %q (%v)", content, err)
+		}
+	}
+}
+
 func TestLocalEntryCRUD(t *testing.T) {
 	project := t.TempDir()
 	server := newLocalFilesServer(t, project)

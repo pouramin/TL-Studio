@@ -2,6 +2,9 @@ package main
 
 import (
 	"io/fs"
+	"io"
+	"bytes"
+	"unicode/utf8"
 	"mime"
 	"os"
 	"path/filepath"
@@ -40,6 +43,8 @@ var previewFileCapabilities = []previewCapabilityDescriptor{
 	{ID: "media.audio", Name: "Audio", Kind: "audio", Renderer: "browser", Extensions: []string{".mp3", ".wav", ".ogg", ".oga", ".m4a", ".aac", ".flac"}},
 	{ID: "document.markdown", Name: "Markdown", Kind: "markdown", Renderer: "markdown", Extensions: []string{".md", ".markdown", ".mdown"}},
 	{ID: "document.text", Name: "Text", Kind: "text", Renderer: "text", Extensions: []string{".txt", ".text", ".log"}},
+	// Source files render as escaped, read-only text. They never execute JS.
+	{ID: "document.source", Name: "Source code", Kind: "text", Renderer: "text", Extensions: []string{".css", ".js", ".jsx", ".ts", ".tsx", ".json", ".xml", ".yml", ".yaml", ".go", ".py", ".rs", ".java", ".c", ".h", ".cpp", ".sh", ".ps1", ".bat"}},
 }
 
 func previewRegistry() previewCapabilityRegistry {
@@ -49,9 +54,13 @@ func previewRegistry() previewCapabilityRegistry {
 }
 
 func previewCapabilityForPath(value string) (previewCapabilityDescriptor, bool) {
-	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(value)))
+	value = strings.TrimSpace(value)
+	if value == "" { return previewCapabilityDescriptor{}, false }
+	ext := strings.ToLower(filepath.Ext(value))
 	if ext == "" {
-		return previewCapabilityDescriptor{}, false
+		// An explicitly selected extensionless text file (e.g. "tl") can
+		// be previewed without guessing another project's index.html.
+		return previewCapabilityDescriptor{ID: "document.plain", Name: "Text", Kind: "text", Renderer: "text"}, true
 	}
 	for _, capability := range previewFileCapabilities {
 		for _, candidate := range capability.Extensions {
@@ -100,6 +109,20 @@ func validPreviewEntry(project, requested string) (previewEntryDescriptor, bool)
 	if err != nil || !info.Mode().IsRegular() {
 		return previewEntryDescriptor{}, false
 	}
+	// An extensionless file must be demonstrably text, not an executable,
+	// binary blob, or a large file accidentally served as HTML.
+	if filepath.Ext(rel) == "" {
+		if info.Size() > maxLocalPreviewBytes { return previewEntryDescriptor{}, false }
+		file, err := os.Open(target)
+		if err != nil { return previewEntryDescriptor{}, false }
+		buf := make([]byte, 4096)
+		n, readErr := file.Read(buf)
+		_ = file.Close()
+		if readErr != nil && readErr != io.EOF { return previewEntryDescriptor{}, false }
+		if bytes.IndexByte(buf[:n], 0) >= 0 || !utf8.Valid(buf[:n]) {
+			return previewEntryDescriptor{}, false
+		}
+	}
 	return previewEntryDescriptor{
 		Path:         filepath.ToSlash(rel),
 		CapabilityID: capability.ID,
@@ -138,6 +161,12 @@ func previewFileCandidates(project string) []previewEntryDescriptor {
 		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
+			return nil
+		}
+		// Keep default discovery focused on documents/media; source and
+		// extensionless files preview only when selected in the editor.
+		capability, supported := previewCapabilityForPath(rel)
+		if !supported || capability.ID == "document.source" || capability.ID == "document.plain" {
 			return nil
 		}
 		descriptor, ok := validPreviewEntry(root, rel)

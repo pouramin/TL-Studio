@@ -1,6 +1,36 @@
+import { createViewScope } from "./view-scope";
+
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
 
+// Lifecycle contract: the presentation module owns renderMessages. Other
+// modules subscribe to post-render effects without monkey-patching that method.
+// Subscriptions run in registration order; a failed decoration cannot prevent
+// the remaining independent decorations from updating the UI.
+const messageRenderEffects: Array<() => void> = [];
+
+const onMessagesRendered = (effect: () => void): (() => void) => {
+  if (typeof effect !== "function") throw new TypeError("Message render effect must be a function");
+  messageRenderEffects.push(effect);
+  return () => {
+    const index = messageRenderEffects.indexOf(effect);
+    if (index !== -1) messageRenderEffects.splice(index, 1);
+  };
+};
+
+const emitMessagesRendered = (): void => {
+  for (const effect of [...messageRenderEffects]) {
+    try {
+      effect();
+    } catch (error) {
+      console.error("[TL Studio] message render effect failed", error);
+    }
+  }
+};
+
 export const K = {
+  viewScope: createViewScope(),
+  onMessagesRendered,
+  emitMessagesRendered,
   els: {
     projectName: $("projectName"), projectPath: $("projectPath"), pickProject: $("pickProject"), manualProject: $("manualProject"),
     backendStatus: $("backendStatus"), sessions: $("sessions"), newSession: $("newSession"), emptyNewSession: $("emptyNewSession"),

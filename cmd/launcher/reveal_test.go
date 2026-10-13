@@ -24,7 +24,7 @@ func TestRevealCommandForPathAcrossSupportedPlatforms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mac.Name != "open" || len(mac.Args) != 2 || mac.Args[0] != "-R" || mac.Args[1] != "/workspace/file.txt" {
+	if mac.Name != "open" || len(mac.Args) != 2 || mac.Args[0] != "-R" || mac.Args[1] != filepath.Clean("/workspace/file.txt") {
 		t.Fatalf("unexpected macOS reveal command: %#v", mac)
 	}
 
@@ -32,7 +32,7 @@ func TestRevealCommandForPathAcrossSupportedPlatforms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if linux.Name != "xdg-open" || len(linux.Args) != 1 || linux.Args[0] != "/workspace/src" {
+	if linux.Name != "xdg-open" || len(linux.Args) != 1 || linux.Args[0] != filepath.Clean("/workspace/src") {
 		t.Fatalf("unexpected Linux reveal command: %#v", linux)
 	}
 

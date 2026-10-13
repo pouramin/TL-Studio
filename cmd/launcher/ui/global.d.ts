@@ -125,6 +125,10 @@ interface TLStudioSessionRunInput {
   model?: TLStudioSessionModelRef;
   variant?: string;
   messageID?: string;
+  maxToolRounds?: number;
+  modelTimeoutSeconds?: number;
+  streamIdleTimeoutSeconds?: number;
+  maxRunTokens?: number;
 }
 
 interface TLStudioToolCapabilities {
@@ -561,6 +565,14 @@ interface TLStudioState {
 type TLStudioCallable = (...args: any[]) => any;
 
 interface TLStudioKernel {
+  viewScope: {
+    enterProject(): void;
+    enterSession(): void;
+    captureProject(): number;
+    captureSession(): { project: number; session: number };
+    isProjectCurrent(token: number): boolean;
+    isSessionCurrent(token: { project: number; session: number }): boolean;
+  };
   els: TLStudioElements;
   state: TLStudioState;
   api: TLStudioProductAPI;
@@ -598,6 +610,8 @@ interface TLStudioKernel {
   ensureSessionSelection: TLStudioCallable;
   loadMessages: TLStudioCallable;
   renderMessages: TLStudioCallable;
+  onMessagesRendered(effect: () => void): () => void;
+  emitMessagesRendered(): void;
   showConversation: TLStudioCallable;
   sendPrompt: TLStudioCallable;
   resizePrompt: TLStudioCallable;

@@ -7,7 +7,6 @@ import { K } from "./kernel";
   if (!K || K.__providerRecoveryInstalled) return;
   K.__providerRecoveryInstalled = true;
 
-  const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
   const messageRole = (message: any) => message?.role || message?.info?.role || message?.type || "";
@@ -20,7 +19,7 @@ import { K } from "./kernel";
     return Number.isFinite(number) && number > 0 ? number : 0;
   };
 
-  const clearlyNonRetryable = (value: any) => /context (?:window|length)|quota exceeded|insufficient quota|invalid prompt|usage not included|freeusagelimiterror|unauthori[sz]ed|forbidden|authentication|reauthenticate|content filter/i.test(value);
+  const clearlyNonRetryable = (value: any) => /context (?:window|length)|quota exceeded|quota exhausted|free-models-per-day|openrouter_free_tier_daily|insufficient quota|invalid prompt|usage not included|freeusagelimiterror|unauthori[sz]ed|forbidden|authentication|reauthenticate|content filter/i.test(value);
   const transientMessage = (value: any) => /provider returned error|upstream|temporar(?:y|ily) unavailable|server (?:is )?(?:error|overloaded)|overloaded|rate limit|too many requests|fetch failed|connection (?:reset|closed|dropped)|response stream|timed out|timeout/i.test(value);
 
   const providerErrorInfo = (message: any) => {
@@ -35,7 +34,8 @@ import { K } from "./kernel";
     const statusCode = finiteStatus(error.statusCode || data.statusCode);
     const combined = `${messageText}\n${responseBody}`;
 
-    if (name === "MessageAbortedError" || name === "ProviderAuthError" || name === "ContextOverflowError" || clearlyNonRetryable(combined)) {
+    // Retry after daily quota exhaustion or HTTP 429 will waste requests.
+    if (statusCode === 429 || name === "MessageAbortedError" || name === "ProviderAuthError" || name === "ContextOverflowError" || clearlyNonRetryable(combined)) {
       return { retryable: false, name, message: messageText, statusCode, responseBody };
     }
 
@@ -134,11 +134,7 @@ import { K } from "./kernel";
     });
   };
 
-  K.renderMessages = (...args) => {
-    const result = baseRenderMessages(...args);
-    decorateProviderFailures();
-    return result;
-  };
+  K.onMessagesRendered(decorateProviderFailures);
 
   K.__providerRecovery = {
     providerErrorInfo,

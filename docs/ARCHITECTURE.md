@@ -42,21 +42,13 @@ All active sessions are TL Studio sessions. The Session domain owns IDs, create/
 
 ## Context management
 
-TL Studio owns model-turn context construction. Persisted Session history remains complete on disk; context management changes only the transient message window sent to the selected model.
+TL Studio owns transient model-turn context construction while preserving the full Session transcript on disk. It estimates the current model's context and output limits, reserves room for system instructions and tool schemas, and compacts older completed tool payloads when context grows.
 
-The Native Agent derives a conservative input budget from the selected model's advertised `contextLimit` and `outputLimit`, with separate reserves for the system prompt, Tool schemas, output tokens, and safety headroom. When a provider does not advertise a context limit, TL Studio uses a conservative local default rather than delegating context policy to the provider.
+All responses from the **most recent multi-tool round** remain verbatim for the next turn. Older completed tool results may be compacted; the model is warned to re-read only the narrowest needed range. A recent-turn window and an explicit context checkpoint account for omitted history.
 
-TL Studio begins compacting older completed Tool payloads before the hard context limit is reached. The most recent Tool result is always kept verbatim for the immediate continuation turn; older compacted file reads retain useful range/path metadata and explicitly tell the model to re-read only the narrowest missing range rather than blindly repeating an identical Tool call.
+If the newest turn still cannot fit the selected model's context, the runtime **fails closed before dispatching an oversized request**. The original transcript remains durable. The cumulative per-run token budget is model-scaled and honors a lower explicit user limit. When exhausted, the Agent records a no-tool, bounded-context final checkpoint rather than claiming task completion.
 
-If a model request would still exceed the hard budget, TL Studio keeps the newest conversation turns and inserts an explicit context checkpoint describing omitted persisted history. The full transcript is not deleted or rewritten by compaction.
-
-Each Agent run also has a model-scaled cumulative token budget. A runaway Tool/model loop stops with a resumable visible failure before one turn can consume an unbounded number of repeated full-context requests. Existing project mutations and persisted Session history remain intact so the user can continue in a new turn.
-
-Tool exposure follows least privilege per turn. Requests that do not explicitly ask to mutate or execute receive read/search-capable tools only; write/execute tools are withheld. The runtime independently enforces the same boundary so a hallucinated `files.write`, `files.edit`, Terminal, or write-capable plugin call cannot mutate the workspace during a read-only turn. English and Persian mutation intent are both recognized.
-
-Context management is observable through semantic Session activity, including failure paths. When TL Studio windows or compacts a request, the Agent transcript can show the model context limit, message budget, estimated retained tokens, omitted-message count, and compacted Tool payload counts. When a run token budget is reached, the failure activity shows the budget and cumulative usage estimate.
-
-This first 0.7 foundation is deterministic and local. It does not introduce vector memory, RAG, a hosted memory service, or provider-owned conversation state.
+Read-only tool restrictions are enforced in the native runtime independently of the model, including hallucinated mutating tool calls. English and Persian execution intent are recognized. Context compaction and budget conditions appear in semantic Session activities. No hosted memory or RAG is introduced.
 
 ## Interactive questions
 

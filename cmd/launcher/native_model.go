@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"context"
 	"encoding/json"
 	"errors"
@@ -42,9 +43,13 @@ type nativeModelRequest struct {
 	Provider tlProviderDefinition
 	Model    tlProviderModel
 	APIKey   string
+	CacheKey string
 	Messages []nativeConversationMessage
 	Tools    []nativeModelToolDefinition
+	ToolsDisabled bool
+	OnStreamActivity func()
 }
+
 
 type nativeModelResponse struct {
 	Text         string
@@ -149,6 +154,32 @@ func nativeToolIDFromWire(name string, tools []nativeModelToolDefinition) string
 	return strings.TrimSpace(name)
 }
 
+func isOfficialMistralBaseURL(raw string) bool {
+	parsed, err := canonicalProviderURL(raw)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(parsed.Hostname(), "api.mistral.ai")
+}
+
+func normalizeMistralToolCallID(raw, seed string) string {
+	raw = strings.TrimSpace(raw)
+	if len(raw) == 9 {
+		valid := true
+		for _, ch := range raw {
+			if (ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') && (ch < '0' || ch > '9') {
+				valid = false
+				break
+			}
+		}
+		if valid {
+			return raw
+		}
+	}
+	sum := sha256.Sum256([]byte(raw + "\x00" + seed))
+	return fmt.Sprintf("%x", sum[:])[:9]
+}
+
 func nativeEndpoint(baseURL, suffix string) (string, error) {
 	base, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || base.Scheme == "" || base.Host == "" {
@@ -207,6 +238,17 @@ func modelHTTPError(response *http.Response, request nativeModelRequest) error {
 		_, _ = saveJevRouterConfig(jevRouterConfig{Enabled: false, Blocked: "openrouter-credits", BlockMessage: message})
 		return errors.New(message)
 	}
+	// Do not leak provider response metadata (account identifiers, headers,
+	// internal request IDs) into chat. Quota exhaustion cannot be recovered by
+	// retrying the same key, and Laya uses the marker for provider-wide cooldown.
+	if response.StatusCode == http.StatusTooManyRequests {
+		lower := strings.ToLower(detail)
+		if strings.Contains(lower, "free-models-per-day") || strings.Contains(lower, "openrouter_free_tier_daily") {
+			return errors.New("OpenRouter free-models-per-day quota exhausted for the active API key (429). Use an account with available quota or wait for reset.")
+		}
+		return errors.New("Model provider rate limit reached (429). Retry later or select another available model.")
+	}
+	if len(detail) > 768 { detail = detail[:768] + "…" }
 	return fmt.Errorf("model request failed with status %d: %s", response.StatusCode, detail)
 }
 
@@ -283,7 +325,14 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 		"messages": openAIChatMessages(request),
 		"stream":   true,
 	}
-	if len(request.Tools) > 0 {
+	if isOfficialMistralBaseURL(request.Provider.BaseURL) {
+		if cacheKey := strings.TrimSpace(request.CacheKey); cacheKey != "" {
+			payload["prompt_cache_key"] = cacheKey
+		}
+	}
+	if request.ToolsDisabled {
+		payload["tool_choice"] = "none"
+	} else if len(request.Tools) > 0 {
 		payload["tools"] = openAITools(request.Tools)
 		payload["tool_choice"] = "auto"
 	}
@@ -296,7 +345,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 		return nativeModelResponse{}, modelHTTPError(response, request)
 	}
 	if !strings.Contains(strings.ToLower(response.Header.Get("Content-Type")), "text/event-stream") {
-		return parseOpenAIChatJSON(response.Body, request.Tools, onTextDelta)
+		return parseOpenAIChatJSON(response.Body, request, onTextDelta)
 	}
 
 	var result nativeModelResponse
@@ -304,6 +353,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 	scanner := bufio.NewScanner(response.Body)
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	for scanner.Scan() {
+		if request.OnStreamActivity != nil { request.OnStreamActivity() }
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -331,13 +381,25 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 			Usage struct {
 				PromptTokens     int64 `json:"prompt_tokens"`
 				CompletionTokens int64 `json:"completion_tokens"`
+				PromptTokensDetails struct {
+					CachedTokens int64 `json:"cached_tokens"`
+				} `json:"prompt_tokens_details"`
 			} `json:"usage"`
 		}
 		if json.Unmarshal([]byte(data), &event) != nil {
 			continue
 		}
-		result.Usage.Input += event.Usage.PromptTokens
-		result.Usage.Output += event.Usage.CompletionTokens
+		if event.Usage.PromptTokens > 0 {
+			cached := event.Usage.PromptTokensDetails.CachedTokens
+			if cached < 0 || cached > event.Usage.PromptTokens {
+				cached = 0
+			}
+			result.Usage.Input = event.Usage.PromptTokens - cached
+			result.Usage.CacheRead = cached
+		}
+		if event.Usage.CompletionTokens > 0 {
+			result.Usage.Output = event.Usage.CompletionTokens
+		}
 		if strings.TrimSpace(event.Model) != "" {
 			result.RoutedModel = strings.TrimSpace(event.Model)
 		}
@@ -375,8 +437,12 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 		if part == nil {
 			continue
 		}
+		callID := part.ID
+		if isOfficialMistralBaseURL(request.Provider.BaseURL) {
+			callID = normalizeMistralToolCallID(callID, fmt.Sprintf("%d\x00%s\x00%s", index, part.Name, part.Arguments.String()))
+		}
 		result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
-			ID:        part.ID,
+			ID:        callID,
 			Name:      nativeToolIDFromWire(part.Name, request.Tools),
 			Arguments: json.RawMessage(part.Arguments.String()),
 		})
@@ -384,7 +450,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 	return result, nil
 }
 
-func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, onTextDelta func(string)) (nativeModelResponse, error) {
+func parseOpenAIChatJSON(reader io.Reader, request nativeModelRequest, onTextDelta func(string)) (nativeModelResponse, error) {
 	data, err := io.ReadAll(io.LimitReader(reader, nativeModelMaxResponseBytes))
 	if err != nil {
 		return nativeModelResponse{}, err
@@ -407,14 +473,25 @@ func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, on
 		Usage struct {
 			PromptTokens     int64 `json:"prompt_tokens"`
 			CompletionTokens int64 `json:"completion_tokens"`
+			PromptTokensDetails struct {
+				CachedTokens int64 `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
 		} `json:"usage"`
 	}
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nativeModelResponse{}, fmt.Errorf("decode OpenAI-compatible response: %w", err)
 	}
+	cachedPromptTokens := payload.Usage.PromptTokensDetails.CachedTokens
+	if cachedPromptTokens < 0 || cachedPromptTokens > payload.Usage.PromptTokens {
+		cachedPromptTokens = 0
+	}
 	result := nativeModelResponse{
 		RoutedModel: strings.TrimSpace(payload.Model),
-		Usage: sessionUsage{Input: payload.Usage.PromptTokens, Output: payload.Usage.CompletionTokens},
+		Usage: sessionUsage{
+			Input: payload.Usage.PromptTokens - cachedPromptTokens,
+			Output: payload.Usage.CompletionTokens,
+			CacheRead: cachedPromptTokens,
+		},
 	}
 	if len(payload.Choices) == 0 {
 		return result, errors.New("model response contained no choices")
@@ -425,10 +502,14 @@ func parseOpenAIChatJSON(reader io.Reader, tools []nativeModelToolDefinition, on
 	if result.Text != "" && onTextDelta != nil {
 		onTextDelta(result.Text)
 	}
-	for _, call := range choice.Message.ToolCalls {
+	for index, call := range choice.Message.ToolCalls {
+		callID := call.ID
+		if isOfficialMistralBaseURL(request.Provider.BaseURL) {
+			callID = normalizeMistralToolCallID(callID, fmt.Sprintf("%d\x00%s\x00%s", index, call.Function.Name, call.Function.Arguments))
+		}
 		result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
-			ID: call.ID,
-			Name: nativeToolIDFromWire(call.Function.Name, tools),
+			ID: callID,
+			Name: nativeToolIDFromWire(call.Function.Name, request.Tools),
 			Arguments: json.RawMessage(call.Function.Arguments),
 		})
 	}
@@ -531,7 +612,9 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 		"input":  responseInput(request),
 		"stream": true,
 	}
-	if len(request.Tools) > 0 {
+	if request.ToolsDisabled {
+		payload["tool_choice"] = "none"
+	} else if len(request.Tools) > 0 {
 		payload["tools"] = responseTools(request.Tools)
 	}
 	response, err := c.doJSON(ctx, endpoint, map[string]string{"Authorization": "Bearer " + request.APIKey}, payload)
@@ -556,6 +639,7 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 	scanner := bufio.NewScanner(response.Body)
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	for scanner.Scan() {
+		if request.OnStreamActivity != nil { request.OnStreamActivity() }
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -722,7 +806,9 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 	if request.System != "" {
 		payload["system"] = request.System
 	}
-	if len(request.Tools) > 0 {
+	if request.ToolsDisabled {
+		payload["tool_choice"] = map[string]string{"type":"none"}
+	} else if len(request.Tools) > 0 {
 		payload["tools"] = anthropicTools(request.Tools)
 	}
 	response, err := c.doJSON(ctx, endpoint, map[string]string{
@@ -750,6 +836,7 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	var eventName string
 	for scanner.Scan() {
+		if request.OnStreamActivity != nil { request.OnStreamActivity() }
 		line := scanner.Text()
 		if strings.HasPrefix(line, "event:") {
 			eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))

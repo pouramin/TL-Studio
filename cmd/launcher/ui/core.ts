@@ -85,8 +85,10 @@ import { K } from "./kernel";
   };
 
   K.loadLocalStatus = async () => {
+    const scope = K.viewScope.captureProject();
     const { els, state } = K;
     const local = await K.request<TLStudioLocalStatus>("/local/status");
+    if (!K.viewScope.isProjectCurrent(scope)) return;
     state.local = local;
     els.projectName.textContent = K.basename(local.project);
     els.projectPath.textContent = local.project || "Choose a folder";
@@ -176,7 +178,9 @@ import { K } from "./kernel";
   };
 
   K.loadCatalog = async () => {
+    const scope = K.viewScope.captureProject();
     const [agents, providers] = await Promise.allSettled([K.api.agents(), K.api.providerState()]);
+    if (!K.viewScope.isProjectCurrent(scope)) return;
     if (agents.status === "fulfilled") {
       K.state.agents = K.normalizeAgents(agents.value);
       K.renderAgents();
@@ -206,15 +210,22 @@ import { K } from "./kernel";
   };
 
   K.loadSessions = async () => {
+    const scope = K.viewScope.captureProject();
     const payload = await K.api.sessionView.list({ limit: 150 });
+    if (!K.viewScope.isProjectCurrent(scope)) return K.state.sessions;
     K.state.sessions = Array.isArray(payload) ? payload : [];
     K.renderSessions();
     return K.state.sessions;
   };
 
   K.loadActiveSessions = async () => {
-    try { K.state.activeSessions = await K.api.sessionView.status(); }
-    catch { K.state.activeSessions = {}; }
+    const scope = K.viewScope.captureProject();
+    try {
+      const active = await K.api.sessionView.status();
+      if (K.viewScope.isProjectCurrent(scope)) K.state.activeSessions = active;
+    } catch {
+      if (K.viewScope.isProjectCurrent(scope)) K.state.activeSessions = {};
+    }
   };
 
   K.isSessionRunning = (sessionID?: string) => {
@@ -266,6 +277,9 @@ import { K } from "./kernel";
     if (session.model) {
       const value = K.modelValue({ ...session.model, id: session.model.id || session.model.modelID });
       K.els.modelSelect.value = [...K.els.modelSelect.querySelectorAll("option")].some((option) => option.value === value) ? value : "";
+    }
+    if (typeof Event !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new Event("tl-studio:agent-run-selection"));
     }
   };
 })();

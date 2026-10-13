@@ -195,11 +195,18 @@ func nativeCompactCompletedToolHistory(messages []nativeConversationMessage, agg
 	compactedCalls := 0
 
 	lastToolIndex := -1
-	lastToolCallID := ""
+	lastRoundIndex := -1
+	lastRoundIDs := map[string]struct{}{}
 	for i := range result {
+		if strings.EqualFold(strings.TrimSpace(result[i].Role), "assistant") && len(result[i].ToolCalls) > 0 {
+			lastRoundIndex = i
+			lastRoundIDs = map[string]struct{}{}
+			for _, call := range result[i].ToolCalls {
+				lastRoundIDs[strings.TrimSpace(call.ID)] = struct{}{}
+			}
+		}
 		if strings.EqualFold(strings.TrimSpace(result[i].Role), "tool") {
 			lastToolIndex = i
-			lastToolCallID = strings.TrimSpace(result[i].ToolCallID)
 		}
 	}
 
@@ -209,7 +216,8 @@ func nativeCompactCompletedToolHistory(messages []nativeConversationMessage, agg
 		if role == "tool" {
 			// The model must always see the most recent tool result exactly once.
 			// Compacting it before the continuation turn can cause blind retries.
-			if i == lastToolIndex {
+			_, isMostRecentRound := lastRoundIDs[strings.TrimSpace(message.ToolCallID)]
+			if i == lastToolIndex || (lastRoundIndex >= 0 && isMostRecentRound) {
 				continue
 			}
 			if compacted, ok := nativeCompactedToolResult(message.Text); ok {
@@ -227,7 +235,7 @@ func nativeCompactCompletedToolHistory(messages []nativeConversationMessage, agg
 			if _, ok := resolved[callID]; !ok {
 				continue
 			}
-			if callID != "" && callID == lastToolCallID {
+			if _, protected := lastRoundIDs[callID]; protected && lastRoundIndex >= 0 {
 				continue
 			}
 			if nativeEstimateTextTokens(string(call.Arguments)) <= nativeContextToolArgumentThreshold {
@@ -356,6 +364,7 @@ func buildNativeContextPlan(messages []nativeConversationMessage, system string,
 		plan.Messages = working
 		plan.EstimatedMessageTokens = workingTokens
 		plan.EstimatedRequestTokens = fixedTokens + outputReserve + workingTokens
+		plan.OverBudget = plan.EstimatedRequestTokens > contextLimit
 		return plan
 	}
 

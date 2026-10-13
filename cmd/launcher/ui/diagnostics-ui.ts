@@ -6,7 +6,6 @@ import { K } from "./kernel";
   if (!K || K.__diagnosticsUiInstalled) return;
   K.__diagnosticsUiInstalled = true;
 
-  const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
 
   const partsOf = (message: any) => Array.isArray(message?.activities)
@@ -339,12 +338,10 @@ import { K } from "./kernel";
     document.head.appendChild(style);
   };
 
-  K.renderMessages = (...args) => {
-    const result = baseRenderMessages(...args);
+  K.onMessagesRendered(() => {
     correctTimeoutModelMetadata();
     decorateWorkingStatus();
-    return result;
-  };
+  });
 
   K.__statusDiagnostics = {
     attemptNumberAt,

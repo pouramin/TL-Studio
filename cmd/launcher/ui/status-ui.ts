@@ -3,7 +3,6 @@ import { K } from "./kernel";
 (() => {
   "use strict";
   
-  const baseRenderMessages = K.renderMessages;
   const RESUME_PROMPT = "Continue the current task from the existing workspace state. Inspect what is already complete, do not repeat finished work, and finish the user's latest request.";
   const PROJECT_MESSAGE_LIMIT = 1000;
   const projectUsageCache = new Map();
@@ -617,8 +616,7 @@ import { K } from "./kernel";
     }
   };
 
-  K.renderMessages = (...args) => {
-    const result = baseRenderMessages(...args);
+  K.onMessagesRendered(() => {
     hideResumeMessages();
     normalizeCancellation();
     normalizeRetryableToolErrors();
@@ -628,6 +626,5 @@ import { K } from "./kernel";
     renderTurnUsage();
     renderProjectUsage();
     scheduleProjectUsageRefresh();
-    return result;
-  };
+  });
 })();

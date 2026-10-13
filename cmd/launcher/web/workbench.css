@@ -138,10 +138,35 @@ html, body {
 
 .workspace-project-slot {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.workspace-open-folder {
+  flex: 0 0 auto;
+  min-height: 27px;
+  padding: 0 9px;
+  border: 1px solid var(--tl-border);
+  border-radius: 5px;
+  background: var(--tl-panel);
+  color: var(--tl-text);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.workspace-open-folder:hover {
+  border-color: var(--tl-brand-green);
+  background: var(--tl-panel-elevated);
+}
+@media (max-width: 1050px) {
+  .workspace-open-folder { padding: 0 6px; font-size: 9px; }
 }
 .workspace-project-switcher.project-button {
   margin: 0;
-  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: auto;
   min-height: 32px;
   display: grid;
   grid-template-columns: minmax(0, auto) minmax(0, 1fr);
@@ -1260,3 +1285,44 @@ html.workspace-resize-ns * {
 html[data-font-size="large"] .workspace-topbar { min-height: 48px; }
 html[data-font-size="large"] .workspace-agent-header { min-height: 47px; }
 html[data-font-size="large"] .workspace-context-head { min-height: 40px !important; }
+
+/* Optional Agent run preferences, intentionally compact in small panels. */
+.workspace-agent-run-controls {
+  padding: 4px 10px 6px;
+  margin: 0 0 6px;
+  border: 1px solid var(--tl-border, #d6dbe1);
+  border-radius: 8px;
+  color: var(--tl-text, inherit);
+}
+.workspace-agent-run-controls summary {
+  cursor: pointer;
+  font-size: var(--tl-ui-xs, 12px);
+  font-weight: 600;
+  user-select: none;
+}
+.workspace-agent-limits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.workspace-agent-limits-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--tl-ui-xs, 12px);
+  min-width: 0;
+}
+.workspace-agent-limits-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  font-size: var(--tl-ui-xs, 12px);
+}
+.workspace-agent-run-controls small {
+  display: block;
+  margin-top: 7px;
+  font-size: var(--tl-ui-xs, 11px);
+  opacity: .73;
+  line-height: 1.5;
+}

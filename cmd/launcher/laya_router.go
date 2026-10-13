@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,10 +118,13 @@ type layaRouterService struct {
 	mu        sync.Mutex
 	healthMu  sync.Mutex
 	cooldowns map[string]layaRouterCooldown
+	// Credential identities are kept as hashes in memory only; a newly
+	// configured API key must not inherit the old account's quota cooldown.
+	credentialHashes map[string][32]byte
 }
 
 func newLayaRouterService(providers *providerManager, plugins *pluginManager) *layaRouterService {
-	return &layaRouterService{providers: providers, plugins: plugins, cooldowns: map[string]layaRouterCooldown{}}
+	return &layaRouterService{providers: providers, plugins: plugins, cooldowns: map[string]layaRouterCooldown{}, credentialHashes: map[string][32]byte{}}
 }
 
 func layaRouterConfigPath() string {
@@ -286,6 +290,23 @@ func (s *layaRouterService) candidateCooldown(providerID, modelID, group string)
 		return entry, true
 	}
 	return layaRouterCooldown{}, false
+}
+
+// observeCredential invalidates runtime provider/model cooldowns only when an
+// actual credential changes. It never stores, persists, or logs API keys.
+func (s *layaRouterService) observeCredential(providerID, key string) {
+	if s == nil { return }
+	identity := sha256.Sum256([]byte(key))
+	s.healthMu.Lock()
+	defer s.healthMu.Unlock()
+	if s.credentialHashes == nil { s.credentialHashes = make(map[string][32]byte) }
+	if previous, ok := s.credentialHashes[providerID]; ok && previous != identity {
+		prefix := providerID + "\x00"
+		for id := range s.cooldowns {
+			if strings.HasPrefix(id, prefix) { delete(s.cooldowns, id) }
+		}
+	}
+	s.credentialHashes[providerID] = identity
 }
 
 func (s *layaRouterService) providerReady(ctx context.Context, provider tlProviderDefinition, connected bool) (bool, string) {
@@ -474,9 +495,11 @@ func (s *layaRouterService) candidates(ctx context.Context, project string) ([]l
 	result := []layaRouterCandidate{}
 	for _, provider := range definitions {
 		connected := false
-		if key, keyErr := s.providers.effectiveCredential(ctx, provider.ID, project); keyErr == nil && strings.TrimSpace(key) != "" {
+		key, keyErr := s.providers.effectiveCredential(ctx, provider.ID, project)
+		if keyErr == nil && strings.TrimSpace(key) != "" {
 			connected = true
 		}
+		s.observeCredential(provider.ID, key)
 		providerReady, providerAvailability := s.providerReady(ctx, provider, connected)
 		for _, model := range provider.Models {
 			if model.Kind == "router" || !model.ToolCall || !providerModelUsesNativeAgent(provider, model) {
@@ -542,8 +565,9 @@ func (s *layaRouterService) Status(ctx context.Context, project string) (layaRou
 			}
 		}
 		if usable == 0 {
-			status.Available = false
-			status.Message = "No enabled, connected tool-capable models are available to Laya Router."
+			// Keep Laya selectable and its configuration discoverable; routing
+			// itself must fail safely until an eligible model becomes ready.
+			status.Message = "No enabled, connected tool-capable models are currently ready for Laya Router."
 		}
 	}
 	return status, nil

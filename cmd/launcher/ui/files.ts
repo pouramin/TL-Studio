@@ -436,6 +436,7 @@ import { K } from "./kernel";
 
   const openEditor = async (path: any) => {
     if (!path) return;
+    const project = K.state.local?.project || "";
     const existing = tabFor(path);
     if (existing) {
       K.state.activeEditorPath = existing.path;
@@ -445,6 +446,7 @@ import { K } from "./kernel";
     K.showError("");
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path })}`);
+      if (project !== (K.state.local?.project || "")) return;
       const viewOnly = !!preview?.viewOnly && !!preview?.previewable;
       if (preview?.binary && !preview?.previewable) throw new Error(`Binary files without a TL Studio preview cannot be opened yet (${preview.mime || "unknown type"}).`);
       const tab = {
@@ -466,14 +468,17 @@ import { K } from "./kernel";
       renderEditor();
       if (!tab.viewOnly) window.setTimeout(() => ui.editor?.focus(), 0);
     } catch (error) {
-      K.showError((error as any).message || String(error));
+      if (project === (K.state.local?.project || "")) K.showError((error as any).message || String(error));
     }
   };
 
   const refreshTabFromDisk = async (tab: any, options: { force?: boolean; silent?: boolean } = {}) => {
     if (!tab?.path) return;
+    const project = K.state.local?.project || "";
+    const current = () => project === (K.state.local?.project || "") && K.state.editorTabs.includes(tab);
     try {
       const preview = await K.request(`/local/file?${new URLSearchParams({ path: tab.path })}`);
+      if (!current()) return;
       if (preview?.viewOnly && preview?.previewable) {
         tab.viewOnly = true;
         tab.content = "";
@@ -499,7 +504,7 @@ import { K } from "./kernel";
       if (pathKey(tab.path) === pathKey(K.state.activeEditorPath)) renderEditor();
       else renderTabs();
     } catch (error) {
-      if (options.silent) return;
+      if (options.silent || !current()) return;
       K.showError((error as any).message || String(error));
     }
   };
@@ -507,6 +512,9 @@ import { K } from "./kernel";
   const saveActive = async (force = false) => {
     const tab = activeTab();
     if (!tab || tab.viewOnly || !isDirty(tab)) return;
+    const project = K.state.local?.project || "";
+    const submittedContent = tab.content;
+    const current = () => project === (K.state.local?.project || "") && K.state.editorTabs.includes(tab);
     K.showError("");
     if (ui.save) ui.save.disabled = true;
     try {
@@ -514,16 +522,23 @@ import { K } from "./kernel";
         method: "PUT",
         body: JSON.stringify({
           path: tab.path,
-          content: tab.content,
+          content: submittedContent,
           expectedSha256: tab.sha256,
           force,
         }),
       });
+      if (!current()) return;
+      const newerContent = tab.content;
       applyPreviewToTab(tab, preview);
+      // Typing during an in-flight save must remain dirty, not be overwritten
+      // by the saved snapshot returned from disk.
+      if (newerContent !== submittedContent) tab.content = newerContent;
       renderEditor();
       await loadDirectory(K.state.filesPath || "", { preserveSelection: true });
     } catch (error) {
+      if (!current()) return;
       if ((error as any).status === 409 && !force) {
+        if (activeTab() !== tab) { tab.externalChanged = true; return; }
         tab.externalChanged = true;
         renderEditor();
         const overwrite = window.confirm(`${basename(tab.path)} changed on disk after you opened it. Overwrite the disk version with your editor contents?`);
@@ -532,7 +547,7 @@ import { K } from "./kernel";
       }
       K.showError((error as any).message || String(error));
     } finally {
-      updateEditorChrome();
+      if (current()) updateEditorChrome();
     }
   };
 
@@ -573,14 +588,22 @@ import { K } from "./kernel";
     window.setTimeout(() => K.els.prompt.focus(), 0);
   };
 
+  // A project switch, refresh, or tree-navigation request can race with an
+  // earlier /local/files response. Only the newest request owns the Explorer.
+  let directoryRequestEpoch = 0;
   const loadDirectory = async (path = "", options: { preserveSelection?: boolean } = {}) => {
+    const epoch = ++directoryRequestEpoch;
+    const project = K.state.local?.project || "";
+    const requestedPath = normalizePath(path);
+    const current = () => epoch === directoryRequestEpoch && project === (K.state.local?.project || "");
     K.state.filesLoading = true;
-    K.state.filesPath = normalizePath(path);
+    K.state.filesPath = requestedPath;
     renderFiles();
     try {
       const params = new URLSearchParams();
-      if (path) params.set("path", path);
+      if (requestedPath) params.set("path", requestedPath);
       const payload = await K.request(`/local/files${params.size ? `?${params}` : ""}`);
+      if (!current()) return;
       K.state.filesPath = payload?.path || "";
       K.state.filesEntries = Array.isArray(payload?.entries) ? payload.entries : [];
       if (!options.preserveSelection) K.state.selectedFileEntry = null;
@@ -590,11 +613,14 @@ import { K } from "./kernel";
         K.state.selectedFileEntry = fresh || null;
       }
     } catch (error) {
+      if (!current()) return;
       K.state.filesEntries = [];
       K.showError((error as any).message || String(error));
     } finally {
-      K.state.filesLoading = false;
-      renderFiles();
+      if (current()) {
+        K.state.filesLoading = false;
+        renderFiles();
+      }
     }
   };
 
@@ -684,6 +710,8 @@ import { K } from "./kernel";
   };
 
   const resetFiles = () => {
+    // Invalidate outstanding reads BEFORE clearing the visible file tree.
+    directoryRequestEpoch++;
     K.state.filesPath = "";
     K.state.filesEntries = [];
     K.state.filesProject = K.state.local?.project || "";
@@ -804,7 +832,12 @@ import { K } from "./kernel";
   K.afterProjectChange = async (...args) => {
     resetFiles();
     ui.panel?.classList.add("hidden");
-    return originalAfterProjectChange(...args);
+    const project = K.state.local?.project || "";
+    const result = await originalAfterProjectChange(...args);
+    // Open the new root deterministically; do not rely on the Workbench
+    // visibility wrapper or a delayed initial mount to perform this fetch.
+    if (project && project === K.state.local?.project) await openFiles();
+    return result;
   };
 
   const originalHandleLiveEvent = K.handleLiveEvent;

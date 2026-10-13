@@ -568,6 +568,7 @@ import { K } from "./kernel";
 
     K.refreshWorkspaceControls?.();
     requestAnimationFrame(() => { view.scrollTop = view.scrollHeight; });
+    K.emitMessagesRendered();
   };
 
   K.presentation = Object.freeze({ partsOf, textOf, renderMarkdown });
