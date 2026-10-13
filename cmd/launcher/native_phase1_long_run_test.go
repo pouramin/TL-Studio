@@ -115,7 +115,17 @@ func TestPhase1AgentThirtyToolsTenRoundsPersistedAndBounded(t *testing.T) {
 	select {
 	case <-model.finished:
 	case <-time.After(15 * time.Second):
-		t.Fatal("30-tool agent simulation timed out")
+		model.mu.Lock()
+		calls := model.calls
+		model.mu.Unlock()
+		messages, _, readErr := store.getMessages(session.ID)
+		var lastMessages []string
+		for _, message := range messages {
+			if message.Error != nil { lastMessages = append(lastMessages, "error: "+message.Error.Message) }
+			if message.Role == "assistant" && message.Text != "" { lastMessages = append(lastMessages, message.Text) }
+		}
+		t.Fatalf("30-tool agent simulation did not finish: model calls=%d persisted messages=%d storeError=%v latest=%v", calls, len(messages), readErr, lastMessages)
+
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for {
