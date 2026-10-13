@@ -156,9 +156,15 @@ func registerLocalFileRoutes(mux *http.ServeMux, state *appState) {
 			writeJSON(w, http.StatusInternalServerError, jsonError{Error: err.Error()})
 			return
 		}
-		if !body.Force && body.ExpectedSHA256 != "" && !strings.EqualFold(body.ExpectedSHA256, fileSHA256(current)) {
-			writeJSON(w, http.StatusConflict, jsonError{Error: "file changed on disk since it was opened"})
-			return
+		if !body.Force {
+			if err := validateWorkspaceExpectedSHA(body.ExpectedSHA256, current, true, true); err != nil {
+				status := http.StatusBadRequest
+				if errors.Is(err, errWorkspaceFileConflict) {
+					status = http.StatusConflict
+				}
+				writeJSON(w, status, jsonError{Error: err.Error()})
+				return
+			}
 		}
 		expected := ""
 		if !body.Force {
