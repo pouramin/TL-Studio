@@ -463,6 +463,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 	}
 
 	repeated := map[string]int{}
+	recentToolRounds := []string{}
 	toolRounds := 0
 	var runTokens int64
 	maxToolRounds := nativeRunToolRoundLimit(input)
@@ -658,6 +659,10 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		if repeatErr != nil {
 			return repeatErr
 		}
+		nextHistory, cycleErr := nativeNextToolLoopHistory(recentToolRounds, response.ToolCalls)
+		if cycleErr != nil {
+			return cycleErr
+		}
 		conversation = append(conversation, nativeConversationMessage{
 			Role:      "assistant",
 			Text:      response.Text,
@@ -686,6 +691,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		}
 		executionWorkObserved = executionWorkObserved || roundObserved
 		repeated = nextRepeats
+		recentToolRounds = nextHistory
 
 		semantic.CompletedAt = time.Now().UnixMilli()
 		semantic.Changes = mergeSessionChanges(semantic.Changes)
