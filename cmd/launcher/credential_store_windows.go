@@ -5,7 +5,6 @@ package main
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"unsafe"
