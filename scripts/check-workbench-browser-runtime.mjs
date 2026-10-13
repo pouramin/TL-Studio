@@ -149,6 +149,32 @@ assert(structure.previewHandles === 8, "expected 8 Preview resize handles");
 assert(structure.modelOptions > 0, "model selector did not initialize");
 assert(structure.agentOptions > 0, "agent selector did not initialize");
 
+// Exercise real Agent budget controls, persistence and safe defaults.
+const budgetUI = await evaluate(`(() => {
+  const parent = document.getElementById("agentRunControls");
+  const rounds = document.getElementById("agentMaxToolRounds");
+  const tokens = document.getElementById("agentMaxRunTokens");
+  const timeout = document.getElementById("agentModelTimeoutSeconds");
+  const idle = document.getElementById("agentStreamIdleSeconds");
+  if (!parent || !rounds || !tokens || !timeout || !idle) return { present:false };
+  const initial = { rounds:rounds.value, tokens:tokens.value, timeout:timeout.value, idle:idle.value };
+  parent.open = true;
+  const set = (element, value) => { element.value=value; element.dispatchEvent(new Event("change",{bubbles:true})); };
+  set(rounds,"50"); set(tokens,"200000"); set(timeout,"360"); set(idle,"60");
+  const values = Object.keys(localStorage).map(key => [key,localStorage.getItem(key)]);
+  const persisted = values.some(([key,value])=>key.startsWith("tl-studio.agent.rounds.")&&value==="50") &&
+    values.some(([key,value])=>key.startsWith("tl-studio.agent.tokens.")&&value==="200000") &&
+    values.some(([key,value])=>key.startsWith("tl-studio.agent.timeout.")&&value==="360") &&
+    values.some(([key,value])=>key.startsWith("tl-studio.agent.idle.")&&value==="60");
+  set(rounds,initial.rounds); set(tokens,initial.tokens); set(timeout,initial.timeout); set(idle,initial.idle);
+  parent.open = false;
+  return { present:true, initial, persisted };
+})()`);
+assert(budgetUI.present, "Agent run preferences not mounted in workbench");
+assert(budgetUI.initial.rounds === "24" && budgetUI.initial.tokens === "0", "unexpected Agent budget defaults");
+assert(budgetUI.persisted, "Agent budget/timeout preferences were not persisted");
+
+
 await waitFor('document.querySelectorAll(".file-row").length > 0', "Explorer did not load real project entries");
 await waitFor('document.querySelector(".file-row.file-file") !== null', "Explorer did not render a real project file");
 await waitFor(`(() => {
