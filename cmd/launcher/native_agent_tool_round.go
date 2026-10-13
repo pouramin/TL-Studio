@@ -23,11 +23,11 @@ func (r *nativeAgentRuntime) executeNativeToolRound(
 		// Record pending tool intent before dispatch; its outcome may be unknown
 		// if the process stops after the side effect but before recording success.
 		semantic.Activities = append(semantic.Activities, sessionActivityView{
-		Kind: "tool", Status: "running", Title: descriptor.Name,
+			Kind: "tool", Status: "running", Title: descriptor.Name,
 			ToolID: descriptor.ID, RuntimeToolID: descriptor.ID,
 			ToolName: descriptor.Name, Category: descriptor.Category,
 			PermissionClass: descriptor.PermissionClass,
-			Input: decodedInput, StartAt: started,
+			Input:           decodedInput, StartAt: started,
 		})
 		if err := r.store.putNativeMessage(sessionID, directory, semantic); err != nil {
 			return false, err
@@ -90,7 +90,7 @@ func (r *nativeAgentRuntime) executeNativeToolRound(
 			ToolName:   modelCall.Name,
 			Text:       nativeToolResultMessage(result),
 		})
-		}
+	}
 
 	return observedWrite, nil
 }
