@@ -208,8 +208,12 @@ func (s *sessionPersistenceStore) loadLocked() error {
 }
 
 func (s *sessionPersistenceStore) persistIndexLocked() error {
-	items := make([]sessionView, 0, len(s.sessions))
-	for _, session := range s.sessions {
+	return s.persistIndexForLocked(s.sessions)
+}
+
+func (s *sessionPersistenceStore) persistIndexForLocked(sessions map[string]sessionView) error {
+	items := make([]sessionView, 0, len(sessions))
+	for _, session := range sessions {
 		items = append(items, session)
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -270,6 +274,42 @@ func (s *sessionPersistenceStore) saveSnapshotLocked(snapshot persistedSessionSn
 	return writePrivateJSONAtomic(s.snapshotPath(snapshot.Session.ID), snapshot)
 }
 
+// commitSessionSnapshotLocked is the only path for a mutation that updates
+// both a Session snapshot and its list index. Both must be on disk before the
+// cache is updated. A failed index write restores the prior snapshot so that
+// an unrelated later operation cannot accidentally commit rejected metadata.
+// The session store mutex must be held by the caller.
+func (s *sessionPersistenceStore) commitSessionSnapshotLocked(session sessionView, snapshot persistedSessionSnapshot) error {
+	previous, previousErr := s.loadSnapshotLocked(session.ID)
+	if previousErr != nil && !errors.Is(previousErr, os.ErrNotExist) {
+		return previousErr
+	}
+	next := make(map[string]sessionView, len(s.sessions)+1)
+	for id, existing := range s.sessions {
+		next[id] = existing
+	}
+	next[session.ID] = session
+
+	if err := s.saveSnapshotLocked(snapshot); err != nil {
+		return err
+	}
+	if err := s.persistIndexForLocked(next); err != nil {
+		var rollbackErr error
+		if errors.Is(previousErr, os.ErrNotExist) {
+			rollbackErr = os.Remove(s.snapshotPath(session.ID))
+			if errors.Is(rollbackErr, os.ErrNotExist) { rollbackErr = nil }
+		} else {
+			rollbackErr = s.saveSnapshotLocked(previous)
+		}
+		if rollbackErr != nil {
+			return fmt.Errorf("commit Session index failed: %w; restoring previous snapshot also failed: %v", err, rollbackErr)
+		}
+		return err
+	}
+	s.sessions = next
+	return nil
+}
+
 func (s *sessionPersistenceStore) upsertSession(session sessionView) error {
 	if strings.TrimSpace(session.ID) == "" || strings.TrimSpace(session.Directory) == "" {
 		return nil
@@ -299,17 +339,12 @@ func (s *sessionPersistenceStore) upsertSession(session sessionView) error {
 	if session.UpdatedAt == 0 {
 		session.UpdatedAt = maxSessionTimestamp(previous.UpdatedAt, time.Now().UnixMilli())
 	}
-	s.sessions[session.ID] = session
-
 	snapshot, err := s.loadSnapshotLocked(session.ID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	snapshot.Session = session
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return err
-	}
-	return s.persistIndexLocked()
+	return s.commitSessionSnapshotLocked(session, snapshot)
 }
 
 func (s *sessionPersistenceStore) putMessages(session sessionView, messages []sessionMessageView) error {
@@ -330,7 +365,6 @@ func (s *sessionPersistenceStore) putMessages(session sessionView, messages []se
 	if session.UpdatedAt == 0 {
 		session.UpdatedAt = time.Now().UnixMilli()
 	}
-	s.sessions[session.ID] = session
 	snapshot, err := s.loadSnapshotLocked(session.ID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -339,10 +373,7 @@ func (s *sessionPersistenceStore) putMessages(session sessionView, messages []se
 	if len(messages) > 0 || len(snapshot.Messages) == 0 {
 		snapshot.Messages = append([]sessionMessageView(nil), messages...)
 	}
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return err
-	}
-	return s.persistIndexLocked()
+	return s.commitSessionSnapshotLocked(session, snapshot)
 }
 
 func (s *sessionPersistenceStore) putChanges(session sessionView, changes []sessionChangeView) error {
@@ -367,10 +398,7 @@ func (s *sessionPersistenceStore) putChanges(session sessionView, changes []sess
 	}
 	snapshot.Session = session
 	snapshot.Changes = append([]sessionChangeView(nil), changes...)
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return err
-	}
-	return s.persistIndexLocked()
+	return s.commitSessionSnapshotLocked(session, snapshot)
 }
 
 func (s *sessionPersistenceStore) list(limit int) ([]sessionView, error) {
@@ -470,8 +498,6 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 		model := *input.Model
 		session.Model = &model
 	}
-	s.sessions[sessionID] = session
-
 	snapshot, err := s.loadSnapshotLocked(sessionID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -512,10 +538,7 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 		Usage:       sessionUsage{},
 		Changes:     []sessionChangeView{},
 	})
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return err
-	}
-	return s.persistIndexLocked()
+	return s.commitSessionSnapshotLocked(session, snapshot)
 }
 
 func (s *sessionPersistenceStore) updateTitle(sessionID, title string) (sessionView, bool, error) {
@@ -532,16 +555,12 @@ func (s *sessionPersistenceStore) updateTitle(sessionID, title string) (sessionV
 	}
 	session.Title = title
 	session.UpdatedAt = time.Now().UnixMilli()
-	s.sessions[sessionID] = session
 	snapshot, err := s.loadSnapshotLocked(sessionID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return sessionView{}, false, err
 	}
 	snapshot.Session = session
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return sessionView{}, false, err
-	}
-	if err := s.persistIndexLocked(); err != nil {
+	if err := s.commitSessionSnapshotLocked(session, snapshot); err != nil {
 		return sessionView{}, false, err
 	}
 	return session, true, nil
@@ -557,10 +576,14 @@ func (s *sessionPersistenceStore) remove(sessionID string) error {
 	if err := s.loadLocked(); err != nil {
 		return err
 	}
-	delete(s.sessions, sessionID)
-	if err := s.persistIndexLocked(); err != nil {
+	next := make(map[string]sessionView, len(s.sessions))
+	for id, existing := range s.sessions {
+		if id != sessionID { next[id] = existing }
+	}
+	if err := s.persistIndexForLocked(next); err != nil {
 		return err
 	}
+	s.sessions = next
 	// Remove the snapshot and its archived history only after the index no
 	// longer references the session.
 	_ = os.Remove(s.snapshotPath(sessionID))
