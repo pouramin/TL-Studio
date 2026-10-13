@@ -38,6 +38,9 @@ Stable promotion rule:
 
 Keep main stable. Develop 0.7 work only on dev or branches based on dev. Future stable promotion must again use the protected PR path and pass the required checks.
 
+
+The 0.7 Context Management foundation is integrated with configurable Agent run limits on dev, including multi-tool latest-round protection, fail-closed oversized requests, and bounded final checkpoints. Tests must pass on the integrated commit before promotion.
+
 ## Architecture state
 
 TL Studio core execution is fully native.
@@ -54,6 +57,7 @@ Owned by TL Studio:
 - Custom Providers
 - Direct native model clients
 - Native Agent loop
+- Native Context Manager and model-turn budgeting
 - Native Tool Registry and Tool Executor
 - Native Permissions
 - Native semantic Session persistence and execution

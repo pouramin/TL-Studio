@@ -355,6 +355,40 @@ import { K } from "./kernel";
       });
     }
 
+    if (item?.kind === "context") {
+      const metadata = item.metadata || {};
+      const contextLimit = Number(metadata.contextLimit || 0);
+      const messageBudget = Number(metadata.messageBudget || 0);
+      const estimatedTokens = Number(metadata.estimatedTokens || 0);
+      const omittedMessages = Number(metadata.omittedMessages || 0);
+      const omittedTokens = Number(metadata.omittedTokens || 0);
+      const compactedToolResults = Number(metadata.compactedToolResults || 0);
+      const compactedToolCalls = Number(metadata.compactedToolCalls || 0);
+      const usedTokens = Number(metadata.usedTokens || 0);
+      const nextEstimatedInputTokens = Number(metadata.nextEstimatedInputTokens || 0);
+      const runTokenBudget = Number(metadata.runTokenBudget || 0);
+      const compact = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(value < 10000 ? 1 : 0)}K` : String(value);
+      const summary = [
+        runTokenBudget > 0 ? `${compact(usedTokens)} / ${compact(runTokenBudget)} run tokens` : "",
+        messageBudget > 0 ? `${compact(estimatedTokens)} / ${compact(messageBudget)} message tokens` : "",
+        contextLimit > 0 ? `${compact(contextLimit)} model context` : "",
+      ].filter(Boolean).join(" · ");
+      const details = [
+        runTokenBudget > 0 ? `Run token budget: ${compact(usedTokens)} used; next request estimated at ${compact(nextEstimatedInputTokens)} input tokens; limit ${compact(runTokenBudget)}.` : "",
+        omittedMessages > 0 ? `Omitted persisted messages: ${omittedMessages} (~${compact(omittedTokens)} tokens)` : "",
+        compactedToolResults > 0 ? `Compacted tool results: ${compactedToolResults}` : "",
+        compactedToolCalls > 0 ? `Compacted completed tool calls: ${compactedToolCalls}` : "",
+        metadata.checkpointInserted ? "A TL Studio context checkpoint was inserted before the retained recent history." : "",
+        metadata.overBudget ? "The estimated request still exceeds the advertised model context limit." : "",
+      ].filter(Boolean).join("\n");
+      return activityCard({
+        title: item.title || "Context window managed",
+        status: item.status || (metadata.overBudget ? "warning" : "completed"),
+        meta: summary,
+        blocks: [["Context management", details]],
+      });
+    }
+
     if (item?.kind === "reasoning" && item.text) {
       return activityCard({
         title: "Reasoning",

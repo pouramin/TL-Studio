@@ -320,6 +320,14 @@ func (e *nativeRoutedRunError) Unwrap() error {
 	return e.cause
 }
 
+func nativeErrorWithActivities(cause error, groups ...[]sessionActivityView) error {
+	if cause == nil { return nil }
+	var activities []sessionActivityView
+	for _, group := range groups { activities = append(activities, group...) }
+	if len(activities) == 0 { return cause }
+	return &nativeRoutedRunError{cause:cause,activities:activities}
+}
+
 func nativeRoutingPrompt(input sessionRunInput) string {
 	if text := strings.TrimSpace(input.Text); text != "" {
 		return text
@@ -467,12 +475,16 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 	toolRounds := 0
 	var runTokens int64
 	maxToolRounds := nativeRunToolRoundLimit(input)
+	contextActivitiesPending := []sessionActivityView{}
+	lastContextManagementSignature := ""
 	routeActivitiesPending := []sessionActivityView{}
 	if routeSelection != nil {
 		routeActivitiesPending = append(routeActivitiesPending, nativeRequestRouteActivity(*routeSelection))
 	}
 	responseActivities := func(response nativeModelResponse) []sessionActivityView {
-		activities := append([]sessionActivityView(nil), routeActivitiesPending...)
+		activities := append([]sessionActivityView(nil), contextActivitiesPending...)
+		contextActivitiesPending = nil
+		activities = append(activities, routeActivitiesPending...)
 		routeActivitiesPending = nil
 		activities = append(activities, nativeRoutedModelActivity(provider, model, response)...)
 		return activities
@@ -535,7 +547,26 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		}
 
 		var response nativeModelResponse
+		var lastEstimatedInput int64
 		for {
+			systemPrompt := nativeAgentTurnSystemPrompt(routingPrompt, executionGuardRetries > 0)
+			contextPlan := buildNativeContextPlan(conversation, systemPrompt, tools, model)
+			if nativeContextPlanChanged(contextPlan) {
+				signature := nativeContextPlanSignature(contextPlan)
+				if signature != lastContextManagementSignature {
+					contextActivitiesPending = append(contextActivitiesPending, nativeContextActivity(contextPlan))
+					lastContextManagementSignature = signature
+				}
+			}
+			if contextPlan.OverBudget {
+				return nativeErrorWithActivities(fmt.Errorf("native Agent request exceeds model context (%d estimated tokens vs %d limit); narrow the task or shorten the latest tool result", contextPlan.EstimatedRequestTokens, contextPlan.ContextLimit),contextActivitiesPending,routeActivitiesPending)
+			}
+			lastEstimatedInput = int64(nativeContextEstimatedInputTokens(contextPlan,model))
+			maxRunTokens := int64(nativeContextRunTokenBudget(model))
+			if input.MaxRunTokens > 0 && input.MaxRunTokens < maxRunTokens { maxRunTokens = input.MaxRunTokens }
+			if runTokens > 0 && runTokens+lastEstimatedInput > maxRunTokens {
+				return writeBudgetCheckpoint(fmt.Sprintf("run token budget %d reached (estimated next turn %d)",maxRunTokens,lastEstimatedInput))
+			}
 			modelTurnTimeout := nativeRunTurnTimeout(input, r.modelRequestTimeout(routeSelection != nil, executionRequired))
 			modelCtx, cancelModel := context.WithTimeout(ctx, modelTurnTimeout)
 			var idleExceeded atomic.Bool
@@ -549,10 +580,10 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				idleTimer = time.AfterFunc(idle, func() { idleExceeded.Store(true); cancelModel() })
 			}
 			response, err = r.model.Complete(modelCtx, nativeModelRequest{
-				System: nativeAgentTurnSystemPrompt(routingPrompt, executionGuardRetries > 0),
+				System: systemPrompt,
 				Provider: provider, Model: model, APIKey: apiKey,
 				CacheKey: "tlstudio-" + sessionID,
-				Messages: append([]nativeConversationMessage(nil), conversation...),
+				Messages: contextPlan.Messages,
 				Tools: tools, OnStreamActivity: pingIdle,
 			}, func(delta string) {
 				pingIdle()
@@ -622,7 +653,13 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				return &nativeRoutedRunError{cause: err, activities: append([]sessionActivityView(nil), routeActivitiesPending...)}
 			}
 		}
-		runTokens += nativeRunBillableTokens(response.Usage)
+		turnTokens := nativeRunBillableTokens(response.Usage)
+		if turnTokens == 0 {
+			// Some bridges omit usage. Conservative fallback prevents a
+			// disabled accounting path from bypassing the run safety cap.
+			turnTokens = lastEstimatedInput + int64(nativeEstimateConversationMessageTokens(nativeConversationMessage{Role:"assistant",Text:response.Text,ToolCalls:response.ToolCalls}))
+		}
+		runTokens += turnTokens
 		if len(response.ToolCalls) == 0 {
 			if strings.TrimSpace(response.Text) == "" {
 				return errors.New("model returned an empty response")

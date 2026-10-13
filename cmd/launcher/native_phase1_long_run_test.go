@@ -76,7 +76,7 @@ func (m *phase1LongRunModel) Complete(_ context.Context, request nativeModelRequ
 			Arguments: json.RawMessage(fmt.Sprintf(`{"path":"stress-%02d.txt"}`, index)),
 		})
 	}
-	return nativeModelResponse{ToolCalls: calls, FinishReason: "tool_calls"}, nil
+	return nativeModelResponse{ToolCalls: calls, FinishReason: "tool_calls", Usage: sessionUsage{Input: 8000, Output: 2000}}, nil
 }
 
 func TestPhase1AgentThirtyToolsTenRoundsPersistedAndBounded(t *testing.T) {
@@ -98,7 +98,7 @@ func TestPhase1AgentThirtyToolsTenRoundsPersistedAndBounded(t *testing.T) {
 	runtime := newNativeAgentRuntime(
 		nativeTestResolver{
 			provider: tlProviderDefinition{ID: "test", Protocol: "openai-compatible", BaseURL: "http://127.0.0.1:1/v1"},
-			model:    tlProviderModel{ID: "test-model", ToolCall: true},
+			model:    tlProviderModel{ID: "test-model", ToolCall: true, ContextLimit: 1000000, OutputLimit: 8192},
 		},
 		model,
 		newNativeToolExecutor(newProcessManager(func() string { return project }), nativeAllowAuthorizer{}),
@@ -115,7 +115,17 @@ func TestPhase1AgentThirtyToolsTenRoundsPersistedAndBounded(t *testing.T) {
 	select {
 	case <-model.finished:
 	case <-time.After(15 * time.Second):
-		t.Fatal("30-tool agent simulation timed out")
+		model.mu.Lock()
+		calls := model.calls
+		model.mu.Unlock()
+		messages, _, readErr := store.getMessages(session.ID)
+		var lastMessages []string
+		for _, message := range messages {
+			if message.Error != nil { lastMessages = append(lastMessages, "error: "+message.Error.Message) }
+			if message.Role == "assistant" && message.Text != "" { lastMessages = append(lastMessages, message.Text) }
+		}
+		t.Fatalf("30-tool agent simulation did not finish: model calls=%d persisted messages=%d storeError=%v latest=%v", calls, len(messages), readErr, lastMessages)
+
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for {
