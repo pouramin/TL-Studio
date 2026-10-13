@@ -172,7 +172,9 @@ import { K } from "./kernel";
     }
     if (ui.entry && paths.includes(preferred)) ui.entry.value = preferred;
     else if (ui.entry && paths.length && !paths.includes(ui.entry.value)) ui.entry.value = paths[0];
-    ui.entryRow?.classList.toggle("hidden", entries.length <= 1 || snapshot?.kind === "dev-server");
+    // The editor owns the selection. The dropdown is useful only when no
+    // editor tab is active; a backend candidate list can omit source files.
+    ui.entryRow?.classList.toggle("hidden", !!selectedEditorPath() || entries.length <= 1 || snapshot?.kind === "dev-server");
     return entries;
   };
 
@@ -204,6 +206,21 @@ import { K } from "./kernel";
     const selected = selectedEditorPath();
     if (K.state.preview.open && selected && !isPreviewablePath(selected)) {
       showUnpreviewableSelection(selected);
+      return;
+    }
+    const active = activePreviewEntry();
+    if (K.state.preview.open && active && snapshot?.running && snapshot?.kind === "file" && snapshot.entry !== active) {
+      ui.kind.textContent = "Active file";
+      ui.status.textContent = "Switching…";
+      ui.url.textContent = active;
+      ui.entryRow?.classList.add("hidden");
+      ui.frame.classList.add("hidden");
+      ui.empty.classList.remove("hidden");
+      ui.empty.querySelector("strong")!.textContent = "Switching Preview…";
+      ui.hint.textContent = `Opening ${active}`;
+      ui.start.disabled = true;
+      ui.reload.disabled = true;
+      ui.external.disabled = true;
       return;
     }
     const available = !!snapshot?.available;
