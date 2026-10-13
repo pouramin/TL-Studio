@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime"
 	"net/http"
@@ -135,6 +136,8 @@ func registerLocalFileRoutes(mux *http.ServeMux, state *appState) {
 			writeJSON(w, http.StatusBadRequest, jsonError{Error: err.Error()})
 			return
 		}
+		workspaceFileMutationMu.Lock()
+		defer workspaceFileMutationMu.Unlock()
 		info, err := os.Lstat(target)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -153,12 +156,26 @@ func registerLocalFileRoutes(mux *http.ServeMux, state *appState) {
 			writeJSON(w, http.StatusInternalServerError, jsonError{Error: err.Error()})
 			return
 		}
-		if !body.Force && body.ExpectedSHA256 != "" && !strings.EqualFold(body.ExpectedSHA256, fileSHA256(current)) {
-			writeJSON(w, http.StatusConflict, jsonError{Error: "file changed on disk since it was opened"})
-			return
+		if !body.Force {
+			if err := validateWorkspaceExpectedSHA(body.ExpectedSHA256, current, true, true); err != nil {
+				status := http.StatusBadRequest
+				if errors.Is(err, errWorkspaceFileConflict) {
+					status = http.StatusConflict
+				}
+				writeJSON(w, status, jsonError{Error: err.Error()})
+				return
+			}
 		}
-		if err := os.WriteFile(target, []byte(body.Content), info.Mode().Perm()); err != nil {
-			writeJSON(w, http.StatusInternalServerError, jsonError{Error: err.Error()})
+		expected := ""
+		if !body.Force {
+			expected = body.ExpectedSHA256
+		}
+		if err := atomicWorkspaceFileWrite(target, []byte(body.Content), info.Mode().Perm(), false, expected); err != nil {
+			if errors.Is(err, errWorkspaceFileConflict) {
+				writeJSON(w, http.StatusConflict, jsonError{Error: err.Error()})
+			} else {
+				writeJSON(w, http.StatusInternalServerError, jsonError{Error: err.Error()})
+			}
 			return
 		}
 		preview, status, err := readLocalFilePreview(state.projectPath(), body.Path)

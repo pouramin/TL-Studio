@@ -179,7 +179,10 @@ import { K } from "./kernel";
   };
 
   K.newSession = () => {
+    K.viewScope.enterSession();
     K.stopSessionPolling();
+    K.els.sendButton.disabled = false;
+    if (K.els.attentionDialog.open) K.els.attentionDialog.close();
     Object.assign(K.state, { session: null, messages: [], sending: false, attentionKey: "" });
     K.showError("");
     K.renderSessions();
@@ -192,31 +195,45 @@ import { K } from "./kernel";
 
   K.loadMessages = async () => {
     if (!K.state.session) return [];
+    const scope = K.viewScope.captureSession();
+    const sessionID = K.state.session.id;
     const revision = ++K.state.revision;
-    const messages = await K.api.sessionView.messages(K.state.session.id, { limit: 200 });
-    if (revision === K.state.revision) K.state.messages = Array.isArray(messages) ? messages : [];
+    const messages = await K.api.sessionView.messages(sessionID, { limit: 200 });
+    if (K.viewScope.isSessionCurrent(scope) && K.state.session?.id === sessionID && revision === K.state.revision) {
+      K.state.messages = Array.isArray(messages) ? messages : [];
+    }
     return K.state.messages;
   };
 
   K.selectSession = async (session) => {
+    K.viewScope.enterSession();
+    const scope = K.viewScope.captureSession();
     K.stopSessionPolling();
     K.state.session = session;
     K.state.messages = [];
+    K.state.sending = false;
+    K.state.attentionKey = "";
+    if (K.els.attentionDialog.open) K.els.attentionDialog.close();
+    K.els.sendButton.disabled = false;
     K.renderSessions();
     K.renderSessionHeader();
     K.showConversation();
     K.showError("");
     K.syncSelectors();
     await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
+    if (!K.viewScope.isSessionCurrent(scope)) return;
     K.renderMessages();
     if (K.isSessionRunning(session.id)) K.startSessionPolling();
   };
 
   K.createSession = async () => {
+    const scope = K.viewScope.captureSession();
     const agent = K.els.agentSelect.value || undefined;
     const model = K.selectedModel();
     const created = await K.api.sessionCommands.create();
+    if (!K.viewScope.isSessionCurrent(scope)) return null;
     if (!created?.id) throw new Error("TL Studio did not return a session ID");
+    K.viewScope.enterSession();
     const session = created as TLStudioSessionView;
     if (agent) session.agent = agent;
     if (model) session.model = model;
@@ -238,17 +255,23 @@ import { K } from "./kernel";
   let refreshTimer: number | null = null;
   const scheduleSelectedRefresh = (delay = 80) => {
     if (refreshTimer) window.clearTimeout(refreshTimer);
+    const scope = K.viewScope.captureSession();
     refreshTimer = window.setTimeout(async () => {
       refreshTimer = null;
-      if (!K.state.session) return;
+      if (!K.state.session || !K.viewScope.isSessionCurrent(scope)) return;
+      const sessionID = K.state.session.id;
       try {
         await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
-        const fresh = await K.api.sessionView.get(K.state.session.id).catch(() => null);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
+        const fresh = await K.api.sessionView.get(sessionID).catch(() => null);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
         if (fresh) K.state.session = fresh;
         K.renderMessages();
         K.renderSessionHeader();
         K.renderSessions();
-      } catch (err) { K.showError((err as any).message || String(err)); }
+      } catch (err) {
+        if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+      }
     }, delay);
   };
 
@@ -297,12 +320,15 @@ import { K } from "./kernel";
 
   K.startSessionPolling = (startedAt = Date.now()) => {
     K.stopSessionPolling();
-    let sawRunning = K.state.session ? K.isSessionRunning(K.state.session.id) : false;
+    const scope = K.viewScope.captureSession();
+    const sessionID = K.state.session?.id;
+    let sawRunning = sessionID ? K.isSessionRunning(sessionID) : false;
     K.state.sessionPolling = window.setInterval(async () => {
-      if (!K.state.session) return K.stopSessionPolling();
+      if (!K.viewScope.isSessionCurrent(scope) || K.state.session?.id !== sessionID) return;
       try {
         await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
-        const running = K.isSessionRunning(K.state.session.id);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
+        const running = K.isSessionRunning(sessionID);
         if (running) sawRunning = true;
         K.renderMessages();
 
@@ -312,13 +338,15 @@ import { K } from "./kernel";
           K.state.sending = false;
           K.stopSessionPolling();
           await K.loadSessions().catch(() => {});
-          const fresh = K.state.sessions.find((item) => item.id === K.state.session?.id);
+          if (!K.viewScope.isSessionCurrent(scope)) return;
+          const fresh = K.state.sessions.find((item) => item.id === sessionID);
           if (fresh) K.state.session = fresh;
           K.renderSessionHeader();
           K.renderSessions();
           K.renderMessages();
         }
       } catch (err) {
+        if (!K.viewScope.isSessionCurrent(scope)) return;
         K.state.sending = false;
         K.stopSessionPolling();
         K.showError((err as any).message || String(err));
@@ -330,12 +358,18 @@ import { K } from "./kernel";
   K.sendPrompt = async () => {
     const text = K.els.prompt.value.trim();
     if (!text || K.state.sending) return;
+    let scope = K.viewScope.captureSession();
     K.showError("");
     K.state.sending = true;
     K.els.sendButton.disabled = true;
     const startedAt = Date.now();
     try {
-      if (!K.state.session) await K.createSession();
+      if (!K.state.session) {
+        const created = await K.createSession();
+        if (!created) return;
+        scope = K.viewScope.captureSession();
+      }
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.ensureSessionSelection();
       const agent = K.els.agentSelect.value || undefined;
       const model = K.selectedModel();
@@ -355,17 +389,23 @@ import { K } from "./kernel";
       });
       K.renderMessages();
 
-      await K.api.sessionCommands.run(K.state.session!.id, { text, agent, model, variant: model?.variant });
+      const sessionID = K.state.session!.id;
+      await K.api.sessionCommands.run(sessionID, { text, agent, model, variant: model?.variant });
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.renderMessages();
       K.startSessionPolling(startedAt);
     } catch (err) {
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.state.sending = false;
       K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {
-      K.els.sendButton.disabled = false;
-      K.els.prompt.focus();
+      if (K.viewScope.isSessionCurrent(scope)) {
+        K.els.sendButton.disabled = false;
+        K.els.prompt.focus();
+      }
     }
   };
 
@@ -399,6 +439,8 @@ import { K } from "./kernel";
   };
 
   K.afterProjectChange = async () => {
+    K.viewScope.enterProject();
+    const scope = K.viewScope.captureProject();
     K.stopEvents();
     Object.assign(K.state, { session: null, sessions: [], messages: [], activeSessions: {}, sending: false });
     K.els.projectName.textContent = K.basename(K.state.local!.project);
@@ -406,6 +448,7 @@ import { K } from "./kernel";
     K.els.projectPath.title = K.state.local!.project;
     K.newSession();
     await Promise.all([K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
+    if (!K.viewScope.isProjectCurrent(scope)) return;
     K.startEvents();
   };
 

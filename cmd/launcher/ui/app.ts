@@ -5,13 +5,16 @@ import { K } from "./kernel";
 
   K.refreshAll = async () => {
     K.showError("");
+    const scope = K.viewScope.captureSession();
     try {
       await Promise.all([K.checkBackend(), K.loadLocalStatus(), K.loadToolRegistry?.(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       if (K.state.session) {
         const currentSessionID = K.state.session.id;
         const fresh = K.state.sessions.find((item) => item.id === currentSessionID);
         if (fresh) K.state.session = fresh;
         await Promise.all([K.loadMessages(), K.loadAttention()]);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
         K.renderMessages();
         K.renderSessionHeader();
         K.syncSelectors();

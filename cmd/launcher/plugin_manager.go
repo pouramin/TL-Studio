@@ -1163,18 +1163,11 @@ func (m *pluginManager) Execute(ctx context.Context, sessionID, project string, 
 		output, callErr := client.CallTool(ctx, originalName, input)
 		result := nativeToolResult{ToolID: call.ID, CallID: call.CallID, Output: output, Duration: time.Since(start).Milliseconds()}
 		if callErr != nil {
-			// Reconnect once after transport/process failure.
-			m.mu.Lock()
-			m.stopLocked(config)
-			restarted, restartErr := m.ensureClientLocked(ctx, config, project)
-			m.mu.Unlock()
-			if restartErr == nil {
-				output, callErr = restarted.CallTool(ctx, originalName, input)
-				result.Output = output
-			}
-		}
-		if callErr != nil {
-			result.Error = callErr.Error()
+			// An MCP server may have committed a write before its reply was lost.
+			// Replaying an attempted tool call can duplicate external side effects.
+			// Report the failure without retrying; ensureClientLocked reconnects a
+			// dead server on the next, separately requested tool operation.
+			result.Error = fmt.Sprintf("%v (not retried; the tool may have completed before the response failed)", callErr)
 		}
 		return result, true
 	}

@@ -9,6 +9,10 @@ const RESUME_PROMPT = "Continue the current task from the existing workspace sta
 
 const K = {
   renderMessages: () => {},
+  onMessagesRendered: (effect) => {
+    K.__renderEffect = effect;
+    return () => { K.__renderEffect = null; };
+  },
   state: {
     session: { id: "session-1" },
     messages: [],
@@ -94,6 +98,17 @@ const usageLimit = {
   parts: [],
 };
 assert.equal(hooks.providerErrorInfo(usageLimit)?.retryable, false);
+
+const exhaustedFreeQuota = {
+  info: { role: "assistant", error: {
+    name: "APIError", data: {
+      message: "OpenRouter free-models-per-day quota exhausted for the active API key (429)",
+      statusCode: 429, isRetryable: true,
+    },
+  }},
+};
+assert.equal(hooks.providerErrorInfo(exhaustedFreeQuota)?.retryable, false,
+  "429 quota exhaustion must not offer automatic Resume");
 
 async function testResume() {
   let sendCalls = 0;

@@ -165,3 +165,24 @@ dialog::backdrop { background:rgba(0,0,0,.62); backdrop-filter:blur(3px); }
 .question-option input { margin-top:2px; }
 .question-custom { width:100%; margin-top:8px; min-height:34px; border:1px solid var(--line); border-radius:7px; background:var(--panel-3); color:var(--text); padding:7px 9px; outline:none; }
 .attention-actions-spacer { flex:1; }
+/* Keep attention choices predictable. Generic .dialog-card input width:100%
+   must never stretch radio controls and push labels into a narrow column. */
+.attention-card { width:min(720px,calc(100vw - 28px)); max-height:min(86vh,850px); display:flex; flex-direction:column; }
+.attention-body { overflow:auto; min-height:0; margin-top:12px; padding:0 2px 4px; font-size:13px; }
+.attention-card .dialog-actions { flex:none; flex-wrap:wrap; gap:9px; padding-top:12px; border-top:1px solid var(--line); }
+.attention-card .dialog-actions button { white-space:normal; line-height:1.3; min-height:36px; }
+.attention-body .question-block { margin:0 0 12px; padding:16px; }
+.attention-body .question-block > strong { font-size:13px; font-weight:650; line-height:1.5; }
+.attention-body .question-option { display:flex; align-items:flex-start; gap:12px; width:100%; padding:10px 12px; margin:6px 0; background:var(--panel-3); border:1px solid var(--line); border-radius:9px; cursor:pointer; color:var(--text); }
+.attention-body .question-option:hover, .attention-body .question-option:focus-within { border-color:var(--accent); }
+.attention-body .question-option .question-choice-input { width:16px; height:16px; min-width:16px; min-height:16px; flex:0 0 16px; padding:0; margin:2px 0 0; accent-color:var(--accent); }
+.attention-body .question-choice-text { display:block; min-width:0; flex:1; overflow-wrap:anywhere; font-size:12px; line-height:1.5; }
+.attention-body .question-custom { font:inherit; padding:9px 12px; width:100%; height:auto; min-height:40px; }
+.attention-summary { font-size:13px; line-height:1.5; margin:0 0 12px; color:var(--text); }
+.attention-permission-details { padding:12px 14px; border:1px solid var(--line); background:var(--panel-2); border-radius:9px; }
+.attention-detail-label { display:block; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:7px; }
+.attention-command-preview { margin:0; overflow:auto; max-height:170px; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; font:11px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--text); }
+.attention-scope-note { margin:12px 0 0; font-size:11px; line-height:1.5; color:var(--muted); }
+.attention-scope-warning { color:var(--warning); }
+@media(max-width:700px) { .attention-card { padding:14px; } .attention-card .dialog-actions button { flex:1 1 130px; } }
+

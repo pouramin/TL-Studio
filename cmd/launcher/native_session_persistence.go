@@ -35,6 +35,14 @@ func (s *sessionPersistenceStore) createNativeSession(directory string, input se
 }
 
 func (s *sessionPersistenceStore) putNativeMessage(sessionID, directory string, message sessionMessageView) error {
+	return s.putNativeMessageWithCompletion(sessionID, directory, message, false)
+}
+
+func (s *sessionPersistenceStore) putNativeFinalMessage(sessionID, directory string, message sessionMessageView) error {
+	return s.putNativeMessageWithCompletion(sessionID, directory, message, true)
+}
+
+func (s *sessionPersistenceStore) putNativeMessageWithCompletion(sessionID, directory string, message sessionMessageView, completed bool) error {
 	sessionID = strings.TrimSpace(sessionID)
 	directory = strings.TrimSpace(directory)
 	if sessionID == "" {
@@ -97,6 +105,9 @@ func (s *sessionPersistenceStore) putNativeMessage(sessionID, directory string, 
 	}
 	if len(message.Changes) > 0 {
 		snapshot.Changes = mergeSessionChanges(append(snapshot.Changes, message.Changes...))
+	}
+	if completed {
+		snapshot.PendingRun = nil
 	}
 	if err := s.saveSnapshotLocked(snapshot); err != nil {
 		return err

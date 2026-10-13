@@ -104,7 +104,7 @@ import { K } from "./kernel";
     K.state.preview.open = !!open;
     ui.panel.classList.toggle("hidden", !open);
     ui.button.classList.toggle("preview-toggle-active", !!open);
-    if (open) loadPreviewRegistry().then(() => refreshStatus()).catch(() => {});
+
   };
 
   const loadPreviewRegistry = async () => {
@@ -127,8 +127,14 @@ import { K } from "./kernel";
   };
 
   const previewCapabilityForPath = (value: any) => {
+    const filename = String(value || "").trim().split(/[\\/]/).pop() || "";
+    if (!filename) return null;
     const ext = extensionOf(value);
-    if (!ext) return null;
+    if (!ext) {
+      // Backend verifies extensionless files are safe text; the selected
+      // editor path is never silently replaced by index.html.
+      return { id: "document.plain", kind: "text", renderer: "text", name: "Text" };
+    }
     for (const capability of K.state.preview.registry?.capabilities || []) {
       if ((capability?.extensions || []).some((candidate: any) => String(candidate).toLowerCase() === ext)) return capability;
     }
@@ -136,7 +142,8 @@ import { K } from "./kernel";
   };
 
   const isPreviewablePath = (value: any) => !!previewCapabilityForPath(value);
-  const activePreviewEntry = () => isPreviewablePath(K.state.activeEditorPath) ? String(K.state.activeEditorPath) : "";
+  const selectedEditorPath = () => String(K.state.activeEditorPath || "").trim();
+  const activePreviewEntry = () => isPreviewablePath(selectedEditorPath()) ? selectedEditorPath() : "";
   const kindLabel = (snapshot: any) => snapshot?.kind === "dev-server"
     ? "Dev server"
     : snapshot?.entryMeta?.name || (snapshot?.kind === "file" ? "File preview" : "Web preview");
@@ -152,7 +159,7 @@ import { K } from "./kernel";
       : [];
     const paths = entries.map((entry: any) => entry.path);
     const signature = entries.map((entry: any) => `${entry.path}:${entry.capabilityID || entry.kind || ""}`).join("\n");
-    const preferred = String(snapshot?.entry || activePreviewEntry() || ui.entry?.value || "");
+    const preferred = String(activePreviewEntry() || snapshot?.entry || ui.entry?.value || "");
     if (ui.entry && K.state.preview.entrySignature !== signature) {
       K.state.preview.entrySignature = signature;
       ui.entry.textContent = "";
@@ -165,18 +172,64 @@ import { K } from "./kernel";
     }
     if (ui.entry && paths.includes(preferred)) ui.entry.value = preferred;
     else if (ui.entry && paths.length && !paths.includes(ui.entry.value)) ui.entry.value = paths[0];
-    ui.entryRow?.classList.toggle("hidden", entries.length <= 1 || snapshot?.kind === "dev-server");
+    // The editor owns the selection. The dropdown is useful only when no
+    // editor tab is active; a backend candidate list can omit source files.
+    ui.entryRow?.classList.toggle("hidden", !!selectedEditorPath() || entries.length <= 1 || snapshot?.kind === "dev-server");
     return entries;
+  };
+
+  // A preview is always tied to the active editor tab. Never leave an old
+  // iframe visible (or fall back to index.html) for an unsupported active file.
+  const showUnpreviewableSelection = (path: string) => {
+    const name = path.split(/[\\/]/).pop() || path;
+    ui.kind.textContent = "Active file";
+    ui.status.textContent = "Unsupported";
+    ui.url.textContent = path;
+    ui.url.title = path;
+    ui.entryRow?.classList.add("hidden");
+    ui.frame.classList.add("hidden");
+    ui.frame.removeAttribute("src");
+    K.state.preview.lastURL = "";
+    ui.empty.classList.remove("hidden");
+    ui.empty.querySelector("strong")!.textContent = "Preview unavailable for active file";
+    ui.hint.textContent = `“${name}” cannot be previewed. Select an HTML, text, Markdown, image, PDF, audio or video tab.`;
+    ui.logs.classList.add("hidden");
+    ui.start.disabled = true;
+    ui.stop.disabled = !K.state.preview.snapshot?.running;
+    ui.reload.disabled = true;
+    ui.external.disabled = true;
+    stopPolling();
   };
 
   const render = (snapshot: any) => {
     K.state.preview.snapshot = snapshot || null;
+    const selected = selectedEditorPath();
+    if (K.state.preview.open && selected && !isPreviewablePath(selected)) {
+      showUnpreviewableSelection(selected);
+      return;
+    }
+    const active = activePreviewEntry();
+    if (K.state.preview.open && active && snapshot?.running && snapshot?.kind === "file" && snapshot.entry !== active) {
+      ui.kind.textContent = "Active file";
+      ui.status.textContent = "Switching…";
+      ui.url.textContent = active;
+      ui.entryRow?.classList.add("hidden");
+      ui.frame.classList.add("hidden");
+      ui.empty.classList.remove("hidden");
+      ui.empty.querySelector("strong")!.textContent = "Switching Preview…";
+      ui.hint.textContent = `Opening ${active}`;
+      ui.start.disabled = true;
+      ui.reload.disabled = true;
+      ui.external.disabled = true;
+      return;
+    }
     const available = !!snapshot?.available;
     const running = !!snapshot?.running;
     const url = snapshot?.url || "";
     const starting = running && snapshot?.kind === "dev-server" && !url;
     const entries = renderEntryChoices(snapshot);
     const needsChoice = snapshot?.kind === "file" && entries.length > 1 && !snapshot?.entry;
+    ui.empty.querySelector("strong")!.textContent = "Preview this project";
 
     ui.kind.textContent = kindLabel(snapshot);
     ui.status.textContent = url ? "Live" : starting ? "Starting…" : running ? "Running" : available ? "Ready" : "Unavailable";
@@ -229,7 +282,12 @@ import { K } from "./kernel";
     ui.start.disabled = true;
     try {
       await loadPreviewRegistry().catch(() => null);
-      const requestedEntry = String(ui.entry?.value || activePreviewEntry() || "").trim();
+      const selected = selectedEditorPath();
+      if (selected && !isPreviewablePath(selected)) {
+        showUnpreviewableSelection(selected);
+        return;
+      }
+      const requestedEntry = String(activePreviewEntry() || ui.entry?.value || "").trim();
       const snapshot = await request(previewPath("/local/preview", requestedEntry), { method: "POST" });
       render(snapshot);
       if (snapshot?.running && !snapshot?.url && !K.state.preview.poll) {
@@ -259,23 +317,37 @@ import { K } from "./kernel";
 
   const followActivePreviewEntry = async (path: any) => {
     const entry = String(path || "").trim();
-    if (!entry || !K.state.preview.open) return;
+    if (!K.state.preview.open) return;
+    ++K.state.preview.entrySwitchGeneration;
+    if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
     await loadPreviewRegistry().catch(() => null);
-    if (!isPreviewablePath(entry)) return;
+    // A different tab may have been selected while capabilities loaded.
+    if (selectedEditorPath() !== entry || !K.state.preview.open) return;
+    if (!entry) {
+      showUnpreviewableSelection("No file selected");
+      return;
+    }
+    if (!isPreviewablePath(entry)) {
+      showUnpreviewableSelection(entry);
+      return;
+    }
     const snapshot = K.state.preview.snapshot;
     const capability = previewCapabilityForPath(entry);
-    if (!snapshot?.running || snapshot?.entry === entry) return;
-    if (snapshot?.kind === "dev-server" && capability?.kind === "html") return;
-    if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
+    if (snapshot?.kind === "dev-server" && capability?.kind === "html" && snapshot?.running) return;
+    if (snapshot?.running && snapshot?.entry === entry) {
+      render(snapshot);
+      return;
+    }
+    // Hide the previous file until the new one has been selected.
+    ui.frame.classList.add("hidden");
+    ui.empty.classList.remove("hidden");
+    ui.empty.querySelector("strong")!.textContent = "Switching Preview…";
+    ui.hint.textContent = `Opening ${entry}`;
     K.state.preview.followTimer = window.setTimeout(() => {
       K.state.preview.followTimer = null;
-      const activeEntry = activePreviewEntry();
-      const current = K.state.preview.snapshot;
-      const activeCapability = previewCapabilityForPath(activeEntry);
-      if (!K.state.preview.open || !current?.running) return;
-      if (!activeEntry || activeEntry !== entry || current?.entry === activeEntry) return;
-      if (current?.kind === "dev-server" && activeCapability?.kind === "html") return;
-      switchPreviewEntry(activeEntry);
+      if (K.state.preview.open && selectedEditorPath() === entry) {
+        void switchPreviewEntry(entry);
+      }
     }, 50);
   };
 
@@ -308,8 +380,15 @@ import { K } from "./kernel";
     const opening = ui.panel.classList.contains("hidden");
     setOpen(opening);
     if (opening) {
+      const selectedAtOpen = selectedEditorPath();
       await loadPreviewRegistry().catch(() => null);
+      if (!K.state.preview.open || selectedEditorPath() !== selectedAtOpen) return;
+      if (selectedAtOpen && !isPreviewablePath(selectedAtOpen)) {
+        showUnpreviewableSelection(selectedAtOpen);
+        return;
+      }
       const snapshot = await refreshStatus().catch(() => null);
+      if (!K.state.preview.open || selectedEditorPath() !== selectedAtOpen) return;
       const activeEntry = activePreviewEntry();
       const activeCapability = previewCapabilityForPath(activeEntry);
       const shouldSwitch = snapshot?.running
@@ -390,5 +469,5 @@ import { K } from "./kernel";
   });
 
   loadPreviewRegistry().catch(() => {});
-  K.preview = Object.freeze({ open: () => setOpen(true), start, stop, reload, refresh: refreshStatus, selectEntry: switchPreviewEntry, capabilities: loadPreviewRegistry });
+  K.preview = Object.freeze({ open: async () => { if (!K.state.preview.open) ui.button.click(); }, start, stop, reload, refresh: refreshStatus, selectEntry: switchPreviewEntry, capabilities: loadPreviewRegistry });
 })();

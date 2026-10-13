@@ -110,6 +110,13 @@ import { K } from "./kernel";
     pickProject.classList.add("workspace-project-switcher");
     pickProject.title = "Switch project";
     projectSlot.appendChild(pickProject);
+    // Explicit, discoverable entry point: the project name/path alone looked
+    // like passive metadata and was easy to miss on first launch.
+    const openFolder = button("Open Folder", "Open or switch a local project folder", "workspace-open-folder");
+    openFolder.id = "workspaceOpenFolder";
+    openFolder.setAttribute("aria-label", "Open or switch a project folder");
+    openFolder.addEventListener("click", () => pickProject.click());
+    projectSlot.appendChild(openFolder);
   }
 
   const commandTrigger = button("Search project or run a command", "Command Palette (Ctrl/Cmd+K)", "workspace-command-trigger");
@@ -727,11 +734,15 @@ import { K } from "./kernel";
   const baseAfterProjectChange = K.afterProjectChange;
   if (typeof baseAfterProjectChange === "function") {
     K.afterProjectChange = async (...args: any[]) => {
-      const result = await baseAfterProjectChange(...args);
+      const change = baseAfterProjectChange(...args);
+      // The base handler invalidates old project scopes synchronously.
+      const scope = K.viewScope.captureProject();
+      const result = await change;
+      if (!K.viewScope.isProjectCurrent(scope)) return result;
       filesPanel?.classList.remove("hidden");
       setContext("explorer");
       await K.openWorkspace?.().catch(() => undefined);
-      syncStatus();
+      if (K.viewScope.isProjectCurrent(scope)) syncStatus();
       return result;
     };
   }

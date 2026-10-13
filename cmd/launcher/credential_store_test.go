@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"runtime"
 )
 
 func TestPrivateFileCredentialStoreKeepsSecretOutOfProviderRegistry(t *testing.T) {
@@ -23,7 +24,7 @@ func TestPrivateFileCredentialStoreKeepsSecretOutOfProviderRegistry(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm()&0o077 != 0 {
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 		t.Fatalf("fallback credential file is too permissive: %o", info.Mode().Perm())
 	}
 	raw, err := os.ReadFile(providerCredentialPath("example-provider"))

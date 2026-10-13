@@ -138,10 +138,35 @@ html, body {
 
 .workspace-project-slot {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.workspace-open-folder {
+  flex: 0 0 auto;
+  min-height: 27px;
+  padding: 0 9px;
+  border: 1px solid var(--tl-border);
+  border-radius: 5px;
+  background: var(--tl-panel);
+  color: var(--tl-text);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.workspace-open-folder:hover {
+  border-color: var(--tl-brand-green);
+  background: var(--tl-panel-elevated);
+}
+@media (max-width: 1050px) {
+  .workspace-open-folder { padding: 0 6px; font-size: 9px; }
 }
 .workspace-project-switcher.project-button {
   margin: 0;
-  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: auto;
   min-height: 32px;
   display: grid;
   grid-template-columns: minmax(0, auto) minmax(0, 1fr);

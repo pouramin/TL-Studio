@@ -39,66 +39,88 @@ import { K } from "./kernel";
 
   K.loadAttention = async () => {
     if (!K.state.session) return;
+    const scope = K.viewScope.captureSession();
+    const sessionID = K.state.session.id;
     const [p, q] = await Promise.allSettled([
-      K.api.permissions.list(K.state.session.id),
-      K.api.questions.list(K.state.session.id),
+      K.api.permissions.list(sessionID),
+      K.api.questions.list(sessionID),
     ]);
+    if (!K.viewScope.isSessionCurrent(scope)) return;
     const permissions = p.status === "fulfilled" ? p.value : [];
     const questions = q.status === "fulfilled" ? q.value : [];
-    if (permissions[0]) return showPermission(permissions[0]);
-    if (questions[0]) return showQuestion(questions[0]);
+    if (permissions[0]) return showPermission(permissions[0], sessionID, scope);
+    if (questions[0]) return showQuestion(questions[0], sessionID, scope);
     if (K.els.attentionDialog.open) {
       K.els.attentionDialog.close();
       K.state.attentionKey = "";
     }
   };
 
-  const showPermission = (item: any) => {
+  const showPermission = (item: any, sessionID: string, scope: { project: number; session: number }) => {
     const key = `permission:${item.id}`;
     if (K.state.attentionKey === key && K.els.attentionDialog.open) return;
     K.state.attentionKey = key;
     reset("Permission request");
 
-    const text = document.createElement("div");
-    const meta = document.createElement("div");
-    text.textContent = `Agent wants permission to ${item.permission || item.action || "perform an action"}.`;
-    meta.className = "attention-meta";
+    const action = document.createElement("p");
+    action.className = "attention-summary";
+    action.textContent = `Agent requests permission: ${item.action || item.permission || "perform an action"}`;
 
     const patterns = Array.isArray(item.patterns) ? item.patterns : Array.isArray(item.resources) ? item.resources : [];
     const alwaysRules = Array.isArray(item.always) ? item.always.filter(Boolean) : [];
     const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata : {};
     const sensitive = metadata.skillShell === true || metadata.sandboxEscalation === true;
     const canAlways = !sensitive && metadata.disableAlways !== true && alwaysRules.length > 0;
-    const always = canAlways ? `TL Studio can remember these rules for this project:\n${alwaysRules.join("\n")}` : "";
+    const taskScope = metadata.taskScope === "project-files" || metadata.taskScope === "project-shell" ? metadata.taskScope : "";
 
-    meta.textContent = [
-      patterns.length ? patterns.join("\n") : "",
-      Object.keys(metadata).length ? JSON.stringify(metadata, null, 2) : "",
-      always,
-    ].filter(Boolean).join("\n\n") || "No additional details.";
-    K.els.attentionBody.append(text, meta);
+    const details = document.createElement("div");
+    details.className = "attention-permission-details";
+    const label = document.createElement("strong");
+    label.className = "attention-detail-label";
+    label.textContent = "Requested operation";
+    const command = document.createElement("pre");
+    command.className = "attention-command-preview";
+    command.textContent = patterns.join("\n") || item.action || "Workspace operation";
+    details.append(label, command);
+    K.els.attentionBody.append(action, details);
+
+    if (taskScope) {
+      const scopeInfo = document.createElement("p");
+      scopeInfo.className = taskScope === "project-shell" ? "attention-scope-note attention-scope-warning" : "attention-scope-note";
+      scopeInfo.textContent = metadata.taskScopeDescription || "Approval applies to this Agent run only.";
+      K.els.attentionBody.appendChild(scopeInfo);
+    }
 
     const actions = [
-      actionButton("Reject", "ghost", () => replyPermission(item, "reject")),
-      actionButton(sensitive ? "Allow" : "Allow once", "ghost", () => replyPermission(item, "once")),
+      actionButton("Reject", "ghost", () => replyPermission(item, "reject", sessionID, scope)),
+      actionButton("Allow once", "ghost", () => replyPermission(item, "once", sessionID, scope)),
     ];
-    if (canAlways) actions.push(actionButton("Always allow in this project", "primary", () => replyPermission(item, "always")));
+    if (taskScope) {
+      actions.push(actionButton(taskScope === "project-shell" ? "Allow commands for this task" : "Allow file edits for this task", "primary", () => replyPermission(item, "task", sessionID, scope)));
+    } else if (canAlways) {
+      actions.push(actionButton("Always allow this operation", "primary", () => replyPermission(item, "always", sessionID, scope)));
+    }
     K.els.attentionActions.append(...actions);
 
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
   };
 
-  const replyPermission = async (item: any, reply: any) => {
+  const replyPermission = async (item: any, reply: any, sessionID: string, scope: { project: number; session: number }) => {
+    if (!K.viewScope.isSessionCurrent(scope)) return;
     try {
-      await K.api.permissions.reply(K.state.session!.id, item.id, reply);
+      await K.api.permissions.reply(sessionID, item.id, reply);
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       if (reply === "always") await K.refreshPermissionRules?.();
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError((err as any).message || String(err)); }
+    } catch (err) {
+      if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+    }
   };
 
-  const showQuestion = (item: any) => {
+  const showQuestion = (item: any, sessionID: string, scope: { project: number; session: number }) => {
     const key = `question:${item.id}`;
     if (K.state.attentionKey === key && K.els.attentionDialog.open) return;
     K.state.attentionKey = key;
@@ -123,9 +145,11 @@ import { K } from "./kernel";
         const span = document.createElement("span");
         label.className = "question-option";
         input.type = question.multiple ? "checkbox" : "radio";
+        input.className = "question-choice-input";
         input.name = name;
         input.value = option.label;
         if (!question.multiple && question.default && option.label === question.default) input.checked = true;
+        span.className = "question-choice-text";
         span.textContent = option.description ? `${option.label} — ${option.description}` : option.label;
         label.append(input, span);
         block.appendChild(label);
@@ -144,13 +168,14 @@ import { K } from "./kernel";
     }
 
     K.els.attentionActions.append(
-      actionButton("Reject", "ghost", () => rejectQuestion(item)),
-      actionButton("Answer", "primary", () => answerQuestion(item, blocks)),
+      actionButton("Reject", "ghost", () => rejectQuestion(item, sessionID, scope)),
+      actionButton("Answer", "primary", () => answerQuestion(item, blocks, sessionID, scope)),
     );
     if (!K.els.attentionDialog.open) K.els.attentionDialog.showModal();
   };
 
-  const answerQuestion = async (item: any, blocks: Array<{ controls: HTMLInputElement[]; custom: HTMLInputElement | null }>) => {
+  const answerQuestion = async (item: any, blocks: Array<{ controls: HTMLInputElement[]; custom: HTMLInputElement | null }>, sessionID: string, scope: { project: number; session: number }) => {
+    if (!K.viewScope.isSessionCurrent(scope)) return;
     const answers = blocks.map(({ controls, custom }) => {
       const selected = controls.filter((input: any) => input.checked).map((input: HTMLInputElement) => input.value);
       const typed = custom?.value.trim();
@@ -160,19 +185,26 @@ import { K } from "./kernel";
     if (answers.some((answer: any) => !answer.length)) return K.showError("Answer every agent question before continuing.");
 
     try {
-      await K.api.questions.reply(K.state.session!.id, item.id, answers);
+      await K.api.questions.reply(sessionID, item.id, answers);
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError((err as any).message || String(err)); }
+    } catch (err) {
+      if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+    }
   };
 
-  const rejectQuestion = async (item: any) => {
+  const rejectQuestion = async (item: any, sessionID: string, scope: { project: number; session: number }) => {
+    if (!K.viewScope.isSessionCurrent(scope)) return;
     try {
-      await K.api.questions.reject(K.state.session!.id, item.id);
+      await K.api.questions.reject(sessionID, item.id);
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError((err as any).message || String(err)); }
+    } catch (err) {
+      if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+    }
   };
 })();

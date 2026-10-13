@@ -307,7 +307,7 @@ func TestProviderCardsRouteAPIBasedServicesToPresetConfiguration(t *testing.T) {
 		}
 	}
 
-	if strings.Contains(accounts, `if (!account.available) return;
+	if strings.Contains(strings.ReplaceAll(accounts, "\r\n", "\n"), `if (!account.available) return;
     K.showError("");
     K.state.authController`) == false {
 		t.Fatal("account login lifecycle must remain intact for account-based providers")
