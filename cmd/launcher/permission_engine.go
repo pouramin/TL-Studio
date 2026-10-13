@@ -78,11 +78,10 @@ func (s *permissionPolicyStore) loadLocked() error {
 	if s.loaded {
 		return nil
 	}
-	s.loaded = true
-	s.rules = nil
-
 	data, err := os.ReadFile(s.filePath)
 	if errors.Is(err, os.ErrNotExist) {
+		s.rules = nil
+		s.loaded = true
 		return nil
 	}
 	if err != nil {
@@ -96,6 +95,7 @@ func (s *permissionPolicyStore) loadLocked() error {
 		return fmt.Errorf("unsupported permission policy version %d", stored.Version)
 	}
 	seen := map[string]bool{}
+	rules := []permissionRule{}
 	for _, rule := range stored.Rules {
 		rule.Project = normalizePermissionProject(rule.Project)
 		rule.Permission = strings.TrimSpace(rule.Permission)
@@ -111,48 +111,28 @@ func (s *permissionPolicyStore) loadLocked() error {
 			continue
 		}
 		seen[rule.ID] = true
-		s.rules = append(s.rules, rule)
+		rules = append(rules, rule)
 	}
+	// Commit in-memory state only after the entire file was read and validated.
+	// A corrupted or inaccessible policy must never become a cached empty policy.
+	s.rules = rules
+	s.loaded = true
 	return nil
 }
 
 func (s *permissionPolicyStore) persistLocked() error {
-	if err := os.MkdirAll(filepath.Dir(s.filePath), 0o700); err != nil {
-		return err
-	}
 	rules := append([]permissionRule(nil), s.rules...)
 	sort.Slice(rules, func(i, j int) bool {
 		left := rules[i].Project + "\x00" + rules[i].Permission + "\x00" + rules[i].Matcher
 		right := rules[j].Project + "\x00" + rules[j].Permission + "\x00" + rules[j].Matcher
 		return left < right
 	})
-	data, err := json.MarshalIndent(permissionPolicyFile{Version: permissionPolicyVersion, Rules: rules}, "", "  ")
-	if err != nil {
-		return err
-	}
-	temp, err := os.CreateTemp(filepath.Dir(s.filePath), "permissions-*.tmp")
-	if err != nil {
-		return err
-	}
-	tempName := temp.Name()
-	defer os.Remove(tempName)
-	if err := temp.Chmod(0o600); err != nil {
-		_ = temp.Close()
-		return err
-	}
-	if _, err := temp.Write(data); err != nil {
-		_ = temp.Close()
-		return err
-	}
-	if err := temp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tempName, s.filePath); err != nil {
-		if writeErr := os.WriteFile(s.filePath, data, 0o600); writeErr != nil {
-			return err
-		}
-	}
-	return nil
+	// Share the Session persistence atomic writer. If the rename fails, the
+	// existing rules must remain intact; never truncate the live policy.
+	return writePrivateJSONAtomic(s.filePath, permissionPolicyFile{
+		Version: permissionPolicyVersion,
+		Rules: rules,
+	})
 }
 
 func (s *permissionPolicyStore) snapshot() ([]permissionRule, error) {
@@ -230,14 +210,19 @@ func (s *permissionPolicyStore) removeIDs(ids []string) error {
 	for _, id := range ids {
 		remove[id] = true
 	}
-	next := s.rules[:0]
+	previous := append([]permissionRule(nil), s.rules...)
+	next := make([]permissionRule, 0, len(s.rules))
 	for _, rule := range s.rules {
 		if !remove[rule.ID] {
 			next = append(next, rule)
 		}
 	}
-	s.rules = append([]permissionRule(nil), next...)
-	return s.persistLocked()
+	s.rules = next
+	if err := s.persistLocked(); err != nil {
+		s.rules = previous
+		return err
+	}
+	return nil
 }
 
 func (s *permissionPolicyStore) remove(id string) (bool, error) {
@@ -247,7 +232,8 @@ func (s *permissionPolicyStore) remove(id string) (bool, error) {
 		return false, err
 	}
 	found := false
-	next := s.rules[:0]
+	previous := append([]permissionRule(nil), s.rules...)
+	next := make([]permissionRule, 0, len(s.rules))
 	for _, rule := range s.rules {
 		if rule.ID == id {
 			found = true
@@ -258,8 +244,9 @@ func (s *permissionPolicyStore) remove(id string) (bool, error) {
 	if !found {
 		return false, nil
 	}
-	s.rules = append([]permissionRule(nil), next...)
+	s.rules = next
 	if err := s.persistLocked(); err != nil {
+		s.rules = previous
 		return false, err
 	}
 	return true, nil
