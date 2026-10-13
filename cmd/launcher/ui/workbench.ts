@@ -727,11 +727,15 @@ import { K } from "./kernel";
   const baseAfterProjectChange = K.afterProjectChange;
   if (typeof baseAfterProjectChange === "function") {
     K.afterProjectChange = async (...args: any[]) => {
-      const result = await baseAfterProjectChange(...args);
+      const change = baseAfterProjectChange(...args);
+      // The base handler invalidates old project scopes synchronously.
+      const scope = K.viewScope.captureProject();
+      const result = await change;
+      if (!K.viewScope.isProjectCurrent(scope)) return result;
       filesPanel?.classList.remove("hidden");
       setContext("explorer");
       await K.openWorkspace?.().catch(() => undefined);
-      syncStatus();
+      if (K.viewScope.isProjectCurrent(scope)) syncStatus();
       return result;
     };
   }

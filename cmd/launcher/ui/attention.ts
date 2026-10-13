@@ -101,7 +101,9 @@ import { K } from "./kernel";
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError((err as any).message || String(err)); }
+    } catch (err) {
+      if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+    }
   };
 
   const showQuestion = (item: any, sessionID: string, scope: { project: number; session: number }) => {
@@ -172,7 +174,9 @@ import { K } from "./kernel";
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError((err as any).message || String(err)); }
+    } catch (err) {
+      if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+    }
   };
 
   const rejectQuestion = async (item: any, sessionID: string, scope: { project: number; session: number }) => {
@@ -183,6 +187,8 @@ import { K } from "./kernel";
       K.state.attentionKey = "";
       if (K.els.attentionDialog.open) K.els.attentionDialog.close();
       await K.loadAttention();
-    } catch (err) { K.showError((err as any).message || String(err)); }
+    } catch (err) {
+      if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+    }
   };
 })();
