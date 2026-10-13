@@ -284,7 +284,11 @@ import { K } from "./kernel";
       if (!accountLoginProviderIDs.has(account.id)) continue;
       const runtimeProviderID = accountRuntimeProviderIDs[account.id] || account.id;
       if (account.connected) K.state.connectedProviders.add(runtimeProviderID);
-      else K.state.connectedProviders.delete(runtimeProviderID);
+      // Account-login status and API-key connectivity are independent.
+      // Never erase an API credential's catalog-connected status merely
+      // because OpenRouter OAuth login is disconnected.
+      // loadCatalog() is authoritative for credentials and will remove
+      // disconnected providers on the next refresh.
     }
   };
 
@@ -394,7 +398,7 @@ import { K } from "./kernel";
                   ? "Account or API key"
                   : "API key"
           : isAPIProvider
-            ? (apiConnected ? "API connected" : "API key")
+            ? (apiConnected ? "API connected" : "API key not configured")
             : statusText(account);
       }
       state.append(dot, stateLabel);
