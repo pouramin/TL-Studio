@@ -206,15 +206,22 @@ import { K } from "./kernel";
   };
 
   K.loadSessions = async () => {
+    const scope = K.viewScope.captureProject();
     const payload = await K.api.sessionView.list({ limit: 150 });
+    if (!K.viewScope.isProjectCurrent(scope)) return K.state.sessions;
     K.state.sessions = Array.isArray(payload) ? payload : [];
     K.renderSessions();
     return K.state.sessions;
   };
 
   K.loadActiveSessions = async () => {
-    try { K.state.activeSessions = await K.api.sessionView.status(); }
-    catch { K.state.activeSessions = {}; }
+    const scope = K.viewScope.captureProject();
+    try {
+      const active = await K.api.sessionView.status();
+      if (K.viewScope.isProjectCurrent(scope)) K.state.activeSessions = active;
+    } catch {
+      if (K.viewScope.isProjectCurrent(scope)) K.state.activeSessions = {};
+    }
   };
 
   K.isSessionRunning = (sessionID?: string) => {

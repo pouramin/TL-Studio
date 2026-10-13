@@ -1,3 +1,5 @@
+import { createViewScope } from "./view-scope";
+
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
 
 // Lifecycle contract: the presentation module owns renderMessages. Other
@@ -26,6 +28,7 @@ const emitMessagesRendered = (): void => {
 };
 
 export const K = {
+  viewScope: createViewScope(),
   onMessagesRendered,
   emitMessagesRendered,
   els: {

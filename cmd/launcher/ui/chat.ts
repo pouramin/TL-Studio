@@ -179,6 +179,7 @@ import { K } from "./kernel";
   };
 
   K.newSession = () => {
+    K.viewScope.enterSession();
     K.stopSessionPolling();
     Object.assign(K.state, { session: null, messages: [], sending: false, attentionKey: "" });
     K.showError("");
@@ -192,13 +193,19 @@ import { K } from "./kernel";
 
   K.loadMessages = async () => {
     if (!K.state.session) return [];
+    const scope = K.viewScope.captureSession();
+    const sessionID = K.state.session.id;
     const revision = ++K.state.revision;
-    const messages = await K.api.sessionView.messages(K.state.session.id, { limit: 200 });
-    if (revision === K.state.revision) K.state.messages = Array.isArray(messages) ? messages : [];
+    const messages = await K.api.sessionView.messages(sessionID, { limit: 200 });
+    if (K.viewScope.isSessionCurrent(scope) && K.state.session?.id === sessionID && revision === K.state.revision) {
+      K.state.messages = Array.isArray(messages) ? messages : [];
+    }
     return K.state.messages;
   };
 
   K.selectSession = async (session) => {
+    K.viewScope.enterSession();
+    const scope = K.viewScope.captureSession();
     K.stopSessionPolling();
     K.state.session = session;
     K.state.messages = [];
@@ -208,15 +215,19 @@ import { K } from "./kernel";
     K.showError("");
     K.syncSelectors();
     await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
+    if (!K.viewScope.isSessionCurrent(scope)) return;
     K.renderMessages();
     if (K.isSessionRunning(session.id)) K.startSessionPolling();
   };
 
   K.createSession = async () => {
+    const scope = K.viewScope.captureSession();
     const agent = K.els.agentSelect.value || undefined;
     const model = K.selectedModel();
     const created = await K.api.sessionCommands.create();
+    if (!K.viewScope.isSessionCurrent(scope)) return null;
     if (!created?.id) throw new Error("TL Studio did not return a session ID");
+    K.viewScope.enterSession();
     const session = created as TLStudioSessionView;
     if (agent) session.agent = agent;
     if (model) session.model = model;
@@ -399,6 +410,8 @@ import { K } from "./kernel";
   };
 
   K.afterProjectChange = async () => {
+    K.viewScope.enterProject();
+    const scope = K.viewScope.captureProject();
     K.stopEvents();
     Object.assign(K.state, { session: null, sessions: [], messages: [], activeSessions: {}, sending: false });
     K.els.projectName.textContent = K.basename(K.state.local!.project);
@@ -406,6 +419,7 @@ import { K } from "./kernel";
     K.els.projectPath.title = K.state.local!.project;
     K.newSession();
     await Promise.all([K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);
+    if (!K.viewScope.isProjectCurrent(scope)) return;
     K.startEvents();
   };
 

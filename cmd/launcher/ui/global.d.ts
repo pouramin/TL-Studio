@@ -561,6 +561,14 @@ interface TLStudioState {
 type TLStudioCallable = (...args: any[]) => any;
 
 interface TLStudioKernel {
+  viewScope: {
+    enterProject(): void;
+    enterSession(): void;
+    captureProject(): number;
+    captureSession(): { project: number; session: number };
+    isProjectCurrent(token: number): boolean;
+    isSessionCurrent(token: { project: number; session: number }): boolean;
+  };
   els: TLStudioElements;
   state: TLStudioState;
   api: TLStudioProductAPI;
