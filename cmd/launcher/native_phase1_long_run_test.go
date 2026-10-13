@@ -98,7 +98,7 @@ func TestPhase1AgentThirtyToolsTenRoundsPersistedAndBounded(t *testing.T) {
 	runtime := newNativeAgentRuntime(
 		nativeTestResolver{
 			provider: tlProviderDefinition{ID: "test", Protocol: "openai-compatible", BaseURL: "http://127.0.0.1:1/v1"},
-			model:    tlProviderModel{ID: "test-model", ToolCall: true, ContextLimit: 200000, OutputLimit: 8192},
+			model:    tlProviderModel{ID: "test-model", ToolCall: true, ContextLimit: 1000000, OutputLimit: 8192},
 		},
 		model,
 		newNativeToolExecutor(newProcessManager(func() string { return project }), nativeAllowAuthorizer{}),
