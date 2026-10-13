@@ -40,8 +40,14 @@ class FakeElement {
   setAttribute(name, value) { this.attributes[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; if (name === "src") this.src = ""; }
   addEventListener(name, fn) { this.handlers[name] = fn; }
+  focus() {}
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   click() { return this.handlers.click?.(); }
-  querySelector(selector) { return selector === "strong" ? (this.strong ||= new FakeElement("strong")) : null; }
+  querySelector(selector) {
+    if (selector === "strong") return this.strong ||= new FakeElement("strong");
+    if (selector === ".file-preview") return this.filePreview ||= new FakeElement();
+    return null;
+  }
   querySelectorAll() { return []; }
 }
 
@@ -53,6 +59,10 @@ const fixture = (moduleName, setup) => {
     "previewClose", "previewStatus", "previewKind", "previewURL",
     "previewEntryRow", "previewEntry", "previewEmpty", "previewHint",
     "previewLogs", "previewFrame",
+    "fileTabs", "fileEditorEmpty", "filePreviewOnly", "filePreviewOnlyTitle",
+    "filePreviewOnlyHint", "fileEditorSurface", "fileLineNumbers", "fileEditor",
+    "fileEditorTitle", "fileEditorPath", "fileEditorMeta", "askFile",
+    "reloadFile", "saveFile", "fileEditorBody", "editorStatus", "editorCursor",
   ];
   const elements = Object.fromEntries(elementIDs.map(id => [id, new FakeElement()]));
   const toolbar = new FakeElement(), main = new FakeElement();
@@ -73,6 +83,7 @@ const fixture = (moduleName, setup) => {
     addEventListener: (name, cb) => listeners.set(name, cb),
     setTimeout, clearTimeout, setInterval, clearInterval,
     dispatchEvent() {},
+    getComputedStyle: () => ({ lineHeight: "20px" }),
     open() {},
     fetch: null,
   };
@@ -171,9 +182,61 @@ async function testPreview() {
 }
 
 
+async function testEditorSaveIsolation() {
+  const saveReply = deferred();
+  let submitted = null;
+  const { K, elements } = fixture("files.ts", ({ K, window }) => {
+    K.request = async url => url.startsWith("/local/files")
+      ? { path: "", entries: [{ type: "file", name: "note.txt", path: "note.txt" }] }
+      : { path: "note.txt", content: "original", sha256: "sha-old", size: 8 };
+    window.fetch = async (_url, options) => {
+      submitted = JSON.parse(options.body);
+      return saveReply.promise;
+    };
+  });
+  await K.openWorkspaceFileAt({ path: "note.txt" });
+  const tab = K.state.editorTabs[0];
+  assert.ok(tab, "editor must open the selected project file");
+  tab.content = "snapshot";
+  const saving = elements.saveFile.click();
+  assert.equal(submitted.content, "snapshot");
+  // The user continues typing while the disk write is in flight.
+  tab.content = "snapshot + later edit";
+  saveReply.resolve({
+    ok: true, status: 200, headers: { get: () => "application/json" },
+    json: async () => ({ path: "note.txt", content: "snapshot", sha256: "sha-new", size: 8 }),
+  });
+  await saving;
+  assert.equal(tab.savedContent, "snapshot", "saved disk snapshot must advance");
+  assert.equal(tab.sha256, "sha-new", "future saves must use the latest disk revision");
+  assert.equal(tab.content, "snapshot + later edit", "late save response must not destroy new typing");
+}
+
+async function testOldProjectEditorReadIsDiscarded() {
+  const staleRead = deferred();
+  let started = false;
+  const { K } = fixture("files.ts", ({ K }) => {
+    K.request = url => {
+      if (url.startsWith("/local/files")) return Promise.resolve({ path: "", entries: [] });
+      started = true;
+      return staleRead.promise;
+    };
+  });
+  const opening = K.openWorkspaceFileAt({ path: "note.txt" });
+  for (let i = 0; i < 10 && !started; i++) await Promise.resolve();
+  assert.equal(started, true, "old project file read did not begin");
+  K.state.local = { project: "/new" };
+  await K.afterProjectChange();
+  staleRead.resolve({ path: "note.txt", content: "old project data", sha256: "old" });
+  await opening;
+  assert.equal(K.state.editorTabs.length, 0, "late old-project file must not open in new project");
+}
+
 async function main() {
   await testExplorer();
   await testPreview();
-  console.log("Explorer project switches and active-tab Preview: ok");
+  await testEditorSaveIsolation();
+  await testOldProjectEditorReadIsDiscarded();
+  console.log("Explorer, Preview and Editor async state isolation: ok");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
