@@ -390,7 +390,7 @@ import { K } from "./kernel";
       K.renderMessages();
 
       const sessionID = K.state.session!.id;
-      const agentLimit = (id: string) => Number((document.getElementById(id) as HTMLSelectElement | null)?.value || 0);
+      const agentLimit = (id: string) => Number((typeof document.getElementById === "function" ? document.getElementById(id) as HTMLSelectElement | null : null)?.value || 0);
       await K.api.sessionCommands.run(sessionID, {
         text, agent, model, variant: model?.variant,
         maxToolRounds: agentLimit("agentMaxToolRounds") || 24,
