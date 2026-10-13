@@ -245,7 +245,7 @@ func TestDurableAgentJournalsToolBeforePermissionOrExecution(t *testing.T) {
 		},
 		&durabilityOneCallModel{}, executor, s, newLiveEventBus(),
 	)
-	if err := runtime.Start(project, session.ID, sessionRunInput{Text: "write", Agent: "code", Model: &sessionModelRef{ProviderID: "test", ID: "test-model"}}); err != nil {
+	if err := runtime.Start(project, session.ID, sessionRunInput{Text: "Create a file named never.txt in this project.", Agent: "code", Model: &sessionModelRef{ProviderID: "test", ID: "test-model"}}); err != nil {
 		t.Fatal(err)
 	}
 	select {
