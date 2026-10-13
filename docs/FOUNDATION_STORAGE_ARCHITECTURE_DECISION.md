@@ -49,6 +49,28 @@ Durability target: local filesystem, transactions, `journal_mode=WAL` and `synch
 
 **Workspace:** Expected SHA followed by ordinary rename cannot guarantee that an uncooperative external writer cannot change the file in the gap. A Linux `renameat2(RENAME_EXCHANGE)` prototype is not a verified portable contract; the proposed Windows share-mode scheme is unverified. Test open-handle writers, symlinks/hardlinks, ACLs/permissions, network drives, rename failures, and persistent backups. Never claim conflict-free writes on unsupported filesystems. Preserving displaced and proposed versions is a recovery strategy, not an unconditional atomic compare-and-swap guarantee.
 
+## Independent design challenge: measured workload and storage engine choice
+
+A further isolated review reported about 6 ms / 0.20 MB for 70 messages, 22 ms / 0.64 MB for 220, 43 ms / 1.8 MB for 620, and 99 ms / 3.0 MB for 1,220 per whole-snapshot rewrite. These are *reviewer-reported sandbox benchmarks*, not verified cross-platform performance numbers. A second writer opening the same per-user state directory with an earlier cached index could drop another launcher's Session from the listing. There is no cross-process session lock in the legacy JSON design.
+
+### Rejected alternative: bespoke append-only per-session logs (Option B-prime)
+
+A per-session framed append-only log with checksums, torn-tail recovery, checkpoint generations, immutable blobs, cross-process locks and an index rebuilt from headers can provide a single commit point and O(new-data) writes. It avoids a SQL dependency. **It also makes TL Studio responsible for a new crash-safe storage engine**: compaction atomicity, frame codec fuzzing, middle-file corruption, synchronization and multi-process recovery would all be security/reliability-critical code owned by this project. That is the strongest reason not to select it for the current reliability-focused foundation. Green unit tests alone cannot offset the maturity difference. Preserve this option as a documented trade-off, not a parallel implementation.
+
+### Retained decision: SQLite with explicit driver/toolchain qualification
+
+Choose SQLite as one authoritative source for Session metadata, messages, changes, pending runs and history; one transaction for each logical update, with reads using committed DB state. SQL transactions must use stable operation IDs and guard against concurrent/stale overwrites as well as cross-process serialization. Favor incremental message rows over rewriting entire conversation JSON.
+
+Two current CGo-free libraries are `modernc.org/sqlite` and `github.com/ncruces/go-sqlite3`. Recent versions require Go 1.26 or newer; this is a **toolchain compatibility issue, not proof no compatible driver release exists**: for example `ncruces/go-sqlite3` v0.23.0 declares Go 1.22, and v0.25.0 declares Go 1.23 (with Go 1.24 toolchain suggested). Both old-driver pinning and an upgrade to a supported Go release require a security, portability and support decision. Go 1.23 is no longer among Go's two currently supported major releases as of October 2026. Prefer qualifying a currently supported Go toolchain (at least Go 1.26) and a maintained driver, rather than permanently pinning an old runtime to avoid a one-time migration. **Neither choice is implemented or benchmark-accepted yet.**
+
+For any driver, record pinned version, full transitive dependency audit, license, binary delta, cold-start and 1,200+/10,000+ message benchmarks, Windows/macOS/Linux CGO-disabled CI compatibility, WAL pragmas, database busy handling and crash-matrix results before introducing it into production.
+
+### Legacy history loss is already possible
+
+The v0.6.2 release source explicitly clips persisted messages beyond 1,200 (`session_persistence.go` lines 159-160) and drops oldest quarters for snapshots above 32 MiB (near line 207). Migration cannot recreate data that was previously overwritten. Preserve *every accessible* message and archive, flag legacy Sessions near the old limit as **possibly previously truncated**, and avoid promising recovery of irretrievable history. The dev preview additionally uses `ArchivedBatches` and `PendingRun` while retaining persistence version 1; migration must discriminate actual file content rather than trusting that version alone.
+
+The source of truth for migration should be a comprehensive read-only legacy-format importer with explicit reports for missing snapshots, corrupt archives, metadata discrepancies and questionable truncation. A legacy-preserving migration must refuse silent partial imports, make the new authority switch explicit and ensure a downgrade cannot silently edit a stale legacy copy or pretend to show post-migration history.
+
 ## Release decision
 
 Until the transactional Session authority, secure local API access and a candid supported-platform workspace integrity contract pass the acceptance suite, **#178 remains Draft and v0.7 is no-go**. Do not merge to dev, promote to main, or introduce new product features. All stabilization work remains in the same PR.
