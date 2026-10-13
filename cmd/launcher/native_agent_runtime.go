@@ -128,6 +128,13 @@ func (r *nativeAgentRuntime) Start(directory, sessionID string, input sessionRun
 }
 
 func (r *nativeAgentRuntime) finishRun(sessionID string) {
+	// A session approval is only valid for the current in-flight run. It
+	// cannot persist into a later user request or a restarted process.
+	if r.tools != nil {
+		if engine, ok := r.tools.permissions.(*permissionEngine); ok {
+			engine.clearNativeRunGrants(sessionID)
+		}
+	}
 	r.mu.Lock()
 	delete(r.runs, strings.TrimSpace(sessionID))
 	r.mu.Unlock()

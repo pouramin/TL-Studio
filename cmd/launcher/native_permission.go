@@ -51,6 +51,27 @@ func nativePermissionPatterns(descriptor toolDescriptor, input map[string]any) [
 	return nil
 }
 
+func nativePermissionTaskScope(id string) string {
+	switch id {
+	case "files.write", "files.edit", "files.delete":
+		return "project-files"
+	case "terminal.command":
+		return "project-shell"
+	default:
+		return ""
+	}
+}
+
+func nativePermissionTaskKey(project, scope string) string {
+	return normalizePermissionProject(project) + "\x00" + scope
+}
+
+func (e *permissionEngine) clearNativeRunGrants(sessionID string) {
+	e.nativeMu.Lock()
+	delete(e.nativeRunGrants, sessionID)
+	e.nativeMu.Unlock()
+}
+
 func (e *permissionEngine) AuthorizeNativeTool(
 	ctx context.Context,
 	sessionID, project string,
@@ -62,6 +83,15 @@ func (e *permissionEngine) AuthorizeNativeTool(
 	}
 	if descriptor.PermissionClass == "read" && !descriptor.Capabilities.Write && !descriptor.Capabilities.Execute && !descriptor.Capabilities.Network {
 		return nil
+	}
+
+	scope := nativePermissionTaskScope(descriptor.ID)
+	if scope != "" {
+		key := nativePermissionTaskKey(project, scope)
+		e.nativeMu.Lock()
+		allowed := e.nativeRunGrants[sessionID][key]
+		e.nativeMu.Unlock()
+		if allowed { return nil }
 	}
 
 	matcher, canRemember := nativePermissionMatcher(descriptor, input)
@@ -85,6 +115,14 @@ func (e *permissionEngine) AuthorizeNativeTool(
 		metadata["disableAlways"] = true
 		if descriptor.Capabilities.Execute {
 			metadata["skillShell"] = true
+		}
+	}
+	if scope != "" {
+		metadata["taskScope"] = scope
+		if scope == "project-files" {
+			metadata["taskScopeDescription"] = "Create, edit and delete workspace files during this Agent run only."
+		} else {
+			metadata["taskScopeDescription"] = "Run any terminal command in this workspace during this Agent run only. Commands may modify files or access the network."
 		}
 	}
 	always := []string{}
@@ -171,6 +209,20 @@ func (e *permissionEngine) replyNativePermission(
 		return nil, true, errors.New("permission request does not belong to this session")
 	}
 	switch reply {
+	case "task":
+		metadata, _ := waiter.item["metadata"].(map[string]any)
+		scope, _ := metadata["taskScope"].(string)
+		if scope == "" { return nil, true, errors.New("this tool does not support run-scoped approval") }
+		project, _ := waiter.item["project"].(string)
+		project = strings.TrimSpace(project)
+		if project == "" || sessionID == "" { return nil, true, errors.New("project and session must be set for run-scoped permission") }
+		e.nativeMu.Lock()
+		if e.nativeRunGrants == nil { e.nativeRunGrants = map[string]map[string]bool{} }
+		if e.nativeRunGrants[sessionID] == nil { e.nativeRunGrants[sessionID] = map[string]bool{} }
+		e.nativeRunGrants[sessionID][nativePermissionTaskKey(project, scope)] = true
+		e.nativeMu.Unlock()
+		select { case waiter.response <- "allow": default: }
+		return map[string]any{"ok": true, "reply": "task", "remembered": 0}, true, nil
 	case "once":
 		select {
 		case waiter.response <- "allow":
