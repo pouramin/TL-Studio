@@ -79,18 +79,31 @@ type privateJSONAtomicIO struct {
 }
 
 func writePrivateJSONAtomic(path string, value any) error {
-	return writePrivateJSONAtomicWithIO(path, value, privateJSONAtomicIO{
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writePrivateBytesAtomic(path, data)
+}
+
+func writePrivateBytesAtomic(path string, data []byte) error {
+	return writePrivateBytesAtomicWithIO(path, data, privateJSONAtomicIO{
 		syncFile: (*os.File).Sync,
 		rename:   os.Rename,
 	})
 }
 
+// Test seam for the same durable primitive used for JSON and encrypted bytes.
 func writePrivateJSONAtomicWithIO(path string, value any, ops privateJSONAtomicIO) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
+		return err
+	}
+	return writePrivateBytesAtomicWithIO(path, data, ops)
+}
+
+func writePrivateBytesAtomicWithIO(path string, data []byte, ops privateJSONAtomicIO) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	temp, err := os.CreateTemp(filepath.Dir(path), ".tl-studio-*.tmp")
@@ -107,8 +120,7 @@ func writePrivateJSONAtomicWithIO(path string, value any, ops privateJSONAtomicI
 		_ = temp.Close()
 		return err
 	}
-	// Persist the bytes before replacing the only live copy. Closing an
-	// unsynced temp file is not sufficient to withstand sudden power loss.
+	// Persist bytes before replacing the only live copy.
 	if err := ops.syncFile(temp); err != nil {
 		_ = temp.Close()
 		return fmt.Errorf("sync staged private state: %w", err)
@@ -116,8 +128,8 @@ func writePrivateJSONAtomicWithIO(path string, value any, ops privateJSONAtomicI
 	if err := temp.Close(); err != nil {
 		return err
 	}
-	// No in-place-write fallback. A rejected replacement must preserve the
-	// old bytes. Parent-directory durability is still filesystem-dependent.
+	// No in-place-write fallback. Directory durability depends on the OS
+	// and filesystem and must be validated separately.
 	if err := ops.rename(tempName, path); err != nil {
 		return fmt.Errorf("atomically replace private state: %w", err)
 	}
