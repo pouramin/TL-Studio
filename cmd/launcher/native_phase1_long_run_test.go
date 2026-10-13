@@ -76,7 +76,7 @@ func (m *phase1LongRunModel) Complete(_ context.Context, request nativeModelRequ
 			Arguments: json.RawMessage(fmt.Sprintf(`{"path":"stress-%02d.txt"}`, index)),
 		})
 	}
-	return nativeModelResponse{ToolCalls: calls, FinishReason: "tool_calls"}, nil
+	return nativeModelResponse{ToolCalls: calls, FinishReason: "tool_calls", Usage: sessionUsage{Input: 8000, Output: 2000}}, nil
 }
 
 func TestPhase1AgentThirtyToolsTenRoundsPersistedAndBounded(t *testing.T) {
