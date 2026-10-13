@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	nativeAgentMaxIterations      = 24
-	nativeAgentMaxToolRounds      = 16
+	nativeAgentMaxIterations      = 32
+	nativeAgentMaxToolRounds      = 24
 	nativeAgentMaxToolsPerRound   = 16
 	nativeAgentMaxRepeatedCalls       = 4
 	nativeAgentModelTurnTimeout       = 2 * time.Minute
@@ -585,10 +585,25 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			return nil
 		}
 
-		toolRounds++
-		if toolRounds > nativeAgentMaxToolRounds {
-			return fmt.Errorf("native Agent exceeded the maximum of %d tool rounds", nativeAgentMaxToolRounds)
+		if toolRounds >= nativeAgentMaxToolRounds {
+			// The per-run budget is a safety boundary, not a claim that work
+			// completed. Preserve the project and give an explicit continuation
+			// checkpoint instead of exposing a raw internal counter error.
+			now := time.Now().UnixMilli()
+			messageID, _ := randomSecret(10)
+			if err := r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
+				ID: "tlsm_" + messageID, SessionID: sessionID,
+				Role: "assistant", Agent: firstSessionString(input.Agent, "code"),
+				Model: displayModel, CreatedAt: now, CompletedAt: now,
+				Text: fmt.Sprintf("TL Studio paused this Agent run after %d tool rounds to limit excessive requests. The task is not verified complete. Earlier file changes are preserved. Inspect the current workspace, then send a new instruction to continue the remaining work.", nativeAgentMaxToolRounds),
+				Activities: responseActivities(response),
+				Attachments: []sessionAttachmentView{}, Usage: response.Usage,
+				Changes: []sessionChangeView{},
+			}); err != nil { return err }
+			r.publish(liveEventView{Type: "message.changed", Action: "changed", SessionID: sessionID})
+			return nil
 		}
+		toolRounds++
 		if len(response.ToolCalls) > nativeAgentMaxToolsPerRound {
 			return fmt.Errorf("native Agent requested %d tools in one round; maximum is %d", len(response.ToolCalls), nativeAgentMaxToolsPerRound)
 		}
