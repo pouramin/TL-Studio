@@ -106,11 +106,7 @@ func (windowsCredentialStore) Put(providerID, secret string) error {
 	if err != nil {
 		return err
 	}
-	path := providerCredentialPath(providerID)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	return os.WriteFile(path, protected, 0o600)
+	return writePrivateBytesAtomic(providerCredentialPath(providerID), protected)
 }
 
 func (windowsCredentialStore) Get(providerID string) (string, error) {
