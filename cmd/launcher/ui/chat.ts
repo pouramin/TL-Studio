@@ -390,7 +390,14 @@ import { K } from "./kernel";
       K.renderMessages();
 
       const sessionID = K.state.session!.id;
-      await K.api.sessionCommands.run(sessionID, { text, agent, model, variant: model?.variant });
+      const agentLimit = (id: string) => Number((document.getElementById(id) as HTMLSelectElement | null)?.value || 0);
+      await K.api.sessionCommands.run(sessionID, {
+        text, agent, model, variant: model?.variant,
+        maxToolRounds: agentLimit("agentMaxToolRounds") || 24,
+        modelTimeoutSeconds: agentLimit("agentModelTimeoutSeconds"),
+        streamIdleTimeoutSeconds: agentLimit("agentStreamIdleSeconds"),
+        maxRunTokens: agentLimit("agentMaxRunTokens"),
+      });
       if (!K.viewScope.isSessionCurrent(scope)) return;
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       if (!K.viewScope.isSessionCurrent(scope)) return;
