@@ -71,7 +71,21 @@ func (s *sessionPersistenceStore) snapshotPath(sessionID string) string {
 	return filepath.Join(s.root, persistedSessionFileName(sessionID))
 }
 
+// privateJSONAtomicIO exists so failure-injection tests can verify the exact
+// durable-write ordering without replacing OS functions globally.
+type privateJSONAtomicIO struct {
+	syncFile func(*os.File) error
+	rename   func(string, string) error
+}
+
 func writePrivateJSONAtomic(path string, value any) error {
+	return writePrivateJSONAtomicWithIO(path, value, privateJSONAtomicIO{
+		syncFile: (*os.File).Sync,
+		rename:   os.Rename,
+	})
+}
+
+func writePrivateJSONAtomicWithIO(path string, value any, ops privateJSONAtomicIO) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -93,13 +107,19 @@ func writePrivateJSONAtomic(path string, value any) error {
 		_ = temp.Close()
 		return err
 	}
+	// Persist the bytes before replacing the only live copy. Closing an
+	// unsynced temp file is not sufficient to withstand sudden power loss.
+	if err := ops.syncFile(temp); err != nil {
+		_ = temp.Close()
+		return fmt.Errorf("sync staged private state: %w", err)
+	}
 	if err := temp.Close(); err != nil {
 		return err
 	}
-	// Never fall back to an in-place write: a crash during that fallback
-	// could corrupt the only persisted copy of a session.
-	if err := os.Rename(tempName, path); err != nil {
-		return fmt.Errorf("atomically replace session data: %w", err)
+	// No in-place-write fallback. A rejected replacement must preserve the
+	// old bytes. Parent-directory durability is still filesystem-dependent.
+	if err := ops.rename(tempName, path); err != nil {
+		return fmt.Errorf("atomically replace private state: %w", err)
 	}
 	return nil
 }
