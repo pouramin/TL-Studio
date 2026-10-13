@@ -18,7 +18,7 @@ func (e *permissionEngine) setEventBus(bus *liveEventBus) {
 
 func nativePermissionMatcher(descriptor toolDescriptor, input map[string]any) (string, bool) {
 	switch descriptor.ID {
-	case "files.write", "files.edit":
+	case "files.write", "files.edit", "files.delete":
 		path, _ := input["path"].(string)
 		path = strings.TrimSpace(strings.ReplaceAll(path, "\\", "/"))
 		if path == "" {
@@ -39,7 +39,7 @@ func nativePermissionMatcher(descriptor toolDescriptor, input map[string]any) (s
 
 func nativePermissionPatterns(descriptor toolDescriptor, input map[string]any) []string {
 	switch descriptor.ID {
-	case "files.write", "files.edit", "files.read", "files.list":
+	case "files.write", "files.edit", "files.delete", "files.read", "files.list":
 		if path, _ := input["path"].(string); strings.TrimSpace(path) != "" {
 			return []string{strings.TrimSpace(strings.ReplaceAll(path, "\\", "/"))}
 		}
