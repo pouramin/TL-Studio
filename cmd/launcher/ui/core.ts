@@ -85,8 +85,10 @@ import { K } from "./kernel";
   };
 
   K.loadLocalStatus = async () => {
+    const scope = K.viewScope.captureProject();
     const { els, state } = K;
     const local = await K.request<TLStudioLocalStatus>("/local/status");
+    if (!K.viewScope.isProjectCurrent(scope)) return;
     state.local = local;
     els.projectName.textContent = K.basename(local.project);
     els.projectPath.textContent = local.project || "Choose a folder";

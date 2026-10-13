@@ -181,6 +181,7 @@ import { K } from "./kernel";
   K.newSession = () => {
     K.viewScope.enterSession();
     K.stopSessionPolling();
+    K.els.sendButton.disabled = false;
     Object.assign(K.state, { session: null, messages: [], sending: false, attentionKey: "" });
     K.showError("");
     K.renderSessions();
@@ -209,6 +210,8 @@ import { K } from "./kernel";
     K.stopSessionPolling();
     K.state.session = session;
     K.state.messages = [];
+    K.state.sending = false;
+    K.els.sendButton.disabled = false;
     K.renderSessions();
     K.renderSessionHeader();
     K.showConversation();
@@ -249,17 +252,23 @@ import { K } from "./kernel";
   let refreshTimer: number | null = null;
   const scheduleSelectedRefresh = (delay = 80) => {
     if (refreshTimer) window.clearTimeout(refreshTimer);
+    const scope = K.viewScope.captureSession();
     refreshTimer = window.setTimeout(async () => {
       refreshTimer = null;
-      if (!K.state.session) return;
+      if (!K.state.session || !K.viewScope.isSessionCurrent(scope)) return;
+      const sessionID = K.state.session.id;
       try {
         await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
-        const fresh = await K.api.sessionView.get(K.state.session.id).catch(() => null);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
+        const fresh = await K.api.sessionView.get(sessionID).catch(() => null);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
         if (fresh) K.state.session = fresh;
         K.renderMessages();
         K.renderSessionHeader();
         K.renderSessions();
-      } catch (err) { K.showError((err as any).message || String(err)); }
+      } catch (err) {
+        if (K.viewScope.isSessionCurrent(scope)) K.showError((err as any).message || String(err));
+      }
     }, delay);
   };
 
@@ -308,12 +317,15 @@ import { K } from "./kernel";
 
   K.startSessionPolling = (startedAt = Date.now()) => {
     K.stopSessionPolling();
-    let sawRunning = K.state.session ? K.isSessionRunning(K.state.session.id) : false;
+    const scope = K.viewScope.captureSession();
+    const sessionID = K.state.session?.id;
+    let sawRunning = sessionID ? K.isSessionRunning(sessionID) : false;
     K.state.sessionPolling = window.setInterval(async () => {
-      if (!K.state.session) return K.stopSessionPolling();
+      if (!K.viewScope.isSessionCurrent(scope) || K.state.session?.id !== sessionID) return;
       try {
         await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
-        const running = K.isSessionRunning(K.state.session.id);
+        if (!K.viewScope.isSessionCurrent(scope)) return;
+        const running = K.isSessionRunning(sessionID);
         if (running) sawRunning = true;
         K.renderMessages();
 
@@ -323,13 +335,15 @@ import { K } from "./kernel";
           K.state.sending = false;
           K.stopSessionPolling();
           await K.loadSessions().catch(() => {});
-          const fresh = K.state.sessions.find((item) => item.id === K.state.session?.id);
+          if (!K.viewScope.isSessionCurrent(scope)) return;
+          const fresh = K.state.sessions.find((item) => item.id === sessionID);
           if (fresh) K.state.session = fresh;
           K.renderSessionHeader();
           K.renderSessions();
           K.renderMessages();
         }
       } catch (err) {
+        if (!K.viewScope.isSessionCurrent(scope)) return;
         K.state.sending = false;
         K.stopSessionPolling();
         K.showError((err as any).message || String(err));
@@ -341,12 +355,18 @@ import { K } from "./kernel";
   K.sendPrompt = async () => {
     const text = K.els.prompt.value.trim();
     if (!text || K.state.sending) return;
+    let scope = K.viewScope.captureSession();
     K.showError("");
     K.state.sending = true;
     K.els.sendButton.disabled = true;
     const startedAt = Date.now();
     try {
-      if (!K.state.session) await K.createSession();
+      if (!K.state.session) {
+        const created = await K.createSession();
+        if (!created) return;
+        scope = K.viewScope.captureSession();
+      }
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.ensureSessionSelection();
       const agent = K.els.agentSelect.value || undefined;
       const model = K.selectedModel();
@@ -366,17 +386,23 @@ import { K } from "./kernel";
       });
       K.renderMessages();
 
-      await K.api.sessionCommands.run(K.state.session!.id, { text, agent, model, variant: model?.variant });
+      const sessionID = K.state.session!.id;
+      await K.api.sessionCommands.run(sessionID, { text, agent, model, variant: model?.variant });
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.renderMessages();
       K.startSessionPolling(startedAt);
     } catch (err) {
+      if (!K.viewScope.isSessionCurrent(scope)) return;
       K.state.sending = false;
       K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {
-      K.els.sendButton.disabled = false;
-      K.els.prompt.focus();
+      if (K.viewScope.isSessionCurrent(scope)) {
+        K.els.sendButton.disabled = false;
+        K.els.prompt.focus();
+      }
     }
   };
 
