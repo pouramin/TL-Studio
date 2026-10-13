@@ -138,6 +138,11 @@ const childMessages = [
 
 const K = {
   renderMessages: () => {},
+  onMessagesRendered: (effect) => {
+    K.__renderEffects.push(effect);
+    return () => { const index = K.__renderEffects.indexOf(effect); if (index >= 0) K.__renderEffects.splice(index, 1); };
+  },
+  __renderEffects: [],
   state: {
     local: { platform: "windows", project: rootProject },
     sessions,

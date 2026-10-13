@@ -598,6 +598,8 @@ interface TLStudioKernel {
   ensureSessionSelection: TLStudioCallable;
   loadMessages: TLStudioCallable;
   renderMessages: TLStudioCallable;
+  onMessagesRendered(effect: () => void): () => void;
+  emitMessagesRendered(): void;
   showConversation: TLStudioCallable;
   sendPrompt: TLStudioCallable;
   resizePrompt: TLStudioCallable;

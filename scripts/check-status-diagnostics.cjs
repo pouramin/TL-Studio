@@ -58,6 +58,11 @@ const assistantError = (created = 2500) => ({
 const K = {
   __diagnosticsUiInstalled: false,
   renderMessages: () => {},
+  onMessagesRendered: (effect) => {
+    K.__renderEffects.push(effect);
+    return () => { const index = K.__renderEffects.indexOf(effect); if (index >= 0) K.__renderEffects.splice(index, 1); };
+  },
+  __renderEffects: [],
   state: {
     session: { id: "session-1" },
     activeSessions: {},
