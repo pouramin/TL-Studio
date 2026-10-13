@@ -363,6 +363,12 @@ func (e *nativeToolExecutor) Execute(ctx context.Context, sessionID, project str
 	defer func() {
 		result.Duration = time.Since(start).Milliseconds()
 	}()
+	// Cancellation must be checked before dispatching an external plugin or
+	// another tool. A canceled run must not begin fresh side effects.
+	if err := ctx.Err(); err != nil {
+		result.Error = err.Error()
+		return result
+	}
 
 	if e.plugins != nil && strings.HasPrefix(result.ToolID, "mcp.") {
 		if pluginResult, handled := e.plugins.Execute(ctx, sessionID, project, call); handled {
@@ -405,6 +411,12 @@ func (e *nativeToolExecutor) Execute(ctx context.Context, sessionID, project str
 			result.Error = err.Error()
 			return result
 		}
+	}
+	// Permission approval can race with a user cancellation. Never begin a
+	// new filesystem mutation or command once its context is canceled.
+	if err := ctx.Err(); err != nil {
+		result.Error = err.Error()
+		return result
 	}
 
 	switch descriptor.ID {
