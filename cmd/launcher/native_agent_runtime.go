@@ -558,7 +558,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			}
 			now := time.Now().UnixMilli()
 			messageID, _ := randomSecret(10)
-			if err := r.store.putNativeMessage(sessionID, directory, sessionMessageView{
+			if err := r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
 				ID:          "tlsm_" + messageID,
 				SessionID:   sessionID,
 				Role:        "assistant",
@@ -618,6 +618,18 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			descriptor, _ := r.tools.Descriptor(directory, modelCall.Name)
 			decodedInput, _ := decodeNativeToolArguments(modelCall.Arguments)
 			started := time.Now().UnixMilli()
+			// Record pending tool intent before dispatch; its outcome may be unknown
+			// if the process stops after the side effect but before recording success.
+			semantic.Activities = append(semantic.Activities, sessionActivityView{
+				Kind: "tool", Status: "running", Title: descriptor.Name,
+				ToolID: descriptor.ID, RuntimeToolID: descriptor.ID,
+				ToolName: descriptor.Name, Category: descriptor.Category,
+				PermissionClass: descriptor.PermissionClass,
+				Input: decodedInput, StartAt: started,
+			})
+			if err := r.store.putNativeMessage(sessionID, directory, semantic); err != nil {
+				return err
+			}
 			r.publish(liveEventView{Type: "message.changed", Action: "content", SessionID: sessionID})
 			allowed := nativeToolCallAllowed(tools, modelCall.Name)
 			var result nativeToolResult
@@ -655,8 +667,12 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 			} else if descriptor.Capabilities.Write || descriptor.Capabilities.Execute {
 				executionWorkObserved = true
 			}
-			semantic.Activities = append(semantic.Activities, activity)
+			semantic.Activities[len(semantic.Activities)-1] = activity
 			semantic.Changes = append(semantic.Changes, result.Changes...)
+			// Persist each completed result before starting the next operation.
+			if err := r.store.putNativeMessage(sessionID, directory, semantic); err != nil {
+				return err
+			}
 			for _, change := range result.Changes {
 				r.publish(liveEventView{Type: "workspace.changed", Action: "changed", SessionID: sessionID, Path: change.File})
 			}
@@ -702,7 +718,7 @@ func (r *nativeAgentRuntime) persistFailure(directory, sessionID string, input s
 	if errors.As(runErr, &routedErr) && routedErr != nil {
 		activities = append(activities, routedErr.activities...)
 	}
-	_ = r.store.putNativeMessage(sessionID, directory, sessionMessageView{
+	_ = r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
 		ID:          "tlsm_" + messageID,
 		SessionID:   sessionID,
 		Role:        "assistant",
