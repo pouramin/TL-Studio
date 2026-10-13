@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os/exec"
+	"runtime"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -87,5 +89,22 @@ func TestAcceptancePreviewAlwaysTracksActiveTabContract(t *testing.T) {
 		"snapshot.entry !== active", "ui.frame.classList.add(\"hidden\")",
 	} {
 		if !strings.Contains(src,contract){t.Fatalf("active Preview missing %q",contract)}
+	}
+}
+
+func TestAcceptanceExplorerPreviewEditorAsyncRegressions(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is not available")
+	}
+	_, sourceFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot resolve test source")
+	}
+	root := filepath.Clean(filepath.Join(filepath.Dir(sourceFile), "..", ".."))
+	command := exec.Command("node", filepath.Join(root, "scripts", "check-explorer-preview-feedback.cjs"))
+	command.Dir = root
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Explorer, Preview and Editor async regressions failed: %v\n%s", err, output)
 	}
 }
