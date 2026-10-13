@@ -110,6 +110,13 @@ import { K } from "./kernel";
     pickProject.classList.add("workspace-project-switcher");
     pickProject.title = "Switch project";
     projectSlot.appendChild(pickProject);
+    // Explicit, discoverable entry point: the project name/path alone looked
+    // like passive metadata and was easy to miss on first launch.
+    const openFolder = button("Open Folder", "Open or switch a local project folder", "workspace-open-folder");
+    openFolder.id = "workspaceOpenFolder";
+    openFolder.setAttribute("aria-label", "Open or switch a project folder");
+    openFolder.addEventListener("click", () => pickProject.click());
+    projectSlot.appendChild(openFolder);
   }
 
   const commandTrigger = button("Search project or run a command", "Command Palette (Ctrl/Cmd+K)", "workspace-command-trigger");
