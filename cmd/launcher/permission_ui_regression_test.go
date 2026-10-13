@@ -44,9 +44,12 @@ func TestBrowserPermissionsUseTLStudioEngine(t *testing.T) {
 func TestPermissionUIExplainsScopedAlwaysRules(t *testing.T) {
 	text := readBrowserSource(t, "attention.ts")
 	for _, expected := range []string{
-		`Agent wants permission to`,
-		`Always allow in this project`,
-		`TL Studio can remember these rules for this project`,
+		`Agent requests permission:`,
+		`Allow once`,
+		`Allow file edits for this task`,
+		`Allow commands for this task`,
+		`Always allow this operation`,
+		`metadata.taskScopeDescription`,
 		`metadata.skillShell === true`,
 		`metadata.sandboxEscalation === true`,
 		`metadata.disableAlways !== true`,
