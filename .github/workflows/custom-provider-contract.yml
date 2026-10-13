@@ -3,7 +3,7 @@ name: Custom Provider Contract
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 permissions:
