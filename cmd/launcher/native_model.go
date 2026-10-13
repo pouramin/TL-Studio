@@ -48,6 +48,7 @@ type nativeModelRequest struct {
 	Tools    []nativeModelToolDefinition
 	ToolsDisabled bool
 	OnStreamActivity func()
+}
 
 
 type nativeModelResponse struct {
