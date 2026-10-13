@@ -310,7 +310,7 @@ import { K } from "./kernel";
           <option value="0">No token cap</option><option value="200000">200K</option>
           <option value="1000000">1M</option><option value="2000000">2M</option></select></label>
       </div>
-      <small>Round and token limits apply to each run. Timeout and idle preferences are saved separately per selected provider. Idle applies to streamed HTTP providers.</small>`;
+      <small>Round and token limits are saved per Agent and apply to each run. Timeouts are saved per provider. Idle applies to streamed HTTP providers.</small>`;
     composerWrap.insertBefore(budget, composerWrap.firstChild);
     const rounds = budget.querySelector<HTMLSelectElement>("#agentMaxToolRounds")!;
     const tokens = budget.querySelector<HTMLSelectElement>("#agentMaxRunTokens")!;
@@ -324,16 +324,22 @@ import { K } from "./kernel";
     const store = (key: string, value: string) => {
       try { localStorage.setItem(key, value); } catch {}
     };
+    const agentKey = () => String(byId<HTMLSelectElement>("agentSelect")?.value || "default").trim().toLowerCase();
     const providerKey = () => String(K.selectedModel?.()?.providerID || "default").trim().toLowerCase();
+    const loadBudgets = () => {
+      const key = agentKey();
+      rounds.value = safeValue(rounds, read("tl-studio.agent.rounds." + key, "24"));
+      tokens.value = safeValue(tokens, read("tl-studio.agent.tokens." + key, "0"));
+    };
     const loadTimeouts = () => {
       const key = providerKey();
       timeout.value = safeValue(timeout, read("tl-studio.agent.timeout." + key, "0"));
       idle.value = safeValue(idle, read("tl-studio.agent.idle." + key, "0"));
     };
-    rounds.value = safeValue(rounds, read("tl-studio.agent.rounds", "24"));
-    tokens.value = safeValue(tokens, read("tl-studio.agent.tokens", "0"));
-    rounds.addEventListener("change", () => store("tl-studio.agent.rounds", rounds.value));
-    tokens.addEventListener("change", () => store("tl-studio.agent.tokens", tokens.value));
+    loadBudgets();
+    rounds.addEventListener("change", () => store("tl-studio.agent.rounds." + agentKey(), rounds.value));
+    tokens.addEventListener("change", () => store("tl-studio.agent.tokens." + agentKey(), tokens.value));
+    byId<HTMLSelectElement>("agentSelect")?.addEventListener("change", loadBudgets);
     timeout.addEventListener("change", () => store("tl-studio.agent.timeout." + providerKey(), timeout.value));
     idle.addEventListener("change", () => store("tl-studio.agent.idle." + providerKey(), idle.value));
     byId<HTMLSelectElement>("modelSelect")?.addEventListener("change", loadTimeouts);
