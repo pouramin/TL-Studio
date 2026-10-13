@@ -1,0 +1,67 @@
+name: Frontend Session State Hardening
+
+on:
+  push:
+    branches:
+      - refactor/frontend-session-state-boundaries
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: View isolation, render lifecycle, and status regression
+        run: |
+          node scripts/check-frontend-view-state.cjs
+          node scripts/check-message-render-lifecycle.cjs
+          node scripts/check-status-ui-regressions.cjs
+          node scripts/check-status-diagnostics.cjs
+      - name: All Go tests
+        run: go test -count=1 ./...
+      - name: Go vet
+        run: go vet ./...
+      - name: TypeScript check and production bundle
+        run: |
+          npm run check:web
+          npm run build:web
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        shell: pwsh
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: View isolation and UI regression
+        shell: pwsh
+        run: |
+          node scripts/check-frontend-view-state.cjs
+          node scripts/check-message-render-lifecycle.cjs
+          node scripts/check-status-ui-regressions.cjs
+          node scripts/check-status-diagnostics.cjs
+      - name: All Windows Go tests
+        shell: pwsh
+        run: go test -count=1 ./...
+      - name: TypeScript check
+        shell: pwsh
+        run: npm run check:web
