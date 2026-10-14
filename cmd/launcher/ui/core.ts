@@ -34,26 +34,37 @@ import { K } from "./kernel";
 
   // Bootstrap the browser with a one-launch capability and exchange it for
   // an HttpOnly session cookie. Hash fragments are never sent in HTTP requests.
-  K.ensureLocalAuth = async (): Promise<void> => {
-    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    let token = fragment.get("tl_auth") || "";
-    if (token) window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    if (!token) {
-      const existing = await fetch("/local/status", { credentials: "same-origin", cache: "no-store" }).catch(() => null);
-      if (existing?.ok) return;
-      token = window.prompt("TL Studio needs the one-time local authorization key shown by the launcher. Enter the Auth code:") || "";
+  // Modules load before the app entry point and can request protected data
+  // immediately. Share one bootstrap promise across all initial requests:
+  // only one consumer may read and remove the launch token from the URL.
+  let localAuthReady: Promise<void> | null = null;
+  K.ensureLocalAuth = (): Promise<void> => {
+    if (!localAuthReady) {
+      localAuthReady = (async () => {
+        const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        let token = fragment.get("tl_auth") || "";
+        if (token) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        if (!token) {
+          const existing = await fetch("/local/status", { credentials: "same-origin", cache: "no-store" }).catch(() => null);
+          if (existing?.ok) return;
+          token = window.prompt("TL Studio needs the one-time local authorization key shown by the launcher. Enter the Auth code:") || "";
+        }
+        if (!token) throw new Error("Local API authorization required; restart TL Studio and use its launcher authorization key.");
+        const response = await fetch("/local/auth/session", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { "X-TL-Studio-Launch-Token": token, "X-TL-Studio-Request": "1" },
+        });
+        if (!response.ok) throw new Error("Local authorization failed. Reopen TL Studio from its launcher.");
+      })();
     }
-    if (!token) throw new Error("Local API authorization required; restart TL Studio and use its launcher authorization key.");
-    const response = await fetch("/local/auth/session", {
-      method: "POST",
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { "X-TL-Studio-Launch-Token": token, "X-TL-Studio-Request": "1" },
-    });
-    if (!response.ok) throw new Error("Local authorization failed. Reopen TL Studio from its launcher.");
+    return localAuthReady;
   };
 
   K.request = async <T = any>(path: string, options: RequestInit = {}): Promise<T> => {
+    // Do not dispatch any protected local API request before browser login.
+    await K.ensureLocalAuth();
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
