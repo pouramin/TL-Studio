@@ -55,7 +55,13 @@ func Open(path string) (*Store,error) {
  if err:=os.MkdirAll(filepath.Dir(path),0700);err!=nil{return nil,err}
  if st,err:=os.Lstat(path);err==nil {
   if !st.Mode().IsRegular() {return nil,fmt.Errorf("session database is not a regular file: %s",path)}
- } else if !errors.Is(err,os.ErrNotExist){return nil,err}
+ } else if errors.Is(err,os.ErrNotExist){
+  // Create private database bytes without a time-of-check/time-of-use
+  // overwrite; concurrent launches can safely race on O_EXCL.
+  file,createErr:=os.OpenFile(path,os.O_RDWR|os.O_CREATE|os.O_EXCL,0600)
+  if createErr==nil{if closeErr:=file.Close();closeErr!=nil{return nil,closeErr}}
+  if createErr!=nil&&!errors.Is(createErr,os.ErrExist){return nil,createErr}
+ } else {return nil,err}
  // The immediate transaction mode avoids failed deferred read-to-write
  // upgrades under concurrent launchers.
  dsn:="file:"+filepath.ToSlash(path)+"?_txlock=immediate&_pragma=busy_timeout(10000)"
