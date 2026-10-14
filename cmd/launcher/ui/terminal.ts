@@ -18,7 +18,7 @@ import { K } from "./kernel";
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
-      headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
+      headers: { "X-TL-Studio-Request": "1", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
     });
     const type = response.headers.get("content-type") || "";
     const payload = response.status === 204
