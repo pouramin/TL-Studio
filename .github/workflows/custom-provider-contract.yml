@@ -56,6 +56,8 @@ jobs:
             sleep 0.2
           done
           test -n "$LOCAL_URL"
+          export TL_STUDIO_LAUNCH_KEY="$(awk '/Auth:/ {print $2; exit}' "$LOG")"
+          test -n "$TL_STUDIO_LAUNCH_KEY"
           python3 scripts/check-provider-config.py "$LOCAL_URL"
 
 
