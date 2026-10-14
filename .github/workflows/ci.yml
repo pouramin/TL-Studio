@@ -188,6 +188,8 @@ jobs:
             sleep 0.2
           done
           test -n "$LOCAL_URL"
+          export TL_STUDIO_LAUNCH_KEY="$(awk '/Auth:/ {print $2; exit}' "$LOG")"
+          test -n "$TL_STUDIO_LAUNCH_KEY"
           python3 scripts/check-native-product-contract.py "$LOCAL_URL" "$GITHUB_WORKSPACE"
 
   native-browser-smoke:
@@ -237,6 +239,8 @@ jobs:
             sleep 0.2
           done
           test -n "$LOCAL_URL"
+          export TL_STUDIO_LAUNCH_KEY="$(awk '/Auth:/ {print $2; exit}' "$LOG")"
+          test -n "$TL_STUDIO_LAUNCH_KEY"
           node scripts/check-workbench-browser-runtime.mjs "$LOCAL_URL"
 
   windows-editor-save-e2e:
