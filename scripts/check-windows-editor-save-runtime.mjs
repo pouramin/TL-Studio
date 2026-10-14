@@ -80,7 +80,7 @@ try {
     await delay(120);
   }
   assert(baseURL, "Native Windows launcher not healthy: " + processLog.slice(-3000));
-  launchKey = (processLog.match(/Auth:\\s+([a-f0-9]{64})/) || [])[1] || "";
+  launchKey = (processLog.match(/Auth:\s+([a-f0-9]{64})/) || [])[1] || "";
   assert(launchKey, "Native Windows launcher did not expose a scoped authorization key");
   const authenticatedURL = baseURL + "/#tl_auth=" + encodeURIComponent(launchKey);
 
