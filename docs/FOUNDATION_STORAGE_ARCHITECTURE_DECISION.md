@@ -71,6 +71,40 @@ The v0.6.2 release source explicitly clips persisted messages beyond 1,200 (`ses
 
 The source of truth for migration should be a comprehensive read-only legacy-format importer with explicit reports for missing snapshots, corrupt archives, metadata discrepancies and questionable truncation. A legacy-preserving migration must refuse silent partial imports, make the new authority switch explicit and ensure a downgrade cannot silently edit a stale legacy copy or pretend to show post-migration history.
 
+## Final independent convergence: SQLite chosen, pending implementation qualification
+
+**Decision accepted at the architecture level (2026-10-14): SQLite wins over bespoke Option B-prime.** The independent reviewer changed their preference after running an isolated CGo-disabled SQLite probe; their weighted evaluation scored SQLite **7.05/10** and Option B-prime **5.60/10** with crash/integrity 30%, long-term maintenance/security 25%, migration/implementation risk 20%, platforms 10%, long-session performance 10%, and dependency/footprint 5%. These are qualitative weighted judgements and **not guarantees or acceptance test results**.
+
+### Independent probe evidence (not production validation)
+
+| Probe | Reviewer-reported result | Limitation |
+| --- | --- | --- |
+| Current JSON full-snapshot rewrite | 6 ms at 70 messages to 99 ms at 1,220 | Existing implementation, single-core sandbox |
+| SQLite incremental WAL FULL commit | 0.32–0.44 ms, approximately constant across 70–1,220 messages | Single-core, fast-fsync sandbox and old driver |
+| Bare append-and-sync floor | 0.15 ms | Not an implemented B-prime engine with indexes, corruption recovery, etc. |
+| Three concurrent SQLite writer processes, killed 14 times after observed commits | 6,992 committed rows, 0 reported invariant violations | SIGKILL does not test sudden-power-loss, 14 trials is not exhaustive |
+| Independent SQLite reader after termination | Integrity checks, counts and sequences matched | Same sandbox / local filesystem |
+| CGo-disabled Linux executable | Built; 1.9 MB baseline vs 9.1 MB driver test (+7.2 MB) | Windows/macOS and final driver unverified |
+| Startup to first query | approximately 1.1 s in four runs | Cause not established; may differ by driver/version/host |
+| Probe peak RSS | approximately 74 MB | Isolated probe, not whole-product baseline |
+
+The probe used **`github.com/ncruces/go-sqlite3` v0.21.3 with SQLite 3.47.2**, an **older test-only driver**. It is not approved for shipment, and its startup, memory or size results must not be extrapolated to a current maintained driver. Neither `modernc.org/sqlite` nor production-current alternatives passed a complete cross-platform qualification in this audit.
+
+### Engineering constraints from the independent experiment
+
+1. Make `BEGIN IMMEDIATE` the explicit concurrency policy for read-modify-write transaction paths. Deferred transactions can fail with `database is locked` on a concurrent writer upgrade, and a busy timeout is not a universal retry mechanism; callers need bounded and idempotent retry/reconciliation, not suppressed errors.
+2. Establish `busy_timeout`/busy handler before potentially lock-acquiring PRAGMAs such as `journal_mode=WAL`. Verify all PRAGMAs on every pooled DB connection and test contention during first open; a single example opened with the wrong ordering failed in the reviewer's prototype.
+3. Qualify **supported Go toolchain first**, then current CGo-free drivers. Do not ship the old v0.21.3 driver solely because the probe was fast; older compatible lines can lag SQLite security fixes.
+4. Define a product startup-performance budget *before* qualifying the driver. Measure first-query latency, cold and warm launch, peak RSS, binary delta and database opening without blocking the UI event loop. UI must show a truthful loading/error state and must never create a new empty history while the DB has not opened or failed integrity validation.
+5. Use WAL and `synchronous=FULL` on supported **local** filesystems only. Reject or clearly guard unsupported/network locations, and test on Windows, macOS, Linux. SIGKILL survival is not physical power-loss durability.
+6. Protect the single-database failure domain with scheduled verified backups, validated recovery/restore procedures, and a corruption fail-closed state. Test restoration and preserve the broken database for diagnosis. Use a SQLite-consistent backup mechanism (such as Online Backup API) instead of blindly copying the live main `.db` file while WAL is active.
+7. No user data migration begins until the chosen driver and Go version have passing qualification evidence. Once qualified, the transaction schema, read-only importer, migration verification, cross-process tests and crash matrix can be implemented incrementally **on the same draft PR #178**.
+8. All legacy JSON and archive bytes must remain unchanged through migration; data already truncated by prior releases cannot be reconstructed. Record possible historical truncation and incomplete/corrupt source data in an accessible migration report.
+
+### Architecture closure vs. release readiness
+
+**Architecture choice is closed:** one SQLite authority, incremental message persistence, explicit operations and transaction boundaries, no bespoke journal/compaction engine. **Implementation approval remains open:** qualifying Go/driver versions, consistent cross-platform test suite, migration, crash recovery and API/workspace security gates are not yet complete. Do not mislabel the SQL test-only prototype as production-ready.
+
 ## Release decision
 
 Until the transactional Session authority, secure local API access and a candid supported-platform workspace integrity contract pass the acceptance suite, **#178 remains Draft and v0.7 is no-go**. Do not merge to dev, promote to main, or introduce new product features. All stabilization work remains in the same PR.
