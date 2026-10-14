@@ -66,7 +66,9 @@ func (g *localAPIGate) handler(next http.Handler) http.Handler{
    default:
     // A browser cookie is ambient authority. Require a same-origin custom
     // header for mutation so a basic cross-site form cannot use it.
-    if !strings.HasPrefix(r.Header.Get("Authorization"),"Bearer ")&&r.Header.Get("X-TL-Studio-Request")!="1" {
+    bearer:=r.Header.Get("Authorization")
+    validCLI:=strings.HasPrefix(bearer,"Bearer ")&&secureTokenEqual(strings.TrimPrefix(bearer,"Bearer "),g.launchSecret)
+    if !validCLI&&r.Header.Get("X-TL-Studio-Request")!="1" {
      http.Error(w,"missing same-origin request header",http.StatusForbidden)
      return
     }
