@@ -8,6 +8,9 @@ import os from "node:os";
 import path from "node:path";
 
 const baseURL = String(process.argv[2] || "").replace(/\/$/, "");
+const launchKey = String(process.env.TL_STUDIO_LAUNCH_KEY || "");
+if (!launchKey) throw new Error("Browser acceptance requires an authenticated launcher key");
+const authenticatedURL = baseURL + "/#tl_auth=" + encodeURIComponent(launchKey);
 if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(baseURL)) {
   console.error("usage: check-workbench-browser-runtime.mjs http://127.0.0.1:<port>");
   process.exit(2);
@@ -51,7 +54,7 @@ const chrome = spawn(chromeBin, [
   "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
   "--disable-background-networking", "--disable-default-apps", "--no-first-run",
   "--no-default-browser-check", "--remote-debugging-port=" + debugPort,
-  "--user-data-dir=" + profile, "--window-size=1440,900", baseURL,
+  "--user-data-dir=" + profile, "--window-size=1440,900", authenticatedURL,
 ], { stdio: ["ignore", "pipe", "pipe"] });
 
 let chromeStderr = "";
@@ -139,7 +142,7 @@ const drag = async (selector, dx, dy) => {
 
 await cdp("Runtime.enable");
 await cdp("Page.enable");
-await cdp("Page.navigate", { url: baseURL });
+await cdp("Page.navigate", { url: authenticatedURL });
 await waitFor('document.readyState === "complete"', "TL Studio page did not finish loading");
 await waitFor('document.getElementById("app")?.classList.contains("workspace-v2") === true', "redesigned workspace did not initialize");
 
