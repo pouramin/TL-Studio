@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"mime"
 	"net"
