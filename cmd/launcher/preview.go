@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -236,11 +237,11 @@ func (m *previewManager) start(preferredEntry string) (previewSnapshot, error) {
 	project := m.state.projectPath()
 	capability := detectPreviewCapability(project, preferredEntry)
 	if !capability.Available {
-		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
+		return previewSnapshot{previewCapability: capability, Project: project}, errors.New(capability.Reason)
 	}
 
 	if capability.Kind == "file" && (capability.Entry == "" || capability.EntryMeta == nil) {
-		return previewSnapshot{previewCapability: capability, Project: project}, fmt.Errorf(capability.Reason)
+		return previewSnapshot{previewCapability: capability, Project: project}, errors.New(capability.Reason)
 	}
 
 	if m.project != "" && sameProjectPath(m.project, project) && m.kind == "file" && capability.Kind == "file" && m.listener != nil && capability.EntryMeta != nil {
