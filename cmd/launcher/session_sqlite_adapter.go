@@ -5,7 +5,6 @@ import (
  "crypto/sha256"
  "encoding/hex"
  "encoding/json"
- "errors"
  "fmt"
  "os"
  "path/filepath"
@@ -20,7 +19,8 @@ import (
 func (s *sessionPersistenceStore) sqliteLoadLocked() error {
  ctx,cancel:=context.WithTimeout(context.Background(),60*time.Second)
  defer cancel()
- if s.sqlite==nil{
+ justOpened:=s.sqlite==nil
+ if justOpened{
   db,err:=sessiondb.Open(filepath.Join(s.root,"sessions.sqlite"))
   if err!=nil{return fmt.Errorf("open SQLite session authority: %w",err)}
   if _,err=db.ImportLegacy(ctx,s.root);err!=nil{
@@ -40,6 +40,7 @@ func (s *sessionPersistenceStore) sqliteLoadLocked() error {
  }
  s.sessions=next
  s.loaded=true
+ if justOpened{return s.sqliteRecoverInterruptedLocked()}
  return nil
 }
 
@@ -93,7 +94,9 @@ func (s *sessionPersistenceStore) sqliteCommitSnapshotLocked(session sessionView
  // A stable content-derived operation key makes retrying the same snapshot
  // after an ambiguous acknowledgment idempotent.
  hash:=sha256.New()
- hash.Write([]byte(session.ID));hash.Write(metadata)
+ hash.Write([]byte(session.ID))
+ hash.Write([]byte(fmt.Sprint(revision)))
+ hash.Write(metadata)
  for _,message:=range messages{hash.Write([]byte{0});hash.Write([]byte(message.ID));hash.Write(message.Payload)}
  hash.Write(changes);hash.Write(pending)
  opID:="session-state-"+hex.EncodeToString(hash.Sum(nil))
@@ -151,7 +154,5 @@ func (s *sessionPersistenceStore) sqliteRecoverInterruptedLocked()error{
  return nil
 }
 
-// SQLite tests use explicit TL_STUDIO_SQLITE_SESSIONS=1; the JSON path
-// remains as read-only migration input and legacy regression coverage
-// until the production cutover has passed every acceptance gate.
-var _ = errors.Is
+// SQLite remains an opt-in acceptance path until manual provider and
+// destructive-crash validation have passed.
