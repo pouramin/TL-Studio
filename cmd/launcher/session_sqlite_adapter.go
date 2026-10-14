@@ -103,7 +103,7 @@ func (s *sessionPersistenceStore) sqliteCommitSnapshotLocked(session sessionView
  _,err=s.sqlite.Apply(ctx,sessiondb.Mutation{
   OperationID:opID, SessionID:session.ID, Directory:session.Directory,
   Metadata:metadata, ExpectedRevision:revision,
-  Messages:messages,ChangeData:changes,
+  Messages:messages,ReplaceMessages:true,ChangeData:changes,
   PendingRun:pending,UpdatePendingRun:true,
  })
  if err!=nil{return err}
