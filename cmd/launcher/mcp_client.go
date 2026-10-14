@@ -524,5 +524,12 @@ func (c *mcpClient) Close() {
 	case <-c.done:
 	case <-time.After(2 * time.Second):
 		_ = cmd.Process.Kill()
+        // On Windows, Process.Kill may return before the OS releases the
+        // executable's image handle. Wait for cmd.Wait to reap it so users
+        // (and temp-directory cleanup) can safely replace or remove plugins.
+        select {
+        case <-c.done:
+        case <-time.After(3 * time.Second):
+        }
 	}
 }
