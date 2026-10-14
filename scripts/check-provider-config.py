@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import urllib.parse
 import urllib.request
@@ -21,6 +22,10 @@ def require(condition: bool, message: str):
 def request(base: str, path: str, method: str = "GET", payload=None, timeout=20):
     data = None
     headers = {"Accept": "application/json"}
+    launch_key = os.environ.get("TL_STUDIO_LAUNCH_KEY", "")
+    if launch_key:
+        headers["Authorization"] = "Bearer " + launch_key
+        headers["X-TL-Studio-Request"] = "1"
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
