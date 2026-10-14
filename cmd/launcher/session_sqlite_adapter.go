@@ -52,6 +52,7 @@ func (s *sessionPersistenceStore) sqliteSnapshotLocked(id string)(persistedSessi
  if !found{return persistedSessionSnapshot{},os.ErrNotExist}
  var snapshot persistedSessionSnapshot
  snapshot.Version=sessionPersistenceVersion
+ snapshot.DBRevision=row.Revision
  if err=json.Unmarshal(row.Metadata,&snapshot.Session);err!=nil{return persistedSessionSnapshot{},err}
  for _,msg:=range msgs {
   var view sessionMessageView
@@ -68,10 +69,11 @@ func (s *sessionPersistenceStore) sqliteSnapshotLocked(id string)(persistedSessi
 func (s *sessionPersistenceStore) sqliteCommitSnapshotLocked(session sessionView,snapshot persistedSessionSnapshot)error{
  ctx,cancel:=context.WithTimeout(context.Background(),60*time.Second)
  defer cancel()
- prior,exists,err:=s.sqlite.Get(ctx,session.ID)
- if err!=nil{return err}
- var revision int64
- if exists{revision=prior.Revision}
+ // The revision is the one observed when the caller read the snapshot.
+ // SQLite Apply checks it atomically inside BEGIN IMMEDIATE. Reading the
+ // current revision here would turn optimistic concurrency into last-writer-
+ // wins and silently lose edits from another launcher.
+ revision:=snapshot.DBRevision
  metadata,err:=json.Marshal(session);if err!=nil{return err}
  messages:=make([]sessiondb.Message,0,len(snapshot.Messages))
  for i,message:=range snapshot.Messages{
