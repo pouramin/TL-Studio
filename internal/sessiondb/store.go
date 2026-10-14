@@ -41,6 +41,8 @@ type Mutation struct {
  ExpectedRevision int64
  Messages []Message
  ChangeData []byte
+ PendingRun []byte
+ UpdatePendingRun bool
  Delete bool
 }
 type Commit struct {
@@ -94,6 +96,9 @@ func Open(path string) (*Store,error) {
   `CREATE TABLE IF NOT EXISTS session_changes (
      session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
      payload BLOB NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS session_pending_run (
+     session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+     payload BLOB NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS commits (
      operation_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL,
      session_id TEXT NOT NULL, revision INTEGER NOT NULL)`,
@@ -121,6 +126,7 @@ func fingerprint(m Mutation) string {
  h.Write([]byte(fmt.Sprint(m.ExpectedRevision,m.Delete)))
  for _,message:=range m.Messages {h.Write([]byte{0});h.Write([]byte(message.ID));h.Write([]byte{0});h.Write(message.Payload)}
  h.Write([]byte{0});h.Write(m.ChangeData)
+ h.Write([]byte{0});h.Write([]byte(fmt.Sprint(m.UpdatePendingRun)));h.Write([]byte{0});h.Write(m.PendingRun)
  return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -166,6 +172,12 @@ func (s *Store) Apply(ctx context.Context,m Mutation)(Commit,error){
    if _,err=tx.ExecContext(ctx,`INSERT INTO session_changes(session_id,payload) VALUES(?,?)
       ON CONFLICT(session_id) DO UPDATE SET payload=excluded.payload`,m.SessionID,m.ChangeData);err!=nil{return Commit{},err}
   }
+  if m.UpdatePendingRun {
+   if len(m.PendingRun)==0 {
+    if _,err=tx.ExecContext(ctx,"DELETE FROM session_pending_run WHERE session_id=?",m.SessionID);err!=nil{return Commit{},err}
+   } else if _,err=tx.ExecContext(ctx,`INSERT INTO session_pending_run(session_id,payload) VALUES(?,?)
+     ON CONFLICT(session_id) DO UPDATE SET payload=excluded.payload`,m.SessionID,m.PendingRun);err!=nil{return Commit{},err}
+  }
  }
  if _,err=tx.ExecContext(ctx,"INSERT INTO commits(operation_id,fingerprint,session_id,revision) VALUES(?,?,?,?)",m.OperationID,fp,m.SessionID,next);err!=nil{return Commit{},err}
  if err=tx.Commit();err!=nil{return Commit{},err}
@@ -198,6 +210,13 @@ func (s *Store) Messages(ctx context.Context,id string)([]Message,error){
 func (s *Store) Changes(ctx context.Context,id string)([]byte,error){
  var value []byte
  err:=s.db.QueryRowContext(ctx,"SELECT payload FROM session_changes WHERE session_id=?",id).Scan(&value)
+ if errors.Is(err,sql.ErrNoRows){return nil,nil}
+ return value,err
+}
+
+func (s *Store) PendingRun(ctx context.Context,id string)([]byte,error){
+ var value []byte
+ err:=s.db.QueryRowContext(ctx,"SELECT payload FROM session_pending_run WHERE session_id=?",id).Scan(&value)
  if errors.Is(err,sql.ErrNoRows){return nil,nil}
  return value,err
 }
