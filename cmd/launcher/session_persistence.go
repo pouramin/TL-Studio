@@ -30,6 +30,10 @@ type persistedSessionIndex struct {
 }
 
 type persistedSessionSnapshot struct {
+    // revision is a read-version token, not a JSON persistence field. Do not
+    // refresh it at commit time or concurrent launchers could overwrite newer
+    // Session history using a stale snapshot.
+    DBRevision int64 `json:"-"`
 	Version int                  `json:"version"`
 	Runtime string               `json:"runtime,omitempty"`
 	Session sessionView          `json:"session"`
