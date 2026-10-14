@@ -54,7 +54,7 @@ import { K } from "./kernel";
       <span id="previewHint">TL Studio can preview supported files or run a package.json dev script.</span>
       <pre id="previewLogs" class="preview-logs hidden"></pre>
     </div>
-    <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
+    <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>`;
   main.appendChild(panel);
 
   const ui: TLStudioDynamicRecord = {
