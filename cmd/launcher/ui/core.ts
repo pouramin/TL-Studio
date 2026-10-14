@@ -39,7 +39,7 @@ import { K } from "./kernel";
     let token = fragment.get("tl_auth") || "";
     if (token) window.history.replaceState(null, "", window.location.pathname + window.location.search);
     if (!token) {
-      const existing = await fetch("/local/health", { credentials: "same-origin", cache: "no-store" }).catch(() => null);
+      const existing = await fetch("/local/status", { credentials: "same-origin", cache: "no-store" }).catch(() => null);
       if (existing?.ok) return;
       token = window.prompt("TL Studio needs the one-time local authorization key shown by the launcher. Enter the Auth code:") || "";
     }
