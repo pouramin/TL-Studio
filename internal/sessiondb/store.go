@@ -220,3 +220,27 @@ func (s *Store) PendingRun(ctx context.Context,id string)([]byte,error){
  if errors.Is(err,sql.ErrNoRows){return nil,nil}
  return value,err
 }
+
+// ReadSnapshot reads metadata, messages, changes and pending-run state in one
+// read transaction. Never interleave unrelated committed generations.
+func (s *Store) ReadSnapshot(ctx context.Context,id string)(Session,[]Message,[]byte,[]byte,bool,error){
+ tx,err:=s.db.BeginTx(ctx,&sql.TxOptions{ReadOnly:true})
+ if err!=nil{return Session{},nil,nil,nil,false,err}
+ defer tx.Rollback()
+ var session Session
+ session.ID=id
+ err=tx.QueryRowContext(ctx,"SELECT directory,metadata,revision FROM sessions WHERE id=?",id).Scan(&session.Directory,&session.Metadata,&session.Revision)
+ if errors.Is(err,sql.ErrNoRows){return Session{},nil,nil,nil,false,nil}
+ if err!=nil{return Session{},nil,nil,nil,false,err}
+ rows,err:=tx.QueryContext(ctx,"SELECT message_id,payload FROM messages WHERE session_id=? ORDER BY sequence",id)
+ if err!=nil{return Session{},nil,nil,nil,false,err}
+ messages:=[]Message{}
+ for rows.Next(){var msg Message;if err=rows.Scan(&msg.ID,&msg.Payload);err!=nil{rows.Close();return Session{},nil,nil,nil,false,err};messages=append(messages,msg)}
+ if err=rows.Err();err!=nil{rows.Close();return Session{},nil,nil,nil,false,err}
+ rows.Close()
+ var changes,pending []byte
+ if err=tx.QueryRowContext(ctx,"SELECT payload FROM session_changes WHERE session_id=?",id).Scan(&changes);err!=nil&&!errors.Is(err,sql.ErrNoRows){return Session{},nil,nil,nil,false,err}
+ if err=tx.QueryRowContext(ctx,"SELECT payload FROM session_pending_run WHERE session_id=?",id).Scan(&pending);err!=nil&&!errors.Is(err,sql.ErrNoRows){return Session{},nil,nil,nil,false,err}
+ if err=tx.Commit();err!=nil{return Session{},nil,nil,nil,false,err}
+ return session,messages,changes,pending,true,nil
+}
