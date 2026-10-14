@@ -79,6 +79,8 @@ import { K } from "./kernel";
   K.state.preview = { snapshot: null, poll: null, open: false, lastURL: "", reloadTimer: null, entrySignature: "", followTimer: null, entrySwitchGeneration: 0, registry: null, registryPromise: null };
 
   const request = async (path: string, options: RequestInit = {}) => {
+    // The preview registry loads at module import time, before app.init().
+    await K.ensureLocalAuth();
     const response = await fetch(path, {
       cache: "no-store",
       ...options,

@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build:web": "node scripts/build-web.mjs",
-    "check:web": "tsc -p tsconfig.check.json --noEmit"
+    "check:web": "tsc -p tsconfig.check.json --noEmit && node scripts/check-browser-auth-startup.cjs"
   },
   "devDependencies": {
     "typescript": "5.9.2",
