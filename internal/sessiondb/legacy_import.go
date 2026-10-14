@@ -44,10 +44,12 @@ type legacyArchive struct {
 type legacySessionKey struct {
  ID string `json:"id"`
  Directory string `json:"directory"`
+ UpdatedAt int64 `json:"updatedAt"`
 }
 type importedSession struct {
  key legacySessionKey
  metadata []byte
+ updatedAt int64
  messages []Message
  changes []byte
  pending []byte
@@ -164,7 +166,7 @@ func (s *Store) ImportLegacy(ctx context.Context,root string)(MigrationReport,er
   if len(bytes.TrimSpace(snapshot.PendingRun))>0&&string(snapshot.PendingRun)!="null"{
    pending,err=canonical(snapshot.PendingRun);if err!=nil{return report,err}
   }
-  sessions=append(sessions,importedSession{key:indexKey,metadata:snapshotMetadata,messages:messages,changes:changes,pending:pending})
+  sessions=append(sessions,importedSession{key:indexKey,metadata:snapshotMetadata,updatedAt:snapshotKey.UpdatedAt,messages:messages,changes:changes,pending:pending})
  }
  // Detect abandoned snapshots and archive files rather than hiding data.
  files,err:=filepath.Glob(filepath.Join(root,"session-*.json"))
@@ -176,7 +178,7 @@ func (s *Store) ImportLegacy(ctx context.Context,root string)(MigrationReport,er
  }
  sort.Slice(sessions,func(i,j int)bool{return sessions[i].key.ID<sessions[j].key.ID})
  for _,session:=range sessions{
-  if _,err=tx.ExecContext(ctx,"INSERT INTO sessions(id,directory,metadata,revision,changed_at) VALUES(?,?,?,1,0)",session.key.ID,session.key.Directory,session.metadata);err!=nil{return report,err}
+  if _,err=tx.ExecContext(ctx,"INSERT INTO sessions(id,directory,metadata,revision,changed_at) VALUES(?,?,?,1,?)",session.key.ID,session.key.Directory,session.metadata,session.updatedAt);err!=nil{return report,err}
   for i,message:=range session.messages{
    if _,err=tx.ExecContext(ctx,"INSERT INTO messages(session_id,message_id,sequence,payload) VALUES(?,?,?,?)",session.key.ID,message.ID,i+1,message.Payload);err!=nil{return report,err}
   }
