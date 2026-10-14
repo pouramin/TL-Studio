@@ -40,6 +40,9 @@ type Mutation struct {
  Metadata []byte
  ExpectedRevision int64
  Messages []Message
+ // ReplaceMessages makes the supplied ordered list authoritative. Normal
+ // commits use a differential sync; reordering or deletion is explicit.
+ ReplaceMessages bool
  ChangeData []byte
  PendingRun []byte
  UpdatePendingRun bool
@@ -123,7 +126,7 @@ func fingerprint(m Mutation) string {
  h.Write([]byte(m.SessionID));h.Write([]byte{0})
  h.Write([]byte(m.Directory));h.Write([]byte{0})
  h.Write(m.Metadata);h.Write([]byte{0})
- h.Write([]byte(fmt.Sprint(m.ExpectedRevision,m.Delete)))
+ h.Write([]byte(fmt.Sprint(m.ExpectedRevision,m.Delete,m.ReplaceMessages)))
  for _,message:=range m.Messages {h.Write([]byte{0});h.Write([]byte(message.ID));h.Write([]byte{0});h.Write(message.Payload)}
  h.Write([]byte{0});h.Write(m.ChangeData)
  h.Write([]byte{0});h.Write([]byte(fmt.Sprint(m.UpdatePendingRun)));h.Write([]byte{0});h.Write(m.PendingRun)
@@ -158,15 +161,19 @@ func (s *Store) Apply(ctx context.Context,m Mutation)(Commit,error){
     ON CONFLICT(id) DO UPDATE SET directory=excluded.directory,metadata=excluded.metadata,
       revision=excluded.revision,changed_at=excluded.changed_at`,
    m.SessionID,m.Directory,m.Metadata,next,time.Now().UnixMilli());err!=nil{return Commit{},err}
-  for _,message:=range m.Messages {
-   if message.ID=="" {return Commit{},errors.New("message ID required")}
-   var sequence int64
-   if err=tx.QueryRowContext(ctx,"SELECT COALESCE(MAX(sequence),0)+1 FROM messages WHERE session_id=?",m.SessionID).Scan(&sequence);err!=nil{return Commit{},err}
-   // Repeated message IDs may update a running tool's journaled status;
-   // never duplicate the message or change the immutable sequence.
-   if _,err=tx.ExecContext(ctx,`INSERT INTO messages(session_id,message_id,sequence,payload)
-       VALUES(?,?,?,?) ON CONFLICT(session_id,message_id) DO UPDATE SET payload=excluded.payload`,
-     m.SessionID,message.ID,sequence,message.Payload);err!=nil{return Commit{},err}
+  if m.ReplaceMessages {
+   if err=replaceMessagesTx(ctx,tx,m.SessionID,m.Messages);err!=nil{return Commit{},err}
+  } else {
+   for _,message:=range m.Messages {
+    if message.ID=="" {return Commit{},errors.New("message ID required")}
+    var sequence int64
+    if err=tx.QueryRowContext(ctx,"SELECT COALESCE(MAX(sequence),0)+1 FROM messages WHERE session_id=?",m.SessionID).Scan(&sequence);err!=nil{return Commit{},err}
+    // Repeated message IDs may update a running tool's journaled status;
+    // never duplicate the message or change the immutable sequence.
+    if _,err=tx.ExecContext(ctx,`INSERT INTO messages(session_id,message_id,sequence,payload)
+        VALUES(?,?,?,?) ON CONFLICT(session_id,message_id) DO UPDATE SET payload=excluded.payload`,
+      m.SessionID,message.ID,sequence,message.Payload);err!=nil{return Commit{},err}
+   }
   }
   if m.ChangeData!=nil {
    if _,err=tx.ExecContext(ctx,`INSERT INTO session_changes(session_id,payload) VALUES(?,?)
