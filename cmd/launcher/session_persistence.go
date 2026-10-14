@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+ "github.com/pouramin/TL-Studio/internal/sessiondb"
 )
 
 const (
@@ -44,6 +46,8 @@ type sessionPersistenceStore struct {
 	runtime  string
 	loaded   bool
 	sessions map[string]sessionView
+ sqlite *sessiondb.Store
+ sqliteMode bool
 }
 
 func sessionPersistenceRoot() string {
@@ -55,6 +59,7 @@ func newSessionPersistenceStore(root, runtimeID string) *sessionPersistenceStore
 		root:     root,
 		runtime:  strings.TrimSpace(runtimeID),
 		sessions: map[string]sessionView{},
+  sqliteMode: strings.TrimSpace(os.Getenv("TL_STUDIO_SQLITE_SESSIONS"))=="1",
 	}
 }
 
@@ -137,6 +142,7 @@ func writePrivateBytesAtomicWithIO(path string, data []byte, ops privateJSONAtom
 }
 
 func (s *sessionPersistenceStore) loadLocked() error {
+ if s.sqliteMode {return s.sqliteLoadLocked()}
 	if s.loaded {
 		return nil
 	}
@@ -245,6 +251,7 @@ func sanitizePersistedMessages(messages []sessionMessageView) []sessionMessageVi
 }
 
 func (s *sessionPersistenceStore) loadSnapshotLocked(sessionID string) (persistedSessionSnapshot, error) {
+ if s.sqliteMode {return s.sqliteSnapshotLocked(sessionID)}
 	data, err := os.ReadFile(s.snapshotPath(sessionID))
 	if errors.Is(err, os.ErrNotExist) {
 		return persistedSessionSnapshot{}, os.ErrNotExist
@@ -280,6 +287,7 @@ func (s *sessionPersistenceStore) saveSnapshotLocked(snapshot persistedSessionSn
 // an unrelated later operation cannot accidentally commit rejected metadata.
 // The session store mutex must be held by the caller.
 func (s *sessionPersistenceStore) commitSessionSnapshotLocked(session sessionView, snapshot persistedSessionSnapshot) error {
+ if s.sqliteMode {return s.sqliteCommitSnapshotLocked(session,snapshot)}
 	previous, previousErr := s.loadSnapshotLocked(session.ID)
 	if previousErr != nil && !errors.Is(previousErr, os.ErrNotExist) {
 		return previousErr
@@ -575,6 +583,7 @@ func (s *sessionPersistenceStore) remove(sessionID string) error {
 	if err := s.loadLocked(); err != nil {
 		return err
 	}
+ if s.sqliteMode {return s.sqliteRemoveLocked(sessionID)}
 	next := make(map[string]sessionView, len(s.sessions))
 	for id, existing := range s.sessions {
 		if id != sessionID { next[id] = existing }
