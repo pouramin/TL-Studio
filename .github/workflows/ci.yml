@@ -315,6 +315,25 @@ jobs:
           cp -R integrations/claude-web-extension staging/package/integrations/
           test -f staging/package/integrations/claude-web-extension/manifest.json
           test -f staging/package/integrations/claude-web-extension/background.js
+          # Disposable acceptance launch: never migrate or mutate the user's
+          # normal TL Studio state. This is not a production default.
+          mkdir -p staging/package/foundation-test-project
+          printf 'BASELINE_VERSION_A\n' > staging/package/foundation-test-project/notes.txt
+          printf 'SENTINEL_NOT_TO_BE_CHANGED\n' > staging/package/foundation-test-project/sentinel.txt
+          printf '%s\r\n' \
+            '@echo off' \
+            'setlocal' \
+            'set "TL_STUDIO_SQLITE_SESSIONS=1"' \
+            'set "TL_STUDIO_STATE_DIR=%LOCALAPPDATA%\\TL-Studio-Foundation-Review-SQLite"' \
+            '"%~dp0tl-studio.exe" --project "%~dp0foundation-test-project"' \
+            'endlocal' > staging/package/SQLITE-FOUNDATION-TEST.bat
+          printf '%s\n' \
+            'EXPERIMENTAL FOUNDATION TEST ONLY - NOT A RELEASE' \
+            'Run SQLITE-FOUNDATION-TEST.bat. It uses a dedicated test project and state folder.' \
+            'Do not point it at important work. The SQLite adapter is not the shipping default.' \
+            'Closing and reopening should preserve notes and native Session history.' \
+            'Please report exact errors and CI run link, without credentials.' \
+            > staging/package/FOUNDATION-TEST-README.txt
       - name: Assert review package contains no Kilo runtime
         shell: bash
         run: |
