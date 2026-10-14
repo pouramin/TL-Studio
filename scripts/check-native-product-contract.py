@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import sys
 import urllib.error
 import urllib.parse
@@ -9,6 +10,10 @@ import urllib.request
 def request(base, path, method="GET", payload=None, expected=200):
     data = None
     headers = {}
+    launch_key = os.environ.get("TL_STUDIO_LAUNCH_KEY", "")
+    if launch_key:
+        headers["Authorization"] = "Bearer " + launch_key
+        headers["X-TL-Studio-Request"] = "1"
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"

@@ -104,9 +104,16 @@ func TestBundledPluginRunsThroughGenericMCPManager(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(executable), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Link(os.Args[0], executable); err != nil {
-		// Some filesystems do not support hard links. A byte copy is acceptable
-		// for this test and keeps the resolver contract cross-platform.
+	// Windows cannot reliably unlink a hardlink to the *currently running*
+	// Go test executable during t.TempDir cleanup. Use a separate file there
+	// so process image handles do not pin the parent's EXE inode.
+	linked := false
+	if runtime.GOOS != "windows" {
+		if err := os.Link(os.Args[0], executable); err == nil {
+			linked = true
+		}
+	}
+	if !linked {
 		data, readErr := os.ReadFile(os.Args[0])
 		if readErr != nil {
 			t.Fatal(readErr)

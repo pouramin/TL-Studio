@@ -779,6 +779,7 @@ import { K } from "./kernel";
       cache: "no-store",
       credentials: "same-origin",
       ...init,
+      headers: { "X-TL-Studio-Request": "1", ...(init?.headers || {}) },
     });
     if (!response.ok) {
       let detail = "";

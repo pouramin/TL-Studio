@@ -54,7 +54,7 @@ import { K } from "./kernel";
       <span id="previewHint">TL Studio can preview supported files or run a package.json dev script.</span>
       <pre id="previewLogs" class="preview-logs hidden"></pre>
     </div>
-    <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer"></iframe>`;
+    <iframe id="previewFrame" class="preview-frame hidden" title="Project live preview" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>`;
   main.appendChild(panel);
 
   const ui: TLStudioDynamicRecord = {
@@ -82,7 +82,7 @@ import { K } from "./kernel";
     const response = await fetch(path, {
       cache: "no-store",
       ...options,
-      headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
+      headers: { "X-TL-Studio-Request": "1", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
     });
     const type = response.headers.get("content-type") || "";
     const payload = response.status === 204
@@ -465,7 +465,7 @@ import { K } from "./kernel";
   window.addEventListener("beforeunload", () => {
     stopPolling();
     if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
-    try { fetch("/local/preview", { method: "DELETE", keepalive: true }); } catch {}
+    try { fetch("/local/preview", { method: "DELETE", keepalive: true, headers: { "X-TL-Studio-Request": "1" } }); } catch {}
   });
 
   loadPreviewRegistry().catch(() => {});

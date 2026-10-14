@@ -69,8 +69,6 @@ func (s *sessionPersistenceStore) putNativeMessageWithCompletion(sessionID, dire
 		model := *message.Model
 		session.Model = &model
 	}
-	s.sessions[sessionID] = session
-
 	snapshot, err := s.loadSnapshotLocked(sessionID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -109,10 +107,7 @@ func (s *sessionPersistenceStore) putNativeMessageWithCompletion(sessionID, dire
 	if completed {
 		snapshot.PendingRun = nil
 	}
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return err
-	}
-	return s.persistIndexLocked()
+	return s.commitSessionSnapshotLocked(session, snapshot)
 }
 
 func (s *sessionPersistenceStore) markSessionExecution(sessionID, directory, execution string) error {
@@ -137,8 +132,6 @@ func (s *sessionPersistenceStore) markSessionExecution(sessionID, directory, exe
 	}
 	session.Execution = execution
 	session.UpdatedAt = time.Now().UnixMilli()
-	s.sessions[sessionID] = session
-
 	snapshot, err := s.loadSnapshotLocked(sessionID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -147,8 +140,5 @@ func (s *sessionPersistenceStore) markSessionExecution(sessionID, directory, exe
 		snapshot = persistedSessionSnapshot{}
 	}
 	snapshot.Session = session
-	if err := s.saveSnapshotLocked(snapshot); err != nil {
-		return err
-	}
-	return s.persistIndexLocked()
+	return s.commitSessionSnapshotLocked(session, snapshot)
 }

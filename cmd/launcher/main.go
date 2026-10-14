@@ -34,6 +34,7 @@ type appState struct {
 	mu          sync.RWMutex
 	project     string
 	frontendURL string
+ authSecret string
 	ctx         context.Context
 }
 
@@ -90,7 +91,9 @@ func main() {
 		log.Fatalf("find frontend port: %v", err)
 	}
 	frontendURL := "http://" + net.JoinHostPort(listenAddr, fmt.Sprint(frontendPort))
-	state := &appState{project: project, frontendURL: frontendURL}
+ launchSecret,err:=randomSecret(32)
+ if err!=nil{log.Fatalf("initialize local API authentication: %v",err)}
+	state := &appState{project: project, frontendURL: frontendURL,authSecret:launchSecret}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -115,11 +118,20 @@ func main() {
 	fmt.Printf("TL Studio %s\n", version)
 	fmt.Printf("  Project: %s\n", project)
 	fmt.Printf("  Local:   %s\n", frontendURL)
+ if noBrowser||runtime.GOOS!="windows" {
+  // A non-browser CLI launch needs a credential for its own local API calls.
+  // Do not expose a bootstrap URL in Unix process arguments.
+  fmt.Printf("  Auth:    %s\n",launchSecret)
+ }
 
 	if !noBrowser {
 		go func() {
 			time.Sleep(250 * time.Millisecond)
-			if err := openBrowser(frontendURL); err != nil {
+			address:=frontendURL
+   if runtime.GOOS=="windows" {
+    address=frontendURL+"/#tl_auth="+launchSecret
+   }
+			if err := openBrowser(address); err != nil {
 				log.Printf("open browser: %v", err)
 			}
 		}()
@@ -254,7 +266,13 @@ func newServer(state *appState) (http.Handler, error) {
 		}
 		fileServer.ServeHTTP(w, r)
 	})
-	return localOnly(securityHeaders(mux)), nil
+	var handler http.Handler=mux
+ if state.authSecret!="" {
+  gate,err:=newLocalAPIGate(state.authSecret)
+  if err!=nil{return nil,fmt.Errorf("initialize local API gate: %w",err)}
+  handler=gate.handler(handler)
+ }
+	return localOnly(securityHeaders(handler)), nil
 }
 
 func isLoopbackHost(host string) bool {

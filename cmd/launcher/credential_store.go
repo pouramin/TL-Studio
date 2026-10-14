@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -140,6 +141,10 @@ func loadOrCreatePrivateCredentialKey() ([]byte, error) {
 		_ = file.Close()
 		return nil, err
 	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("sync new private credential key: %w", err)
+	}
 	if err := file.Close(); err != nil {
 		return nil, err
 	}
@@ -206,11 +211,7 @@ func (privateFileCredentialStore) Put(providerID, secret string) error {
 	if err != nil {
 		return err
 	}
-	path := providerCredentialPath(providerID)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	return os.WriteFile(path, encrypted, 0o600)
+	return writePrivateBytesAtomic(providerCredentialPath(providerID), encrypted)
 }
 
 func (privateFileCredentialStore) Get(providerID string) (string, error) {

@@ -61,6 +61,7 @@ process.on("exit", dispose);
 process.on("SIGINT", () => { dispose(); process.exit(130); });
 
 let baseURL = "";
+let launchKey = "";
 const outcomes = [];
 try {
   native = spawn(executable, ["--no-browser", "--project", project], {
@@ -79,6 +80,9 @@ try {
     await delay(120);
   }
   assert(baseURL, "Native Windows launcher not healthy: " + processLog.slice(-3000));
+  launchKey = (processLog.match(/Auth:\s+([a-f0-9]{64})/) || [])[1] || "";
+  assert(launchKey, "Native Windows launcher did not expose a scoped authorization key");
+  const authenticatedURL = baseURL + "/#tl_auth=" + encodeURIComponent(launchKey);
 
   const port = await freePort();
   const profile = path.join(temp, "chrome-profile");
@@ -86,7 +90,7 @@ try {
     "--headless=new", "--disable-gpu", "--disable-dev-shm-usage",
     "--no-first-run", "--no-default-browser-check", "--disable-background-networking",
     "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
-    "--window-size=1400,850", baseURL
+    "--window-size=1400,850", authenticatedURL
   ], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
   chrome.stderr.on("data", data => { chromeLog += String(data); });
   let target = null;
@@ -137,7 +141,7 @@ try {
   };
   await cdp("Runtime.enable");
   await cdp("Page.enable");
-  await cdp("Page.navigate", { url: baseURL });
+  await cdp("Page.navigate", { url: authenticatedURL });
   await waitFor('document.querySelector("#app.workspace-v2") !== null', "workbench ready");
   await waitFor('Array.from(document.querySelectorAll(".file-row.file-file")).some(e => e.textContent.includes("note.txt"))', "Explorer note file");
   await evaluate('Array.from(document.querySelectorAll(".file-row.file-file")).find(e => e.textContent.includes("note.txt")).click()');

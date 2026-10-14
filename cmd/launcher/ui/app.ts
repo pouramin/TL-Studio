@@ -57,6 +57,7 @@ import { K } from "./kernel";
     wire();
     K.resizePrompt();
     try {
+      await K.ensureLocalAuth();
       await K.loadLocalStatus();
       if (!await K.checkBackend()) return;
       await Promise.all([K.loadToolRegistry?.(), K.loadCatalog(), K.loadSessions(), K.loadActiveSessions()]);

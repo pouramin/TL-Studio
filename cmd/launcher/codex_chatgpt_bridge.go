@@ -141,6 +141,7 @@ type codexAppServer struct {
 	closed    bool
 	closeErr  error
 	done      chan struct{}
+    waitDone  chan struct{} // closed only after cmd.Wait has reaped the real child
 	notify    chan codexRPCEnvelope
 }
 
@@ -150,6 +151,7 @@ func startCodexAppServer(command codexCommand) (*codexAppServer, error) {
 	}
 	ctx := context.Background()
 	cmd := codexProcess(ctx, command, "app-server", "--stdio")
+    configureManagedCommand(cmd)
 	if err := prepareCodexCommand(cmd); err != nil {
 		return nil, err
 	}
@@ -177,12 +179,14 @@ func startCodexAppServer(command codexCommand) (*codexAppServer, error) {
 		stderr: stderr,
 		pending: map[int64]chan codexRPCEnvelope{},
 		done: make(chan struct{}),
+        waitDone: make(chan struct{}),
 		notify: make(chan codexRPCEnvelope, 64),
 	}
 	go server.readLoop(stdout)
 	go func() {
 		err := cmd.Wait()
 		server.closeWithError(err)
+        close(server.waitDone)
 	}()
 
 	initTimeout := 20 * time.Second
@@ -368,16 +372,29 @@ func (s *codexAppServer) isClosed() bool {
 }
 
 func (s *codexAppServer) Close() {
-	if s == nil {
-		return
-	}
-	if s.stdin != nil {
-		_ = s.stdin.Close()
-	}
-	if s.cmd != nil && s.cmd.Process != nil {
-		_ = s.cmd.Process.Kill()
-	}
-	s.closeWithError(nil)
+    if s == nil { return }
+    if s.stdin != nil { _ = s.stdin.Close() }
+    if s.cmd != nil && s.cmd.Process != nil {
+        select {
+        case <-s.waitDone:
+            // Already fully reaped.
+        default:
+            // Stop the entire command tree, including cmd.exe/npx children
+            // on Windows. Killing only the parent leaves background Node and
+            // Git processes writing to state after the test/user closes.
+            _ = terminateManagedProcess(s.cmd)
+            select {
+            case <-s.waitDone:
+            case <-time.After(3 * time.Second):
+                _ = s.cmd.Process.Kill()
+                select {
+                case <-s.waitDone:
+                case <-time.After(2 * time.Second):
+                }
+            }
+        }
+    }
+    s.closeWithError(nil)
 }
 
 type codexAccountInfo struct {
