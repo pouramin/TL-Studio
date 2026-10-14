@@ -577,6 +577,7 @@ interface TLStudioKernel {
   state: TLStudioState;
   api: TLStudioProductAPI;
 
+  ensureLocalAuth(): Promise<void>;
   request<T = any>(path: string, options?: RequestInit): Promise<T>;
   basename(path?: string): string;
   formatTime(input?: string | number | Date): string;
