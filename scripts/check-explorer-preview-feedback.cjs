@@ -89,6 +89,10 @@ const fixture = (moduleName, setup) => {
   };
   const K = {
     state: { local: { project: "/old" }, activeEditorPath: "", preview: {} },
+    // This isolated Explorer/Preview fixture models an already-authorized
+    // browser. Cold-start ordering and denied credentials are covered by
+    // check-browser-auth-startup.cjs.
+    ensureLocalAuth: async () => {},
     handleLiveEvent() {},
     afterProjectChange: async () => {},
     showError(message) { if (message) throw Error("Unexpected UI error: " + message); },
@@ -182,6 +186,29 @@ async function testPreview() {
 }
 
 
+async function testPreviewWaitsForAuthorization() {
+  const authorization = deferred();
+  const requests = [];
+  const { K } = fixture("preview.ts", ({ K, window }) => {
+    K.ensureLocalAuth = () => authorization.promise;
+    window.fetch = async input => {
+      requests.push(String(input));
+      return {
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: async () => ({ version: 1, capabilities: [] }),
+      };
+    };
+  });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(requests.length, 0, "Preview dispatched an API call before authorization completed");
+  authorization.resolve();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(requests, ["/local/preview/capabilities"],
+    "Preview must load its registry only after authorization completes");
+  assert.equal(K.state.preview.registry?.version, 1);
+}
+
 async function testEditorSaveIsolation() {
   const saveReply = deferred();
   let submitted = null;
@@ -235,6 +262,7 @@ async function testOldProjectEditorReadIsDiscarded() {
 async function main() {
   await testExplorer();
   await testPreview();
+  await testPreviewWaitsForAuthorization();
   await testEditorSaveIsolation();
   await testOldProjectEditorReadIsDiscarded();
   console.log("Explorer, Preview and Editor async state isolation: ok");
