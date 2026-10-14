@@ -52,6 +52,9 @@ func (g *localAPIGate) handler(next http.Handler) http.Handler{
    w.WriteHeader(http.StatusNoContent)
    return
   }
+  // Non-sensitive liveness is intentionally public so the CLI can discover
+  // readiness without disclosing Session, provider or filesystem state.
+  if r.URL.Path=="/local/health" {next.ServeHTTP(w,r);return}
   if strings.HasPrefix(r.URL.Path,"/local/") {
    if !g.authorized(r) {
     w.Header().Set("Cache-Control","no-store")
