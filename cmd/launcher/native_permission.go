@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+// Explicit user rejection is a run-stopping decision, not a recoverable tool
+// failure. Keep a typed sentinel so callers never infer it from error text.
+var errNativeToolPermissionRejected = errors.New("tool permission was rejected")
+
 type nativePermissionWaiter struct {
 	item     map[string]any
 	response chan string
@@ -173,7 +177,7 @@ func (e *permissionEngine) AuthorizeNativeTool(
 		if decision == "allow" {
 			return nil
 		}
-		return errors.New("tool permission was rejected")
+		return errNativeToolPermissionRejected
 	case <-ctx.Done():
 		return ctx.Err()
 	}
