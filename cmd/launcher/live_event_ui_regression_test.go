@@ -10,7 +10,7 @@ func TestBrowserUsesTLStudioLiveEventContract(t *testing.T) {
 	chat := readBrowserSource(t, "chat.ts")
 
 	for _, required := range []string{
-		"new EventSource(path)",
+		"K.localFetch(path, { signal: controller.signal })",
 		`"/local/events"`,
 	} {
 		if !strings.Contains(runtimeAPI, required) {

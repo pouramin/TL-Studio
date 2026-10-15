@@ -42,7 +42,11 @@ const resolvedMonaco = require.resolve("monaco-editor");
 const packageRoot = path.resolve(path.dirname(resolvedMonaco), "..", "..");
 const vs = path.join(packageRoot, "esm", "vs");
 
-await build({
+const monacoBuild = await build({
+  metafile: true,
+  plugins: [{ name: "patched-monaco-sanitizer", setup(builder) {
+    builder.onResolve({ filter: /dompurify\/dompurify\.js$/ }, () => ({ path: require.resolve("dompurify") }));
+  } }],
   entryPoints: { "monaco-editor": path.join(root, "scripts", "monaco", "entry.ts") },
   outdir: webDir,
   bundle: true,
@@ -73,6 +77,12 @@ await build({
   target: ["es2020"],
   logLevel: "warning",
 });
+
+const sanitizerInputs = Object.keys(monacoBuild.metafile.inputs);
+if (!sanitizerInputs.some(name => /node_modules[\\/]dompurify[\\/]dist/.test(name)) ||
+    sanitizerInputs.some(name => /vs[\\/]base[\\/]browser[\\/]dompurify[\\/]dompurify\.js$/.test(name))) {
+  throw new Error("Monaco must bundle the patched DOMPurify package, never its embedded copy");
+}
 
 const required = [
   "browser.js",

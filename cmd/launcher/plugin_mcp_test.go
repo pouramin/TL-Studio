@@ -36,14 +36,14 @@ func TestMCPHelperProcess(t *testing.T) {
 			if hasID {
 				write(map[string]any{
 					"jsonrpc": "2.0",
-					"id": id,
+					"id":      id,
 					"result": map[string]any{
 						"protocolVersion": mcpProtocolVersion,
 						"capabilities": map[string]any{
-							"tools": map[string]any{},
+							"tools":     map[string]any{},
 							"resources": map[string]any{},
 						},
-						"serverInfo": map[string]any{"name":"fake-mcp","version":"1.0"},
+						"serverInfo": map[string]any{"name": "fake-mcp", "version": "1.0"},
 					},
 				})
 			}
@@ -51,32 +51,32 @@ func TestMCPHelperProcess(t *testing.T) {
 			// notification
 		case "tools/list":
 			write(map[string]any{
-				"jsonrpc":"2.0","id":id,
-				"result":map[string]any{"tools":[]any{
+				"jsonrpc": "2.0", "id": id,
+				"result": map[string]any{"tools": []any{
 					map[string]any{
-						"name":"echo","description":"Echo structured input.",
-						"inputSchema":map[string]any{
-							"type":"object",
-							"properties":map[string]any{"text":map[string]any{"type":"string"}},
+						"name": "echo", "description": "Echo structured input.",
+						"inputSchema": map[string]any{
+							"type":       "object",
+							"properties": map[string]any{"text": map[string]any{"type": "string"}},
 						},
-						"annotations":map[string]any{"readOnlyHint":true},
+						"annotations": map[string]any{"readOnlyHint": true},
 					},
 					map[string]any{
-						"name":"update_file","description":"Fake mutating tool.",
-						"inputSchema":map[string]any{"type":"object"},
-						"annotations":map[string]any{"destructiveHint":true},
+						"name": "update_file", "description": "Fake mutating tool.",
+						"inputSchema": map[string]any{"type": "object"},
+						"annotations": map[string]any{"destructiveHint": true},
 					},
 					map[string]any{
-						"name":"sleep","description":"Wait for cancellation.",
-						"inputSchema":map[string]any{"type":"object"},
+						"name": "sleep", "description": "Wait for cancellation.",
+						"inputSchema": map[string]any{"type": "object"},
 					},
 				}},
 			})
 		case "resources/list":
 			write(map[string]any{
-				"jsonrpc":"2.0","id":id,
-				"result":map[string]any{"resources":[]any{
-					map[string]any{"uri":"fake://resource","name":"Fake resource","mimeType":"text/plain"},
+				"jsonrpc": "2.0", "id": id,
+				"result": map[string]any{"resources": []any{
+					map[string]any{"uri": "fake://resource", "name": "Fake resource", "mimeType": "text/plain"},
 				}},
 			})
 		case "tools/call":
@@ -87,17 +87,17 @@ func TestMCPHelperProcess(t *testing.T) {
 				time.Sleep(2 * time.Second)
 			}
 			write(map[string]any{
-				"jsonrpc":"2.0","id":id,
-				"result":map[string]any{
-					"content":[]any{map[string]any{"type":"text","text":"ok:"+name}},
-					"structuredContent":map[string]any{"name":name,"arguments":args},
+				"jsonrpc": "2.0", "id": id,
+				"result": map[string]any{
+					"content":           []any{map[string]any{"type": "text", "text": "ok:" + name}},
+					"structuredContent": map[string]any{"name": name, "arguments": args},
 				},
 			})
 		default:
 			if hasID {
 				write(map[string]any{
-					"jsonrpc":"2.0","id":id,
-					"error":map[string]any{"code":-32601,"message":"method not found"},
+					"jsonrpc": "2.0", "id": id,
+					"error": map[string]any{"code": -32601, "message": "method not found"},
 				})
 			}
 		}
@@ -107,26 +107,26 @@ func TestMCPHelperProcess(t *testing.T) {
 
 func fakeMCPConfig(project string, enabled bool) pluginConfig {
 	return pluginConfig{
-		ID: "fake",
-		Name: "Fake MCP",
-		Type: pluginTypeMCP,
-		Enabled: enabled,
-		Scope: "project",
-		Project: project,
+		ID:        "fake",
+		Name:      "Fake MCP",
+		Type:      pluginTypeMCP,
+		Enabled:   enabled,
+		Scope:     "project",
+		Project:   project,
 		Transport: pluginTransportStdio,
-		Command: os.Args[0],
+		Command:   os.Args[0],
 		Arguments: []string{"-test.run=TestMCPHelperProcess"},
 		Environment: []pluginEnvironmentRef{
-			{Name:"GO_WANT_MCP_HELPER",Configured:true},
-			{Name:"TEST_PLUGIN_SECRET",Configured:true},
+			{Name: "GO_WANT_MCP_HELPER", Configured: true},
+			{Name: "TEST_PLUGIN_SECRET", Configured: true},
 		},
 	}
 }
 
 func fakeMCPEnvironment() map[string]string {
 	return map[string]string{
-		"GO_WANT_MCP_HELPER":"1",
-		"TEST_PLUGIN_SECRET":"SUPER_SECRET_VALUE",
+		"GO_WANT_MCP_HELPER": "1",
+		"TEST_PLUGIN_SECRET": "SUPER_SECRET_VALUE",
 	}
 }
 
@@ -134,25 +134,37 @@ func TestPluginStorePersistsProjectScope(t *testing.T) {
 	temp := t.TempDir()
 	project := filepath.Join(temp, "project")
 	other := filepath.Join(temp, "other")
-	if err := os.MkdirAll(project, 0o755); err != nil { t.Fatal(err) }
-	if err := os.MkdirAll(other, 0o755); err != nil { t.Fatal(err) }
+	if err := os.MkdirAll(project, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	store := newPluginStore(filepath.Join(temp, "plugins.json"))
 	config, err := normalizePluginConfig(pluginConfig{
-		ID:"example", Name:"Example", Type:"mcp", Scope:"project", Transport:"stdio",
-		Command:"example-mcp", Project:project,
+		ID: "example", Name: "Example", Type: "mcp", Scope: "project", Transport: "stdio",
+		Command: "example-mcp", Project: project,
 	}, project)
-	if err != nil { t.Fatal(err) }
-	if err := store.upsert(config); err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.upsert(config); err != nil {
+		t.Fatal(err)
+	}
 
 	reloaded := newPluginStore(filepath.Join(temp, "plugins.json"))
 	items, err := reloaded.list(project)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(items) != 1 || items[0].ID != "example" {
 		t.Fatalf("unexpected project plugins: %#v", items)
 	}
 	items, err = reloaded.list(other)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(items) != 0 {
 		t.Fatalf("project plugin leaked into another project: %#v", items)
 	}
@@ -162,22 +174,30 @@ func TestPluginStoreMatchesEquivalentProjectPath(t *testing.T) {
 	temp := t.TempDir()
 	realProject := filepath.Join(temp, "real-project")
 	aliasProject := filepath.Join(temp, "project-alias")
-	if err := os.MkdirAll(realProject, 0o755); err != nil { t.Fatal(err) }
+	if err := os.MkdirAll(realProject, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Symlink(realProject, aliasProject); err != nil {
 		t.Skipf("symlink unavailable on this platform: %v", err)
 	}
 
 	store := newPluginStore(filepath.Join(temp, "plugins.json"))
 	config, err := normalizePluginConfig(pluginConfig{
-		ID:"equivalent", Name:"Equivalent", Type:"mcp", Scope:"project", Transport:"stdio",
-		Command:"example-mcp", Project:realProject,
+		ID: "equivalent", Name: "Equivalent", Type: "mcp", Scope: "project", Transport: "stdio",
+		Command: "example-mcp", Project: realProject,
 	}, realProject)
-	if err != nil { t.Fatal(err) }
-	if err := store.upsert(config); err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.upsert(config); err != nil {
+		t.Fatal(err)
+	}
 
 	reloaded := newPluginStore(filepath.Join(temp, "plugins.json"))
 	items, err := reloaded.list(aliasProject)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(items) != 1 || items[0].ID != "equivalent" {
 		t.Fatalf("project plugin did not survive equivalent-path reopen: %#v", items)
 	}
@@ -188,7 +208,9 @@ func TestPluginProjectMatchKeyResolvesEquivalentAliases(t *testing.T) {
 	realProject := filepath.Join(temp, "real-project")
 	aliasOne := filepath.Join(temp, "project-alias-one")
 	aliasTwo := filepath.Join(temp, "project-alias-two")
-	if err := os.MkdirAll(realProject, 0o755); err != nil { t.Fatal(err) }
+	if err := os.MkdirAll(realProject, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Symlink(realProject, aliasOne); err != nil {
 		t.Skipf("symlink unavailable on this platform: %v", err)
 	}
@@ -208,8 +230,12 @@ func TestSavedPluginCanAttachToCurrentProjectAndKeepSecrets(t *testing.T) {
 	temp := t.TempDir()
 	projectA := filepath.Join(temp, "project-a")
 	projectB := filepath.Join(temp, "project-b")
-	if err := os.MkdirAll(projectA, 0o755); err != nil { t.Fatal(err) }
-	if err := os.MkdirAll(projectB, 0o755); err != nil { t.Fatal(err) }
+	if err := os.MkdirAll(projectA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectB, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	manager := newTestPluginManager(t, projectA, &recordingPluginAuthorizer{})
 	config := fakeMCPConfig(projectA, false)
@@ -219,29 +245,39 @@ func TestSavedPluginCanAttachToCurrentProjectAndKeepSecrets(t *testing.T) {
 	}
 
 	saved, err := manager.SavedElsewhere(projectB)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(saved) != 1 || saved[0].ID != config.ID || saved[0].Status != "Saved" {
 		t.Fatalf("saved plugin was not surfaced for recovery: %#v", saved)
 	}
 
 	view, err := manager.AttachToProject(projectB, config.ID, saved[0].Project)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if view.Project != normalizePluginProject(projectB) || view.Status != "Disabled" {
 		t.Fatalf("plugin did not attach to current project: %#v", view)
 	}
 
 	oldItems, err := manager.store.list(projectA)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(oldItems) != 0 {
 		t.Fatalf("plugin remained attached to old project: %#v", oldItems)
 	}
 	newItems, err := manager.store.list(projectB)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(newItems) != 1 || newItems[0].ID != config.ID {
 		t.Fatalf("plugin missing from new project after attach: %#v", newItems)
 	}
 	resolved, err := manager.configEnvironment(newItems[0])
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resolved["TEST_PLUGIN_SECRET"] != "SUPER_SECRET_VALUE" {
 		t.Fatalf("plugin secret did not migrate with project attachment: %#v", resolved)
 	}
@@ -270,12 +306,16 @@ func TestPluginRemovalPersistsAcrossReloadAndDeletesSecrets(t *testing.T) {
 
 	reloaded := newPluginStore(manager.store.filePath)
 	items, err := reloaded.list(project)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(items) != 0 {
 		t.Fatalf("removed plugin reappeared after store reload: %#v", items)
 	}
 	saved, err := reloaded.listSavedElsewhere(filepath.Join(project, "other-project"))
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(saved) != 0 {
 		t.Fatalf("removed plugin leaked into saved-for-another-project recovery: %#v", saved)
 	}
@@ -302,18 +342,20 @@ func TestMCPClientInitializesDiscoversAndCallsTools(t *testing.T) {
 	if !ok || original != "echo" {
 		t.Fatalf("echo tool was not namespaced/resolved: %#v %q %v", descriptor, original, ok)
 	}
-	if descriptor.PermissionClass != "read" || !descriptor.Capabilities.Read {
+	if descriptor.PermissionClass != "unknown" || !descriptor.Capabilities.Execute {
 		t.Fatalf("read-only MCP tool was classified incorrectly: %#v", descriptor)
 	}
 	writeDescriptor, _, ok := client.ResolveTool("mcp.fake.update_file")
-	if !ok || writeDescriptor.PermissionClass != "write" || !writeDescriptor.Capabilities.Write {
+	if !ok || writeDescriptor.PermissionClass != "unknown" || !writeDescriptor.Capabilities.Write {
 		t.Fatalf("mutating MCP tool was classified incorrectly: %#v", writeDescriptor)
 	}
 	if len(client.Resources()) != 1 {
 		t.Fatalf("expected optional resource discovery, got %#v", client.Resources())
 	}
-	output, err := client.CallTool(ctx, "echo", map[string]any{"text":"hello"})
-	if err != nil { t.Fatal(err) }
+	output, err := client.CallTool(ctx, "echo", map[string]any{"text": "hello"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	encoded, _ := json.Marshal(output)
 	if !strings.Contains(string(encoded), "hello") {
 		t.Fatalf("tool result did not round-trip structured arguments: %s", encoded)
@@ -325,7 +367,9 @@ func TestMCPClientCancellation(t *testing.T) {
 	client := newMCPClient(fakeMCPConfig(project, true), project, fakeMCPEnvironment())
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := client.Start(ctx); err != nil { t.Fatal(err) }
+	if err := client.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 	defer client.Close()
 
 	callCtx, callCancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
@@ -337,7 +381,7 @@ func TestMCPClientCancellation(t *testing.T) {
 }
 
 type recordingPluginAuthorizer struct {
-	mu sync.Mutex
+	mu    sync.Mutex
 	calls []toolDescriptor
 }
 
@@ -349,7 +393,8 @@ func (a *recordingPluginAuthorizer) AuthorizeNativeTool(_ context.Context, _ str
 }
 
 func (a *recordingPluginAuthorizer) count() int {
-	a.mu.Lock(); defer a.mu.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	return len(a.calls)
 }
 
@@ -357,7 +402,7 @@ func newTestPluginManager(t *testing.T, project string, authorizer nativeToolAut
 	t.Helper()
 	stateDir := t.TempDir()
 	t.Setenv("TL_STUDIO_STATE_DIR", stateDir)
-	state := &appState{project:project}
+	state := &appState{project: project}
 	manager := newPluginManager(state, newProcessManager(state.projectPath), authorizer)
 	manager.store = newPluginStore(filepath.Join(stateDir, "plugins.json"))
 	manager.credentials = privateFileCredentialStore{}
@@ -371,9 +416,11 @@ func TestPluginManagerDisabledEnabledAgentExecutionAndSecretRedaction(t *testing
 	manager := newTestPluginManager(t, project, auth)
 	config := fakeMCPConfig(project, false)
 	env := fakeMCPEnvironment()
-	request := pluginUpsertRequest{Plugin:config, Environment:&env}
+	request := pluginUpsertRequest{Plugin: config, Environment: &env}
 	view, err := manager.Upsert(project, request)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if view.Status != "Disabled" {
 		t.Fatalf("disabled plugin unexpectedly started: %#v", view)
 	}
@@ -386,21 +433,25 @@ func TestPluginManagerDisabledEnabledAgentExecutionAndSecretRedaction(t *testing
 	}
 
 	view, err = manager.SetEnabled(project, config.ID, true)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if view.Status != "Connected" || view.DiscoveredTools != 3 {
 		t.Fatalf("enabled plugin did not connect/discover tools: %#v", view)
 	}
 	definitions := manager.ToolDefinitions(project)
 	found := false
 	for _, definition := range definitions {
-		if definition.ID == "mcp.fake.echo" { found = true }
+		if definition.ID == "mcp.fake.echo" {
+			found = true
+		}
 	}
 	if !found {
 		t.Fatalf("enabled plugin tool was not exposed to native Agent: %#v", definitions)
 	}
 
 	result, handled := manager.Execute(context.Background(), "session-test", project, nativeToolCall{
-		ID:"mcp.fake.echo", CallID:"call-1", Arguments:json.RawMessage(`{"text":"from-agent"}`),
+		ID: "mcp.fake.echo", CallID: "call-1", Arguments: json.RawMessage(`{"text":"from-agent"}`),
 	})
 	if !handled || result.Error != "" {
 		t.Fatalf("MCP tool execution failed: handled=%v result=%#v", handled, result)
@@ -410,7 +461,9 @@ func TestPluginManagerDisabledEnabledAgentExecutionAndSecretRedaction(t *testing
 	}
 
 	view, err = manager.SetEnabled(project, config.ID, false)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if view.Status != "Disabled" {
 		t.Fatalf("disable did not update status: %#v", view)
 	}
@@ -427,7 +480,7 @@ func TestGraphifyConnectionTestDoesNotRequireBuiltGraph(t *testing.T) {
 	env := fakeMCPEnvironment()
 
 	view, err := manager.TestConfig(context.Background(), project, pluginUpsertRequest{
-		Plugin: config,
+		Plugin:      config,
 		Environment: &env,
 	})
 	if err != nil {
@@ -465,9 +518,9 @@ func TestGraphifyCannotEnableBeforeGraphExists(t *testing.T) {
 }
 
 func TestUnknownMCPToolUsesSaferPermissionClass(t *testing.T) {
-	descriptor := classifyMCPTool(pluginConfig{ID:"x",Name:"X"}, mcpTool{
-		Name:"mystery_capability",
-		InputSchema:map[string]any{"type":"object"},
+	descriptor := classifyMCPTool(pluginConfig{ID: "x", Name: "X"}, mcpTool{
+		Name:        "mystery_capability",
+		InputSchema: map[string]any{"type": "object"},
 	})
 	if descriptor.PermissionClass != "unknown" || !descriptor.Capabilities.Execute {
 		t.Fatalf("unknown tool should use safer permission path: %#v", descriptor)
@@ -478,12 +531,16 @@ func TestPluginManagerReportsMissingExecutable(t *testing.T) {
 	project := t.TempDir()
 	manager := newTestPluginManager(t, project, &recordingPluginAuthorizer{})
 	config := pluginConfig{
-		ID:"missing",Name:"Missing",Type:"mcp",Enabled:true,Scope:"project",Project:project,
-		Transport:"stdio",Command:"definitely-not-a-real-mcp-executable-12345",
+		ID: "missing", Name: "Missing", Type: "mcp", Enabled: true, Scope: "project", Project: project,
+		Transport: "stdio", Command: "definitely-not-a-real-mcp-executable-12345",
 	}
-	if err := manager.store.upsert(config); err != nil { t.Fatal(err) }
+	if err := manager.store.upsert(config); err != nil {
+		t.Fatal(err)
+	}
 	views, err := manager.List(project, true)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(views) != 1 || views[0].Status != "Error" {
 		t.Fatalf("missing process did not surface useful error status: %#v", views)
 	}
@@ -495,60 +552,73 @@ func TestNativeToolsRemainAvailableWithoutPlugins(t *testing.T) {
 	for _, tool := range executor.ToolDefinitions() {
 		ids[tool.ID] = true
 	}
-	for _, required := range []string{"files.read","files.list","files.write","files.edit","search.content","terminal.command"} {
+	for _, required := range []string{"files.read", "files.list", "files.write", "files.edit", "search.content", "terminal.command"} {
 		if !ids[required] {
 			t.Fatalf("native tool %s disappeared after plugin integration", required)
 		}
 	}
 }
 
-
 func TestPluginStoreMigratesLegacyProjectGraphifyRecords(t *testing.T) {
 	temp := t.TempDir()
 	projectA := filepath.Join(temp, "old-a")
 	projectB := filepath.Join(temp, "old-b")
-	if err := os.MkdirAll(projectA, 0o755); err != nil { t.Fatal(err) }
-	if err := os.MkdirAll(projectB, 0o755); err != nil { t.Fatal(err) }
+	if err := os.MkdirAll(projectA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectB, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	path := filepath.Join(temp, "plugins.json")
 	stored := pluginStoreFile{
 		Version: pluginStoreVersion,
 		Plugins: []pluginConfig{
 			{
-				ID:"graphify", Name:"Graphify", Type:pluginTypeMCP, Enabled:true,
-				Scope:"project", Project:projectA, Transport:pluginTransportStdio,
-				Command:"C:/Users/Test/.local/bin/graphify-mcp.exe",
-				Arguments:[]string{"graphify-out/graph.json"},
+				ID: "graphify", Name: "Graphify", Type: pluginTypeMCP, Enabled: true,
+				Scope: "project", Project: projectA, Transport: pluginTransportStdio,
+				Command:   "C:/Users/Test/.local/bin/graphify-mcp.exe",
+				Arguments: []string{"graphify-out/graph.json"},
 			},
 			{
-				ID:"graphify", Name:"Graphify", Type:pluginTypeMCP, Enabled:false,
-				Scope:"project", Project:projectB, Transport:pluginTransportStdio,
-				Command:"graphify-mcp",
-				Arguments:[]string{"graphify-out/graph.json"},
-				Metadata:map[string]string{"integration":"graphify"},
+				ID: "graphify", Name: "Graphify", Type: pluginTypeMCP, Enabled: false,
+				Scope: "project", Project: projectB, Transport: pluginTransportStdio,
+				Command:   "graphify-mcp",
+				Arguments: []string{"graphify-out/graph.json"},
+				Metadata:  map[string]string{"integration": "graphify"},
 			},
 			{
-				ID:"custom", Name:"Custom", Type:pluginTypeMCP, Enabled:false,
-				Scope:"project", Project:projectA, Transport:pluginTransportStdio,
-				Command:"custom-mcp",
+				ID: "custom", Name: "Custom", Type: pluginTypeMCP, Enabled: false,
+				Scope: "project", Project: projectA, Transport: pluginTransportStdio,
+				Command: "custom-mcp",
 			},
 		},
 	}
 	data, err := json.MarshalIndent(stored, "", "  ")
-	if err != nil { t.Fatal(err) }
-	if err := os.WriteFile(path, data, 0o600); err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	store := newPluginStore(path)
 	items, err := store.list(projectA)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(items) != 1 || items[0].ID != "custom" {
 		t.Fatalf("legacy project Graphify records survived migration: %#v", items)
 	}
 
 	reloadedData, err := os.ReadFile(path)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	var reloaded pluginStoreFile
-	if err := json.Unmarshal(reloadedData, &reloaded); err != nil { t.Fatal(err) }
+	if err := json.Unmarshal(reloadedData, &reloaded); err != nil {
+		t.Fatal(err)
+	}
 	for _, plugin := range reloaded.Plugins {
 		if plugin.ID == "graphify" && plugin.Scope == "project" {
 			t.Fatalf("legacy Graphify record was not removed from persisted store: %#v", plugin)

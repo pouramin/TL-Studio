@@ -21,16 +21,16 @@ type sessionUpdateInput struct {
 }
 
 type sessionRunInput struct {
-	Text      string           `json:"text,omitempty"`
-	Parts     []map[string]any `json:"parts,omitempty"`
-	Agent     string           `json:"agent,omitempty"`
-	Model     *sessionModelRef `json:"model,omitempty"`
-	Variant   string           `json:"variant,omitempty"`
-	MessageID string           `json:"messageID,omitempty"`
-	MaxToolRounds int          `json:"maxToolRounds,omitempty"`
-	ModelTimeoutSeconds int    `json:"modelTimeoutSeconds,omitempty"`
-	StreamIdleTimeoutSeconds int `json:"streamIdleTimeoutSeconds,omitempty"`
-	MaxRunTokens int64         `json:"maxRunTokens,omitempty"`
+	Text                     string           `json:"text,omitempty"`
+	Parts                    []map[string]any `json:"parts,omitempty"`
+	Agent                    string           `json:"agent,omitempty"`
+	Model                    *sessionModelRef `json:"model,omitempty"`
+	Variant                  string           `json:"variant,omitempty"`
+	MessageID                string           `json:"messageID,omitempty"`
+	MaxToolRounds            int              `json:"maxToolRounds,omitempty"`
+	ModelTimeoutSeconds      int              `json:"modelTimeoutSeconds,omitempty"`
+	StreamIdleTimeoutSeconds int              `json:"streamIdleTimeoutSeconds,omitempty"`
+	MaxRunTokens             int64            `json:"maxRunTokens,omitempty"`
 }
 
 type sessionAbortInput struct {
@@ -132,6 +132,13 @@ func (c *sessionCommandContract) remove(_ context.Context, directory, sessionID 
 	if err != nil {
 		return err
 	}
+	if c.native != nil {
+		c.native.mu.Lock()
+		defer c.native.mu.Unlock()
+		if _, running := c.native.runs[strings.TrimSpace(sessionID)]; running {
+			return errors.New("abort the active run before deleting this session")
+		}
+	}
 	return store.remove(strings.TrimSpace(sessionID))
 }
 
@@ -158,6 +165,9 @@ func (c *sessionCommandContract) run(_ context.Context, directory, sessionID str
 		return errors.New("prompt text or parts are required")
 	}
 	if err := validateNativeRunLimits(input); err != nil {
+		return err
+	}
+	if _, err := nativeTextAttachments(input.Parts); err != nil {
 		return err
 	}
 	return c.native.Start(directory, sessionID, input)
@@ -200,45 +210,83 @@ func writeSessionCommandError(w http.ResponseWriter, err error) {
 func registerSessionCommandRoutes(mux *http.ServeMux, contract *sessionCommandContract) {
 	mux.HandleFunc("POST /local/sessions", func(w http.ResponseWriter, r *http.Request) {
 		directory, err := contract.allowedDirectory(r.URL.Query().Get("directory"))
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		var input sessionCreateInput
-		if !decodeSessionCommandJSON(w, r, &input) { return }
+		if !decodeSessionCommandJSON(w, r, &input) {
+			return
+		}
 		session, err := contract.create(r.Context(), directory, input)
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		writeJSON(w, http.StatusCreated, session)
 	})
 	mux.HandleFunc("PATCH /local/sessions/{sessionID}", func(w http.ResponseWriter, r *http.Request) {
 		directory, err := contract.allowedDirectory(r.URL.Query().Get("directory"))
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		var input sessionUpdateInput
-		if !decodeSessionCommandJSON(w, r, &input) { return }
+		if !decodeSessionCommandJSON(w, r, &input) {
+			return
+		}
 		session, err := contract.update(r.Context(), directory, r.PathValue("sessionID"), input)
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		writeJSON(w, http.StatusOK, session)
 	})
 	mux.HandleFunc("DELETE /local/sessions/{sessionID}", func(w http.ResponseWriter, r *http.Request) {
 		directory, err := contract.allowedDirectory(r.URL.Query().Get("directory"))
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		sessionID := r.PathValue("sessionID")
-		if err := contract.remove(r.Context(), directory, sessionID); err != nil { writeSessionCommandError(w, err); return }
+		if err := contract.remove(r.Context(), directory, sessionID); err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]any{"deleted": true, "sessionID": sessionID})
 	})
 	mux.HandleFunc("POST /local/sessions/{sessionID}/runs", func(w http.ResponseWriter, r *http.Request) {
 		directory, err := contract.allowedDirectory(r.URL.Query().Get("directory"))
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		var input sessionRunInput
-		if !decodeSessionCommandJSON(w, r, &input) { return }
+		if !decodeSessionCommandJSON(w, r, &input) {
+			return
+		}
 		sessionID := r.PathValue("sessionID")
-		if err := contract.run(r.Context(), directory, sessionID, input); err != nil { writeSessionCommandError(w, err); return }
+		if err := contract.run(r.Context(), directory, sessionID, input); err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		writeJSON(w, http.StatusAccepted, map[string]any{"accepted": true, "sessionID": sessionID})
 	})
 	mux.HandleFunc("POST /local/sessions/{sessionID}/abort", func(w http.ResponseWriter, r *http.Request) {
 		directory, err := contract.allowedDirectory(r.URL.Query().Get("directory"))
-		if err != nil { writeSessionCommandError(w, err); return }
+		if err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		var input sessionAbortInput
-		if r.ContentLength != 0 && !decodeSessionCommandJSON(w, r, &input) { return }
+		if r.ContentLength != 0 && !decodeSessionCommandJSON(w, r, &input) {
+			return
+		}
 		sessionID := r.PathValue("sessionID")
-		if err := contract.abort(r.Context(), directory, sessionID, input); err != nil { writeSessionCommandError(w, err); return }
+		if err := contract.abort(r.Context(), directory, sessionID, input); err != nil {
+			writeSessionCommandError(w, err)
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]any{"aborted": true, "sessionID": sessionID})
 	})
 }

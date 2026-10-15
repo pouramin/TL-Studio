@@ -8,7 +8,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
-const executable = process.argv[2];
+const executable = process.argv[2] ? path.resolve(process.argv[2]) : "";
 if (process.platform !== "win32" || !executable || !fs.existsSync(executable)) {
   throw Error("Run on a Windows runner with the built TL Studio executable as argument");
 }
@@ -144,6 +144,17 @@ try {
   await cdp("Page.navigate", { url: authenticatedURL });
   await waitFor('document.querySelector("#app.workspace-v2") !== null', "workbench ready");
   await waitFor('Array.from(document.querySelectorAll(".file-row.file-file")).some(e => e.textContent.includes("note.txt"))', "Explorer note file");
+  const auth = await evaluate('(async () => { const token=sessionStorage.getItem("tl-studio-local-capability"); const plain=await fetch("/local/status"); const allowed=await fetch("/local/status",{headers:{Authorization:"Bearer "+token}}); const controller=new AbortController(); const stream=await fetch("/local/events",{headers:{Authorization:"Bearer "+token},signal:controller.signal}); const reader=stream.body.getReader(); const first=await reader.read(); controller.abort(); return {plain:plain.status,allowed:allowed.status,stream:stream.status,first:new TextDecoder().decode(first.value),hash:location.hash}; })()');
+  assert(auth.plain === 401 && auth.allowed === 200, "Control API still accepts ambient authority");
+  assert(auth.stream === 200 && auth.first.includes("stream.ready"), "Authorized fetch event stream failed");
+  assert(auth.hash === "", "Launch capability remained in URL");
+  const cookies = await cdp("Network.getCookies", {urls:[baseURL]});
+  assert(!cookies.cookies.some(cookie => cookie.name.startsWith("tl_studio_auth_")), "Control auth leaked into a cookie");
+  await evaluate('globalThis.__beforeAuthReload = true');
+  await cdp("Page.reload");
+  await waitFor('globalThis.__beforeAuthReload !== true && Array.from(document.querySelectorAll(".file-row.file-file")).some(e => e.textContent.includes("note.txt"))', "authorized refresh");
+  outcomes.push("explicit header authorization, cookie-free SSE, and refresh persistence");
+
   await evaluate('Array.from(document.querySelectorAll(".file-row.file-file")).find(e => e.textContent.includes("note.txt")).click()');
   await waitFor('document.getElementById("fileEditorPath")?.textContent === "note.txt"', "Editor note file");
   await waitFor('document.querySelector("#fileEditorSurface")?.classList.contains("hidden") === false', "Editor visible");
@@ -209,6 +220,8 @@ try {
   process.exitCode = 1;
 } finally {
   dispose();
+  assert(path.dirname(path.resolve(temp)) === path.resolve(os.tmpdir()) &&
+    path.basename(temp).startsWith("tl-editor-acceptance-"), "Refusing cleanup outside the acceptance temp directory");
   // Do not remove until after child processes have been terminated.
   for (let n = 0; n < 15; n++) {
     try { fs.rmSync(temp, { recursive: true, force: true }); break; }

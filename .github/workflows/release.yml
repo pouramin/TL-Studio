@@ -49,7 +49,7 @@ jobs:
         with:
           node-version: '24.x'
       - name: Install UI build tools
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Type-check browser product API
         run: npm run check:web
       - name: Build browser UI
@@ -127,6 +127,9 @@ jobs:
             sleep 0.2
           done
           test -n "$LOCAL_URL"
+          export TL_STUDIO_LAUNCH_KEY="$(awk '/Auth:/ {print $2; exit}' "$LOG")"
+          test -n "$TL_STUDIO_LAUNCH_KEY"
+          echo "::add-mask::$TL_STUDIO_LAUNCH_KEY"
           python3 scripts/check-native-product-contract.py "$LOCAL_URL" "$GITHUB_WORKSPACE"
       - name: Package
         shell: bash

@@ -32,11 +32,10 @@ import { K } from "./kernel";
     e.classList.toggle("hidden", !message);
   };
 
-  // Bootstrap the browser with a one-launch capability and exchange it for
-  // an HttpOnly session cookie. Hash fragments are never sent in HTTP requests.
-  // Modules load before the app entry point and can request protected data
-  // immediately. Share one bootstrap promise across all initial requests:
-  // only one consumer may read and remove the launch token from the URL.
+  // Origin-scoped tab storage survives refresh without leaking a capability to
+  // untrusted preview ports. Never attach it to cross-origin requests.
+  const authStorageKey = "tl-studio-local-capability";
+  let capability = "";
   let localAuthReady: Promise<void> | null = null;
   K.ensureLocalAuth = (): Promise<void> => {
     if (!localAuthReady) {
@@ -44,28 +43,49 @@ import { K } from "./kernel";
         const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
         let token = fragment.get("tl_auth") || "";
         if (token) window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        if (!token) {
-          const existing = await fetch("/local/status", { credentials: "same-origin", cache: "no-store" }).catch(() => null);
-          if (existing?.ok) return;
-          token = window.prompt("TL Studio needs the one-time local authorization key shown by the launcher. Enter the Auth code:") || "";
-        }
-        if (!token) throw new Error("Local API authorization required; restart TL Studio and use its launcher authorization key.");
+        if (!token) { try { token = window.sessionStorage?.getItem(authStorageKey) || ""; } catch {} }
+        if (!token) token = window.prompt("Enter the Auth code shown by the TL Studio launcher:") || "";
+        if (!token) throw new Error("Local API authorization required; use the launcher Auth code.");
         const response = await fetch("/local/auth/session", {
-          method: "POST",
-          credentials: "same-origin",
-          cache: "no-store",
+          method: "POST", credentials: "omit", cache: "no-store",
           headers: { "X-TL-Studio-Launch-Token": token, "X-TL-Studio-Request": "1" },
         });
-        if (!response.ok) throw new Error("Local authorization failed. Reopen TL Studio from its launcher.");
-      })();
+        if (!response.ok) {
+          try { window.sessionStorage?.removeItem(authStorageKey); } catch {}
+          throw new Error("Local authorization failed. Reopen TL Studio from its launcher.");
+        }
+        capability = token;
+        try { window.sessionStorage?.setItem(authStorageKey, token); } catch {}
+      })().catch(error => { localAuthReady = null; throw error; });
     }
     return localAuthReady;
+  };
+
+  K.localFetch = async (path: string, options: RequestInit = {}): Promise<Response> => {
+    const url = new URL(path, window.location.href);
+    if (url.origin !== window.location.origin || !url.pathname.startsWith("/local/")) {
+      throw new Error("Local capabilities cannot be sent outside the control API.");
+    }
+    await K.ensureLocalAuth();
+    const headers = new Headers(options.headers);
+    headers.set("Authorization", "Bearer " + capability);
+    headers.set("X-TL-Studio-Request", "1");
+    const response = await fetch(path, { cache: "no-store", ...options, credentials: "omit", headers });
+    if (response.status === 401) {
+      capability = ""; localAuthReady = null;
+      try { window.sessionStorage?.removeItem(authStorageKey); } catch {}
+    }
+    if (response.ok && ["/local/file", "/local/entry"].includes(url.pathname)
+        && ["PUT", "POST", "PATCH", "DELETE"].includes(String(options.method || "GET").toUpperCase())) {
+      window.dispatchEvent(new Event("tl-studio:project-file-changed"));
+    }
+    return response;
   };
 
   K.request = async <T = any>(path: string, options: RequestInit = {}): Promise<T> => {
     // Do not dispatch any protected local API request before browser login.
     await K.ensureLocalAuth();
-    const response = await fetch(path, {
+    const response = await K.localFetch(path, {
       cache: "no-store",
       ...options,
       headers: { "X-TL-Studio-Request": "1", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },

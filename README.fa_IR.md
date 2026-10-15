@@ -390,7 +390,7 @@ npm
 <p dir="rtl" align="right">نصب وابستگی‌های توسعهٔ <span dir="ltr">Browser:</span></p>
 
 ```bash
-npm install --ignore-scripts --no-audit --no-fund
+npm ci --ignore-scripts --no-audit --no-fund
 ```
 
 <p dir="rtl" align="right"><span dir="ltr">Type-check</span> و <span dir="ltr">Build</span> رابط <span dir="ltr">Browser:</span></p>

@@ -117,13 +117,13 @@ type chatGPTAccountAdapter struct {
 
 func newChatGPTAccountAdapter(state *appState, manager *providerManager) *chatGPTAccountAdapter {
 	return &chatGPTAccountAdapter{
-		state: state,
+		state:   state,
 		manager: manager,
-		logins: map[string]*chatGPTLoginTransaction{},
+		logins:  map[string]*chatGPTLoginTransaction{},
 	}
 }
 
-func (a *chatGPTAccountAdapter) ID() string { return chatGPTAccountProviderID }
+func (a *chatGPTAccountAdapter) ID() string       { return chatGPTAccountProviderID }
 func (a *chatGPTAccountAdapter) Protocol() string { return codexChatGPTProviderProtocol }
 func (a *chatGPTAccountAdapter) CompleteModelTurn(ctx context.Context, request nativeModelRequest, onTextDelta func(string)) (nativeModelResponse, error) {
 	return a.completeModelTurn(ctx, request, onTextDelta)
@@ -202,8 +202,8 @@ func windowsNodeBackedCommand(path, source string) (codexCommand, bool) {
 		if info, err := os.Stat(script); err == nil && !info.IsDir() {
 			return codexCommand{
 				Executable: node,
-				PrefixArgs: []string{script, "--yes", "@openai/codex"},
-				Source: source + "-node",
+				PrefixArgs: []string{script, "--yes", "@openai/codex@0.162.1"},
+				Source:     source + "-node",
 			}, true
 		}
 	case "codex.cmd", "codex.bat":
@@ -212,7 +212,7 @@ func windowsNodeBackedCommand(path, source string) (codexCommand, bool) {
 			return codexCommand{
 				Executable: node,
 				PrefixArgs: []string{script},
-				Source: source + "-node",
+				Source:     source + "-node",
 			}, true
 		}
 	}
@@ -252,8 +252,8 @@ func (a *chatGPTAccountAdapter) resolveCommand() (codexCommand, error) {
 		}
 		return codexCommand{
 			Executable: path,
-			PrefixArgs: []string{"--yes", "@openai/codex"},
-			Source: "npx",
+			PrefixArgs: []string{"--yes", "@openai/codex@0.162.1"},
+			Source:     "npx",
 		}, nil
 	}
 	return codexCommand{}, errors.New("official Codex CLI is not installed; install @openai/codex or configure its executable path")
@@ -263,23 +263,23 @@ func (a *chatGPTAccountAdapter) setupSummary() *providerAccountSetupSummary {
 	_, commandErr := a.resolveCommand()
 	return &providerAccountSetupSummary{
 		Configurable: true,
-		Configured: commandErr == nil,
-		Label: "Codex setup",
+		Configured:   commandErr == nil,
+		Label:        "Codex setup",
 	}
 }
 
 func (a *chatGPTAccountAdapter) baseStatus() providerAccountStatus {
 	_, commandErr := a.resolveCommand()
 	status := providerAccountStatus{
-		ID: chatGPTAccountProviderID,
-		Name: "ChatGPT / Codex",
-		Description: "Connect a ChatGPT account through OpenAI's official Codex login.",
-		Available: commandErr == nil,
-		State: providerAccountDisconnected,
-		AuthModes: []string{"chatgpt"},
+		ID:           chatGPTAccountProviderID,
+		Name:         "ChatGPT / Codex",
+		Description:  "Connect a ChatGPT account through OpenAI's official Codex login.",
+		Available:    commandErr == nil,
+		State:        providerAccountDisconnected,
+		AuthModes:    []string{"chatgpt"},
 		Capabilities: []string{"models", "inference"},
-		BillingNote: "Usage follows the connected ChatGPT/Codex plan rather than normal OpenAI API-key billing.",
-		Setup: a.setupSummary(),
+		BillingNote:  "Usage follows the connected ChatGPT/Codex plan rather than normal OpenAI API-key billing.",
+		Setup:        a.setupSummary(),
 	}
 	if commandErr != nil {
 		status.Error = commandErr.Error()
@@ -329,15 +329,15 @@ func (a *chatGPTAccountAdapter) Setup(context.Context, string) (providerAccountS
 		value = override
 	}
 	return providerAccountSetup{
-		Title: "ChatGPT / Codex setup",
+		Title:       "ChatGPT / Codex setup",
 		Description: "TL Studio uses OpenAI's official Codex CLI for ChatGPT account authorization and plan-backed model access. If Codex is already on PATH, or npx is available, no custom path is required.",
 		Fields: []providerAccountSetupField{{
-			ID: "codexExecutable",
-			Label: "Codex executable",
+			ID:          "codexExecutable",
+			Label:       "Codex executable",
 			Description: "Optional path or command for the official Codex CLI. Leave empty to auto-detect codex or use npx @openai/codex.",
 			Placeholder: "codex",
-			Value: value,
-			ReadOnly: readOnly,
+			Value:       value,
+			ReadOnly:    readOnly,
 		}},
 	}, nil
 }
@@ -404,11 +404,11 @@ func (a *chatGPTAccountAdapter) BeginLogin(ctx context.Context, _ string) (provi
 	}
 	expiresAt := time.Now().UTC().Add(10 * time.Minute)
 	transaction := &chatGPTLoginTransaction{
-		LoginID: localLoginID,
+		LoginID:      localLoginID,
 		CodexLoginID: response.LoginID,
-		AuthURL: response.AuthURL,
-		Server: server,
-		ExpiresAt: expiresAt,
+		AuthURL:      response.AuthURL,
+		Server:       server,
+		ExpiresAt:    expiresAt,
 	}
 	a.mu.Lock()
 	a.logins[localLoginID] = transaction
@@ -416,11 +416,11 @@ func (a *chatGPTAccountAdapter) BeginLogin(ctx context.Context, _ string) (provi
 	go a.watchLogin(transaction)
 
 	return providerAccountLogin{
-		LoginID: localLoginID,
-		Flow: "chatgpt",
-		AuthorizationURL: response.AuthURL,
-		Instructions: "Open ChatGPT, sign in, and approve Codex access for TL Studio.",
-		ExpiresAt: expiresAt.Format(time.RFC3339),
+		LoginID:             localLoginID,
+		Flow:                "chatgpt",
+		AuthorizationURL:    response.AuthURL,
+		Instructions:        "Open ChatGPT, sign in, and approve Codex access for TL Studio.",
+		ExpiresAt:           expiresAt.Format(time.RFC3339),
 		PollIntervalSeconds: 2,
 	}, nil
 }
@@ -546,12 +546,12 @@ func (a *chatGPTAccountAdapter) syncProvider(ctx context.Context, server *codexA
 		return nil, errors.New("provider ID chatgpt is already used by a different provider")
 	}
 	definition := tlProviderDefinition{
-		ID: chatGPTAccountProviderID,
-		Name: "ChatGPT / Codex",
-		Protocol: codexChatGPTProviderProtocol,
-		BaseURL: chatGPTAccountBaseURL,
+		ID:        chatGPTAccountProviderID,
+		Name:      "ChatGPT / Codex",
+		Protocol:  codexChatGPTProviderProtocol,
+		BaseURL:   chatGPTAccountBaseURL,
 		ManagedBy: "account",
-		Models: models,
+		Models:    models,
 	}
 	if err := a.manager.store.put(definition); err != nil {
 		return nil, err

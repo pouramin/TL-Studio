@@ -98,6 +98,7 @@ const fixture = (moduleName, setup) => {
     showError(message) { if (message) throw Error("Unexpected UI error: " + message); },
   };
   const extra = setup({ elements, toolbar, main, listeners, window, K }) || {};
+  K.localFetch = (...args) => window.fetch(...args);
   const context = vm.createContext({
     K, document, window, console, fetch: window.fetch,
     URL, URLSearchParams, Request, Event, CustomEvent: class { constructor(type, args) { this.type = type; this.detail = args?.detail; } },
@@ -259,7 +260,23 @@ async function testOldProjectEditorReadIsDiscarded() {
   assert.equal(K.state.editorTabs.length, 0, "late old-project file must not open in new project");
 }
 
+async function testCaseDistinctEditorTabs() {
+  const { K } = fixture("files.ts", ({ K }) => {
+    K.state.local = { project: "/linux", platform: "linux" };
+    K.request = async url => {
+      if (url.startsWith("/local/files")) return { path: "", entries: [] };
+      const path = new URL(url, "http://localhost").searchParams.get("path");
+      return { path, content: path, sha256: "hash-" + path };
+    };
+  });
+  await K.openWorkspaceFileAt({ path: "Foo.ts" });
+  await K.openWorkspaceFileAt({ path: "foo.ts" });
+  assert.equal(K.state.editorTabs.length, 2, "case-distinct files must not share a tab");
+  assert.equal(K.state.activeEditorPath, "foo.ts");
+}
+
 async function main() {
+  await testCaseDistinctEditorTabs();
   await testExplorer();
   await testPreview();
   await testPreviewWaitsForAuthorization();

@@ -516,6 +516,22 @@ func resolveProjectMutationPath(project, requested string) (string, string, erro
 		return "", "", fmt.Errorf(".git is protected from workspace mutations")
 	}
 
+	// Do not follow parent aliases: .git and project boundaries must not depend
+	// on a check performed before following an untrusted link/reparse point.
+	parentRel := filepath.Dir(clean)
+	current := root
+	if parentRel != "." {
+		for _, component := range strings.Split(parentRel, string(os.PathSeparator)) {
+			current = filepath.Join(current, component)
+			info, err := os.Lstat(current)
+			if err != nil {
+				return "", "", err
+			}
+			if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || workspaceReparsePoint(info) {
+				return "", "", errors.New("workspace mutation through a linked parent is not allowed")
+			}
+		}
+	}
 	lexicalTarget := filepath.Join(root, clean)
 	parent := filepath.Dir(lexicalTarget)
 	resolvedParent, err := filepath.EvalSymlinks(parent)
@@ -532,6 +548,9 @@ func resolveProjectMutationPath(project, requested string) (string, string, erro
 	}
 	if rel == "" {
 		return "", "", fmt.Errorf("project root cannot be modified")
+	}
+	if strings.EqualFold(strings.Split(filepath.ToSlash(rel), "/")[0], ".git") {
+		return "", "", errors.New(".git is protected from workspace mutations")
 	}
 	return target, filepath.ToSlash(rel), nil
 }

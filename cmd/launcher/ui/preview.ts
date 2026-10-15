@@ -81,7 +81,7 @@ import { K } from "./kernel";
   const request = async (path: string, options: RequestInit = {}) => {
     // The preview registry loads at module import time, before app.init().
     await K.ensureLocalAuth();
-    const response = await fetch(path, {
+    const response = await K.localFetch(path, {
       cache: "no-store",
       ...options,
       headers: { "X-TL-Studio-Request": "1", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
@@ -424,24 +424,7 @@ import { K } from "./kernel";
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   });
 
-  // Editor/file mutations use fetch directly. Dispatch a narrow local event only
-  // after successful workspace mutations so file previews update automatically.
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = async (input, init = {}) => {
-    const response = await nativeFetch(input, init);
-    try {
-      const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      const parsed = new URL(raw, window.location.href);
-      const requestMethod = input instanceof Request ? input.method : "";
-      const method = String(init?.method || requestMethod || "GET").toUpperCase();
-      const workspaceMutation = response.ok
-        && parsed.origin === window.location.origin
-        && (parsed.pathname === "/local/file" || parsed.pathname === "/local/entry")
-        && ["PUT", "POST", "PATCH", "DELETE"].includes(method);
-      if (workspaceMutation) window.dispatchEvent(new Event("tl-studio:project-file-changed"));
-    } catch {}
-    return response;
-  };
+  // Workspace requests publish changes through the owned local transport.
   window.addEventListener("tl-studio:project-file-changed", scheduleFileReload);
   window.addEventListener("tl-studio:editor-render", (event) => followActivePreviewEntry((event as CustomEvent<any>).detail?.path));
 
@@ -467,7 +450,7 @@ import { K } from "./kernel";
   window.addEventListener("beforeunload", () => {
     stopPolling();
     if (K.state.preview.followTimer) window.clearTimeout(K.state.preview.followTimer);
-    try { fetch("/local/preview", { method: "DELETE", keepalive: true, headers: { "X-TL-Studio-Request": "1" } }); } catch {}
+    try { void K.localFetch("/local/preview", { method: "DELETE", keepalive: true, headers: { "X-TL-Studio-Request": "1" } }); } catch {}
   });
 
   loadPreviewRegistry().catch(() => {});

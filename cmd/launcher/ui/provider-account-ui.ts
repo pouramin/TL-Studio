@@ -293,8 +293,11 @@ import { K } from "./kernel";
   };
 
   const renderAccountButton = () => {
-    const connected = K.state.providerAccounts.filter((account) =>
-      accountLoginProviderIDs.has(account.id) && account.connected).length;
+    const providers = new Set(K.state.connectedProviders);
+    for (const account of K.state.providerAccounts) {
+      if (account.connected) providers.add(accountRuntimeProviderIDs[account.id] || account.id);
+    }
+    const connected = providers.size;
     K.els.accountButton.textContent = "Account";
     K.els.accountButton.classList.toggle("signed-in", connected > 0);
     K.els.accountButton.title = connected
@@ -775,7 +778,7 @@ import { K } from "./kernel";
   };
 
   const claudeWebRelayFetch = async (path: string, init?: RequestInit) => {
-    const response = await fetch(path, {
+    const response = await K.localFetch(path, {
       cache: "no-store",
       credentials: "same-origin",
       ...init,
@@ -1091,14 +1094,9 @@ import { K } from "./kernel";
   K.__providerAccountsUi = { load, render, open, connectAccount, configureAccount, disconnectAccount, disconnectAPIProviderPreset };
   K.openProviderAccounts = open;
 
-  const previousRenderAccount = K.renderAccount;
-  K.renderAccount = () => {
-    if (K.state.providerAccounts.length) {
-      renderAccountButton();
-      return;
-    }
-    previousRenderAccount?.();
-  };
+  // Catalog credentials and account logins load independently. Re-render the
+  // cards when either completes so startup order cannot leave stale labels.
+  K.renderAccount = render;
 
   window.addEventListener("tlstudio:providers-changed", () => { void load(); });
   render();

@@ -6,8 +6,8 @@ import { K } from "./kernel";
   
   if (!K || K.__attachmentsInstalled) return;
 
-  const MAX_FILE_BYTES = 10 * 1024 * 1024;
-  const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+  const MAX_FILE_BYTES = 256 * 1024;
+  const MAX_TOTAL_BYTES = 1024 * 1024;
   const MAX_FILES = 8;
   const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
   const TEXT_MIMES = new Set([
@@ -61,7 +61,7 @@ import { K } from "./kernel";
   attachmentInput.multiple = true;
   attachmentInput.hidden = true;
   attachmentInput.accept = [
-    "image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "text/*",
+    "text/*",
     ".md", ".mdx", ".json", ".jsonl", ".yaml", ".yml", ".toml", ".xml", ".csv",
     ".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".rs", ".java", ".c", ".cpp", ".h",
     ".css", ".html", ".sql", ".sh", ".ps1", ".diff", ".patch", ".env",
@@ -159,7 +159,7 @@ import { K } from "./kernel";
     K.renderAttachments();
   };
 
-  K.addAttachments = async (files: FileList | File[] | null) => {
+  const addAttachments = async (files: FileList | File[] | null) => {
     const incoming: File[] = Array.from(files || []);
     if (!incoming.length) return;
 
@@ -173,8 +173,8 @@ import { K } from "./kernel";
         break;
       }
       const mime = normalizeMime(file);
-      if (!mime) {
-        errors.push(`${file.name}: unsupported file type. Use images, PDF, or text/code files.`);
+      if (!mime || mime === "application/pdf" || mime.startsWith("image/")) {
+        errors.push(`${file.name}: only text/code attachments are currently supported; images and PDFs are not sent to the model.`);
         continue;
       }
       if (file.size > MAX_FILE_BYTES) {
@@ -202,6 +202,16 @@ import { K } from "./kernel";
     if (errors.length) K.showError(errors[0]);
     attachmentInput.value = "";
   };
+
+  // Send must wait for the picker/FileReader to finish. Serialize selections
+  // so simultaneous paste/drop/picker reads also respect the total limits.
+  let pendingReads: Promise<void> = Promise.resolve();
+  K.addAttachments = (files: FileList | File[] | null) => {
+    const incoming = Array.from(files || []);
+    pendingReads = pendingReads.then(() => addAttachments(incoming));
+    return pendingReads;
+  };
+  K.waitForAttachments = () => pendingReads;
 
   attachButton.addEventListener("click", () => attachmentInput.click());
   attachmentInput.addEventListener("change", () => K.addAttachments(attachmentInput.files));
@@ -282,59 +292,7 @@ import { K } from "./kernel";
     }
   };
 
-  const baseRenderMessages = K.renderMessages;
-  K.renderMessages = () => {
-    baseRenderMessages();
-    decorateMessageAttachments();
-  };
-
-  K.sendPrompt = async () => {
-    const text = K.els.prompt.value.trim();
-    const attachments = K.state.attachments.slice();
-    if ((!text && !attachments.length) || K.state.sending) return;
-    K.showError("");
-    K.state.sending = true;
-    K.els.sendButton.disabled = true;
-    const startedAt = Date.now();
-    try {
-      if (!K.state.session) await K.createSession();
-      K.ensureSessionSelection();
-      const agent = K.els.agentSelect.value || undefined;
-      const model = K.selectedModel();
-      const parts = [
-        { type: "text", text },
-        ...attachments.map((item) => ({ type: "file", mime: item.mime, filename: item.name, url: item.url })),
-      ];
-
-      K.els.prompt.value = "";
-      K.resizePrompt();
-      K.state.messages.push({
-        role: "user",
-        createdAt: startedAt,
-        agent: agent || "",
-        model: model ? { providerID: model.providerID, id: model.id } : undefined,
-        text,
-        activities: [],
-        attachments: attachments.map((item) => ({ name: item.name, mime: item.mime, url: item.url })),
-        usage: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
-        changes: [],
-      });
-      K.renderMessages();
-
-      await K.api.sessionCommands.run(K.state.session!.id, { text, parts, agent, model, variant: model?.variant });
-      K.clearAttachments();
-      await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
-      K.renderMessages();
-      K.startSessionPolling(startedAt);
-    } catch (err) {
-      K.state.sending = false;
-      K.showError((err as any).message || String(err));
-      K.renderMessages();
-    } finally {
-      K.els.sendButton.disabled = false;
-      K.els.prompt.focus();
-    }
-  };
+  K.onMessagesRendered(decorateMessageAttachments);
 
   const baseNewSession = K.newSession;
   K.newSession = () => {

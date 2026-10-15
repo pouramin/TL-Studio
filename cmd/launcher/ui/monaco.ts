@@ -20,7 +20,7 @@ import { K } from "./kernel";
     suppressChange: false,
   };
 
-  const pathKey = (value: any) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "").toLowerCase();
+  const pathKey = (value: any) => String(value || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
 
   const languageForPath = (path: any) => {
     const clean = String(path || "").replace(/\\/g, "/");

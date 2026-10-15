@@ -152,7 +152,7 @@ import { K } from "./kernel";
     status.textContent = "Searching…";
     count.textContent = "";
     try {
-      const response = await fetch(`/local/search?${params}`, { cache: "no-store", signal: controller.signal });
+      const response = await K.localFetch(`/local/search?${params}`, { cache: "no-store", signal: controller.signal });
       const payload = await response.json().catch(() => null);
       if (currentGeneration !== generation) return;
       if (!response.ok) throw new Error(payload?.error || `${response.status} ${response.statusText}`);

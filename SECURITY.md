@@ -25,3 +25,24 @@ External model providers, the official Codex helper, and MCP servers are separat
 Do not expose the local control port through a public proxy. Review project code, provider endpoints, plugin commands, and requested permissions before approving sensitive actions.
 
 Please report security issues privately to the repository owner rather than opening a public exploit report.
+
+## Development hardening
+
+The control API requires an explicit per-launch bearer capability on every
+protected request, including the fetch-based event stream. It does not accept
+ambient cookies. The Browser keeps its capability in origin-scoped tab storage
+to survive refresh; it never sends it to Preview ports or other origins.
+
+A state directory has one application owner, enforced by an OS file lock.
+Use a separate TL_STUDIO_STATE_DIR for an independent concurrent instance.
+SQLite is still opt-in pending its documented acceptance work. PID liveness
+checks avoid treating another live owner's pending run as a crashed run.
+
+External MCP annotations do not grant read-only authority. Unknown MCP tools
+require explicit execution approval and are excluded from read-only Agent turns.
+Approving a plugin executable is a separate trust decision from approving tools.
+
+Native attachments currently support UTF-8 text/code only (256 KiB each,
+1 MiB total). Images and PDFs are rejected explicitly rather than dropped.
+Automatic in-place installation replacement is disabled: download new releases
+into a separate folder while rollback-capable updates are being qualified.

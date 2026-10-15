@@ -15,7 +15,7 @@ import { K } from "./kernel";
   const hasDirtyTabs = () => Array.isArray(K.state.editorTabs) && K.state.editorTabs.some(isDirty);
 
   const localRequest = async (path: any) => {
-    const response = await fetch(path, { cache: "no-store" });
+    const response = await K.localFetch(path, { cache: "no-store" });
     const type = response.headers.get("content-type") || "";
     const payload = type.includes("application/json") ? await response.json().catch(() => null) : await response.text().catch(() => "");
     if (!response.ok) {

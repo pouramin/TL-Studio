@@ -204,21 +204,21 @@ func TestChatGPTCodexBridgeReturnsTLStudioToolCall(t *testing.T) {
 	response, err := client.Complete(context.Background(), nativeModelRequest{
 		System: "system",
 		Provider: tlProviderDefinition{
-			ID: chatGPTAccountProviderID,
-			Name: "ChatGPT / Codex",
-			Protocol: codexChatGPTProviderProtocol,
-			BaseURL: chatGPTAccountBaseURL,
+			ID:        chatGPTAccountProviderID,
+			Name:      "ChatGPT / Codex",
+			Protocol:  codexChatGPTProviderProtocol,
+			BaseURL:   chatGPTAccountBaseURL,
 			ManagedBy: "account",
 		},
-		Model: tlProviderModel{ID: "gpt-5.6-sol", Name: "GPT-5.6 Sol", ToolCall: true},
-		APIKey: "official-codex-chatgpt-account",
+		Model:    tlProviderModel{ID: "gpt-5.6-sol", Name: "GPT-5.6 Sol", ToolCall: true},
+		APIKey:   "official-codex-chatgpt-account",
 		Messages: []nativeConversationMessage{{Role: "user", Text: "read the readme"}},
 		Tools: []nativeModelToolDefinition{{
-			ID: "files.read",
-			Name: "Read file",
+			ID:          "files.read",
+			Name:        "Read file",
 			Description: "Read a project file",
 			InputSchema: map[string]any{
-				"type": "object",
+				"type":       "object",
 				"properties": map[string]any{"path": map[string]any{"type": "string"}},
 			},
 		}},
@@ -244,12 +244,12 @@ func TestChatGPTCodexBridgeReturnsTLStudioToolCall(t *testing.T) {
 func TestChatGPTAdapterDisconnectRemovesManagedProvider(t *testing.T) {
 	manager, adapter := newChatGPTTestManager(t)
 	if err := manager.store.put(tlProviderDefinition{
-		ID: chatGPTAccountProviderID,
-		Name: "ChatGPT / Codex",
-		Protocol: codexChatGPTProviderProtocol,
-		BaseURL: chatGPTAccountBaseURL,
+		ID:        chatGPTAccountProviderID,
+		Name:      "ChatGPT / Codex",
+		Protocol:  codexChatGPTProviderProtocol,
+		BaseURL:   chatGPTAccountBaseURL,
 		ManagedBy: "account",
-		Models: []tlProviderModel{{ID: "gpt-5.6-sol", Name: "GPT-5.6 Sol", ToolCall: true}},
+		Models:    []tlProviderModel{{ID: "gpt-5.6-sol", Name: "GPT-5.6 Sol", ToolCall: true}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,6 @@ func TestChatGPTIntegrationAvoidsPrivateAuthSurfaces(t *testing.T) {
 	}
 }
 
-
 func TestRealCodexAppServerInitializeSmoke(t *testing.T) {
 	if os.Getenv("TL_STUDIO_REAL_CODEX_SMOKE") != "1" {
 		t.Skip("real Codex smoke is opt-in")
@@ -345,7 +344,7 @@ func TestRealCodexAppServerInitializeSmoke(t *testing.T) {
 func TestWindowsBatchCommandLineKeepsOuterAndExecutableQuotes(t *testing.T) {
 	line := windowsBatchCommandLine(
 		`C:\Program Files\nodejs\npx.cmd`,
-		[]string{"--yes", "@openai/codex", "app-server", "--stdio"},
+		[]string{"--yes", "@openai/codex@0.162.1", "app-server", "--stdio"},
 	)
 	if !strings.HasPrefix(line, `""C:\Program Files\nodejs\npx.cmd"`) {
 		t.Fatalf("batch command must keep cmd.exe outer and executable quotes: %q", line)
@@ -354,7 +353,6 @@ func TestWindowsBatchCommandLineKeepsOuterAndExecutableQuotes(t *testing.T) {
 		t.Fatalf("batch command must close the outer cmd.exe quote pair: %q", line)
 	}
 }
-
 
 func TestChatGPTCodexBridgeSchemaUsesStrictStringArguments(t *testing.T) {
 	schema := codexBridgeSchema()
@@ -382,7 +380,6 @@ func TestChatGPTCodexBridgeSchemaUsesStrictStringArguments(t *testing.T) {
 		t.Fatalf("tool arguments must be a JSON-encoded string in the strict output schema: %#v", arguments)
 	}
 }
-
 
 func TestRealCodexExecCLIContractSmoke(t *testing.T) {
 	if os.Getenv("TL_STUDIO_REAL_CODEX_SMOKE") != "1" {
@@ -432,10 +429,9 @@ func TestRealCodexExecCLIContractSmoke(t *testing.T) {
 	}
 }
 
-
 func TestCodexBridgePromptCarriesSelectedModelIdentity(t *testing.T) {
 	prompt, err := codexBridgePrompt(nativeModelRequest{
-		Model: tlProviderModel{ID: "gpt-5.6-luna", Name: "GPT-5.6 Luna"},
+		Model:    tlProviderModel{ID: "gpt-5.6-luna", Name: "GPT-5.6 Luna"},
 		Messages: []nativeConversationMessage{{Role: "user", Text: "which model are you?"}},
 	})
 	if err != nil {
@@ -453,7 +449,6 @@ func TestCodexBridgePromptCarriesSelectedModelIdentity(t *testing.T) {
 		}
 	}
 }
-
 
 func TestChatGPTHotPathAvoidsAccountRead(t *testing.T) {
 	manager, adapter := newChatGPTTestManager(t)
@@ -500,7 +495,6 @@ func TestPreferredCodexReasoningEffortFavorsLowLatency(t *testing.T) {
 	}
 }
 
-
 func TestChatGPTPersistentBridgeReusesOneAppServer(t *testing.T) {
 	manager, adapter := newChatGPTTestManager(t)
 	if err := manager.store.put(tlProviderDefinition{
@@ -525,22 +519,22 @@ func TestChatGPTPersistentBridgeReusesOneAppServer(t *testing.T) {
 	request := nativeModelRequest{
 		System: "system",
 		Provider: tlProviderDefinition{
-			ID: chatGPTAccountProviderID,
-			Name: "ChatGPT / Codex",
-			Protocol: codexChatGPTProviderProtocol,
-			BaseURL: chatGPTAccountBaseURL,
+			ID:        chatGPTAccountProviderID,
+			Name:      "ChatGPT / Codex",
+			Protocol:  codexChatGPTProviderProtocol,
+			BaseURL:   chatGPTAccountBaseURL,
 			ManagedBy: "account",
 		},
 		Model: tlProviderModel{
-			ID: "gpt-5.6-luna",
-			Name: "GPT-5.6 Luna",
-			ToolCall: true,
-			Reasoning: true,
+			ID:              "gpt-5.6-luna",
+			Name:            "GPT-5.6 Luna",
+			ToolCall:        true,
+			Reasoning:       true,
 			ReasoningEffort: "low",
 		},
-		APIKey: "official-codex-chatgpt-account",
+		APIKey:   "official-codex-chatgpt-account",
 		Messages: []nativeConversationMessage{{Role: "user", Text: "hello"}},
-		Tools: []nativeModelToolDefinition{},
+		Tools:    []nativeModelToolDefinition{},
 	}
 	for index := 0; index < 2; index++ {
 		response, err := client.Complete(context.Background(), request, nil)

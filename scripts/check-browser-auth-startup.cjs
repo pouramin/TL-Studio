@@ -15,15 +15,16 @@ const coreJS = ts.transpileModule(coreSource, {
 
 function browserHarness({ token = "test-launch-token", existingCookie = false, failBootstrap = false } = {}) {
   const calls = [];
-  let authorized = existingCookie;
+  let authorized = false;
+  const expectedToken = token || "test-launch-token";
   let completeBootstrap;
   let prompts = 0;
-  const location = { hash: token ? "#tl_auth=" + token : "", pathname: "/", search: "" };
+  const location = { href: "http://127.0.0.1:8765/", origin: "http://127.0.0.1:8765", hash: token ? "#tl_auth=" + token : "", pathname: "/", search: "" };
   const K = { state: {}, els: {} };
   const fetch = (url, options = {}) => {
     calls.push({ url, options, authorizedAtDispatch: authorized });
     if (url === "/local/auth/session") {
-      assert.equal(options.headers["X-TL-Studio-Launch-Token"], token);
+      assert.equal(options.headers["X-TL-Studio-Launch-Token"], expectedToken);
       return new Promise(resolve => {
         completeBootstrap = () => {
           if (!failBootstrap) authorized = true;
@@ -44,6 +45,8 @@ function browserHarness({ token = "test-launch-token", existingCookie = false, f
   };
   const window = {
     location,
+    sessionStorage: { getItem: () => existingCookie ? expectedToken : null, setItem() {}, removeItem() {} },
+    dispatchEvent() {},
     history: { replaceState: (_state, _title, newPath) => {
       assert.equal(newPath, "/");
       location.hash = "";
@@ -58,7 +61,7 @@ function browserHarness({ token = "test-launch-token", existingCookie = false, f
     },
     window,
     fetch,
-    URLSearchParams,
+    URLSearchParams, URL, Headers, Event,
     console,
   }, { filename: "core-transpiled.js" });
   return {
@@ -94,7 +97,7 @@ async function testColdStartSingleFlight() {
 async function testMissingOrRejectedAuthFailsClosed() {
   const absent = browserHarness({ token: "" });
   await assert.rejects(absent.K.request("/local/permissions/rules"), /authorization required/i);
-  assert.deepEqual(absent.calls.map(x => x.url), ["/local/status"],
+  assert.deepEqual(absent.calls.map(x => x.url), [],
     "request escaped a missing-credential bootstrap");
   assert.equal(absent.promptCount, 1);
 
@@ -108,9 +111,15 @@ async function testMissingOrRejectedAuthFailsClosed() {
 
 async function testExistingAuthenticatedTab() {
   const h = browserHarness({ token: "", existingCookie: true });
-  const data = await h.K.request("/local/sessions");
+  const pending = h.K.request("/local/sessions");
+  h.completeBootstrap();
+  const data = await pending;
   assert.equal(data.result, "/local/sessions");
-  assert.deepEqual(h.calls.map(x => x.url), ["/local/status", "/local/sessions"]);
+  assert.deepEqual(h.calls.map(x => x.url), ["/local/auth/session", "/local/sessions"]);
+  const call = h.calls.at(-1);
+  assert.equal(call.options.headers.get("Authorization"), "Bearer test-launch-token");
+  await assert.rejects(h.K.localFetch("http://127.0.0.1:9999/local/status"), /outside the control API/);
+
   assert.equal(h.promptCount, 0);
 }
 
