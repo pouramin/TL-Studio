@@ -749,7 +749,12 @@ func (r *nativeAgentRuntime) persistFailure(directory, sessionID string, input s
 	now := time.Now().UnixMilli()
 	messageID, _ := randomSecret(10)
 	errorType := "native_agent"
-	if errors.Is(runErr, context.Canceled) {
+	errorMessage := runErr.Error()
+	switch {
+	case errors.Is(runErr, errNativeToolPermissionRejected):
+		errorType = "permission_denied"
+		errorMessage = "Permission rejected by user. The Agent stopped without retrying the operation. The requested task remains unfinished."
+	case errors.Is(runErr, context.Canceled):
 		errorType = "cancelled"
 	}
 	activities := []sessionActivityView{}
@@ -765,7 +770,7 @@ func (r *nativeAgentRuntime) persistFailure(directory, sessionID string, input s
 		Model:       input.Model,
 		CreatedAt:   now,
 		CompletedAt: now,
-		Error:       &sessionErrorView{Type: errorType, Message: runErr.Error()},
+		Error:       &sessionErrorView{Type: errorType, Message: errorMessage},
 		Activities:  activities,
 		Attachments: []sessionAttachmentView{},
 		Usage:       sessionUsage{},

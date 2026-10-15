@@ -90,6 +90,12 @@ func (r *nativeAgentRuntime) executeNativeToolRound(
 			ToolName:   modelCall.Name,
 			Text:       nativeToolResultMessage(result),
 		})
+		// Reject is a user decision, not a recoverable tool failure. The
+		// rejected activity has already been persisted. Stop this batch and
+		// the entire run before another tool or model turn can retry it.
+		if result.PermissionRejected {
+			return observedWrite, errNativeToolPermissionRejected
+		}
 	}
 
 	return observedWrite, nil
