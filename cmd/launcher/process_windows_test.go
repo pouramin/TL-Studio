@@ -75,6 +75,10 @@ func TestOwnedCommandEndsDescendantAfterParentExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer windows.CloseHandle(process)
+	// Hold the parent until the test owns a child handle, including on slow CI.
+	if err := os.WriteFile(pidPath+".release", nil, 0600); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
@@ -87,7 +91,8 @@ func TestOwnedCommandEndsDescendantAfterParentExit(t *testing.T) {
 }
 
 func TestOwnedCommandParentHelper(t *testing.T) {
-	if os.Getenv("TL_STUDIO_COMMAND_CHILD_PID") == "" {
+	pidPath := os.Getenv("TL_STUDIO_COMMAND_CHILD_PID")
+	if pidPath == "" {
 		return
 	}
 	executable, err := os.Executable()
@@ -99,7 +104,14 @@ func TestOwnedCommandParentHelper(t *testing.T) {
 	if err := child.Start(); err != nil {
 		t.Fatal(err)
 	}
-	os.Exit(0)
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(pidPath + ".release"); err == nil {
+			os.Exit(0)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("parent was not released by test")
 }
 
 func TestOwnedCommandChildHelper(t *testing.T) {
