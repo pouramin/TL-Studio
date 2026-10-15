@@ -26,12 +26,13 @@ type nativeToolCall struct {
 }
 
 type nativeToolResult struct {
-	ToolID   string              `json:"toolID"`
-	CallID   string              `json:"callID,omitempty"`
-	Output   any                 `json:"output,omitempty"`
-	Changes  []sessionChangeView `json:"changes,omitempty"`
-	Error    string              `json:"error,omitempty"`
-	Duration int64               `json:"durationMs,omitempty"`
+	ToolID             string              `json:"toolID"`
+	CallID             string              `json:"callID,omitempty"`
+	Output             any                 `json:"output,omitempty"`
+	Changes            []sessionChangeView `json:"changes,omitempty"`
+	Error              string              `json:"error,omitempty"`
+	Duration           int64               `json:"durationMs,omitempty"`
+	PermissionRejected bool                `json:"-"` // internal run-control signal, never a model/API field
 }
 
 type nativeToolAuthorizer interface {
@@ -409,6 +410,7 @@ func (e *nativeToolExecutor) Execute(ctx context.Context, sessionID, project str
 	if e.permissions != nil {
 		if err := e.permissions.AuthorizeNativeTool(ctx, sessionID, project, descriptor, input); err != nil {
 			result.Error = err.Error()
+			result.PermissionRejected = errors.Is(err, errNativeToolPermissionRejected)
 			return result
 		}
 	}
