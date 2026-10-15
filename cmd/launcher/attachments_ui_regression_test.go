@@ -13,16 +13,20 @@ func TestComposerAttachmentsAreEmbeddedAndWired(t *testing.T) {
 
 	text := readBrowserSource(t, "attachments.ts")
 	for _, expected := range []string{
-		`type: "file"`,
 		`readAsDataURL`,
 		`MAX_FILE_BYTES`,
 		`attachmentInput.multiple = true`,
-		`K.sendPrompt = async () =>`,
-		`K.api.sessionCommands.run`,
+		`K.waitForAttachments = () => pendingReads`,
+		`K.onMessagesRendered(decorateMessageAttachments)`,
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("attachments.ts is missing expected behavior %q", expected)
 		}
+	}
+	chat := readBrowserSource(t, "chat.ts")
+	if strings.Contains(text, `K.sendPrompt =`) ||
+		!strings.Contains(chat, `type: "file", mime: item.mime, filename: item.name, url: item.url`) {
+		t.Fatal("attachment prompts must use the shared chat command path")
 	}
 	if strings.Contains(text, "K.request(") || strings.Contains(text, "/kilo/session/") || strings.Contains(text, "/runtime/session/") {
 		t.Fatal("attachments UI bypasses the TL Studio runtime adapter")

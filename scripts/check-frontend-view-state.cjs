@@ -224,6 +224,44 @@ async function main() {
     assert.equal(dispatched, 0, "abandoned create must not trigger a tool run");
   }
 
+  // A fast Send must wait for FileReader and keep the common limits/session
+  // guards, rather than taking a separate attachment-only submission path.
+  {
+    const { K, nodes } = createFixture();
+    const pendingRead = deferred();
+    K.waitForAttachments = () => pendingRead.promise;
+    const calls = [];
+    K.api.sessionCommands.run = async (...args) => calls.push(args);
+    K.api.sessionView.messages = async () => [];
+    K.startSessionPolling = () => {};
+    let cleared = false;
+    K.clearAttachments = () => { cleared = true; K.state.attachments = []; };
+    nodes.prompt.value = "What is in the attachment?";
+    const sending = K.sendPrompt();
+    assert.equal(calls.length, 0, "send raced ahead of the file read");
+    K.state.attachments = [{ name: "test.txt", mime: "text/plain", url: "data:text/plain;base64,bWFya2Vy" }];
+    pendingRead.resolve();
+    await sending;
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][1].parts[1].filename, "test.txt");
+    assert.equal(calls[0][1].parts[1].url, "data:text/plain;base64,bWFya2Vy");
+    assert.equal(calls[0][1].maxToolRounds, 24);
+    assert.equal(cleared, true);
+  }
+  {
+    const { K, nodes } = createFixture();
+    const pendingRead = deferred();
+    K.waitForAttachments = () => pendingRead.promise;
+    let dispatched = false;
+    K.api.sessionCommands.run = async () => { dispatched = true; };
+    nodes.prompt.value = "Analyze this upload";
+    const sending = K.sendPrompt();
+    K.newSession();
+    pendingRead.resolve();
+    await sending;
+    assert.equal(dispatched, false, "pending attachment sent into a different session");
+  }
+
   console.log("frontend navigation state isolation: ok");
 }
 

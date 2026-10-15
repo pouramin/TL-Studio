@@ -270,6 +270,13 @@ jobs:
         run: |
           node scripts/check-windows-editor-save-runtime.mjs "$env:RUNNER_TEMP/tl-studio-editor.exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Real Browser attachment delivery and provider restart status
+        shell: pwsh
+        run: |
+          node scripts/check-windows-provider-attachments-runtime.mjs "$env:RUNNER_TEMP/tl-studio-editor.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-windows-provider-attachments-runtime.mjs "$env:RUNNER_TEMP/tl-studio-editor.exe" --sqlite
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   windows-review-package:
     if: github.event_name == 'pull_request'

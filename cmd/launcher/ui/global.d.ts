@@ -632,6 +632,7 @@ interface TLStudioKernel {
   loadToolRegistry: TLStudioCallable;
   toolDescriptor: TLStudioCallable;
   addAttachments: TLStudioCallable;
+  waitForAttachments?: () => Promise<void>;
   clearAttachments: TLStudioCallable;
   renderAttachments: TLStudioCallable;
   openWorkspace: TLStudioCallable;

@@ -32,3 +32,22 @@ bounded parser fuzzing.
 Run the commands in [CONTRIBUTING.md](../CONTRIBUTING.md) before review. A green
 suite does not replace the outstanding acceptance work above, especially storage
 crash consistency and portable filesystem race guarantees.
+
+## User acceptance follow-up
+
+The Windows SQLite test reported passing startup, file editing/conflicts and
+permission approval/denial, but an attachment answer searched the workspace
+instead of using the upload and OpenRouter's card appeared disconnected after
+restart despite working model requests.
+
+The follow-up re-renders provider cards after the independent catalog/account
+loads and includes API-key providers in the header status. Attachment submission
+now uses the common chat path (including Agent limits and navigation guards),
+waits for pending file reads, and clearly identifies uploaded content as message
+data whose filenames are not workspace paths. A real Browser/local-provider
+test checks the actual HTTP payload with both backends, fast Send during a file
+read and delayed catalog loading. A reopened-store/provider test verifies text
+survives JSON and SQLite persistence. Live-model attachment interpretation still
+needs user retesting; the original missing-content answer was not reproduced
+with the local mock provider. Neither OpenRouter-backed JEV nor the separate
+JEV Direct plugin is enabled or reconfigured by these changes.

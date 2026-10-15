@@ -357,8 +357,12 @@ import { K } from "./kernel";
   };
 
   K.sendPrompt = async () => {
+    const attachmentScope = K.viewScope.captureSession();
+    if (K.waitForAttachments) await K.waitForAttachments();
+    if (!K.viewScope.isSessionCurrent(attachmentScope)) return;
     const text = K.els.prompt.value.trim();
-    if (!text || K.state.sending) return;
+    const attachments = (K.state.attachments || []).slice();
+    if ((!text && !attachments.length) || K.state.sending) return;
     let scope = K.viewScope.captureSession();
     K.showError("");
     K.state.sending = true;
@@ -384,7 +388,7 @@ import { K } from "./kernel";
         model: model ? { providerID: model.providerID, id: model.id } : undefined,
         text,
         activities: [],
-        attachments: [],
+        attachments: attachments.map(item => ({ name: item.name, mime: item.mime, url: item.url })),
         usage: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
         changes: [],
       });
@@ -394,12 +398,17 @@ import { K } from "./kernel";
       const agentLimit = (id: string) => Number((typeof document.getElementById === "function" ? document.getElementById(id) as HTMLSelectElement | null : null)?.value || 0);
       await K.api.sessionCommands.run(sessionID, {
         text, agent, model, variant: model?.variant,
+        parts: [
+          { type: "text", text },
+          ...attachments.map(item => ({ type: "file", mime: item.mime, filename: item.name, url: item.url })),
+        ],
         maxToolRounds: agentLimit("agentMaxToolRounds") || 24,
         modelTimeoutSeconds: agentLimit("agentModelTimeoutSeconds"),
         streamIdleTimeoutSeconds: agentLimit("agentStreamIdleSeconds"),
         maxRunTokens: agentLimit("agentMaxRunTokens"),
       });
       if (!K.viewScope.isSessionCurrent(scope)) return;
+      K.clearAttachments?.();
       await Promise.all([K.loadMessages(), K.loadActiveSessions(), K.loadAttention?.()]);
       if (!K.viewScope.isSessionCurrent(scope)) return;
       K.renderMessages();
@@ -407,6 +416,7 @@ import { K } from "./kernel";
     } catch (err) {
       if (!K.viewScope.isSessionCurrent(scope)) return;
       K.state.sending = false;
+      if (!K.els.prompt.value) K.els.prompt.value = text;
       K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {
