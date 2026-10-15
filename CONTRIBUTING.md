@@ -26,3 +26,6 @@ Current ownership boundaries are described in docs/ARCHITECTURE.md. Prefer
 small typed interfaces between auth, session persistence, process lifecycle,
 provider transports, and Browser state. Broad package extraction is a separate
 incremental refactor and must preserve the regression suite.
+
+SQLite recovery, verified backup/restore commands, migration acceptance and
+long-history measurements are documented in [SESSION_DURABILITY.md](docs/SESSION_DURABILITY.md).

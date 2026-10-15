@@ -53,6 +53,9 @@ func (s *sessionPersistenceStore) putNativeMessageWithCompletion(sessionID, dire
 	if err := s.loadLocked(); err != nil {
 		return err
 	}
+	if s.sqliteMode {
+		return s.sqlitePutNativeLocked(sessionID, directory, message, completed)
+	}
 
 	session := s.sessions[sessionID]
 	if session.ID == "" {
@@ -122,6 +125,9 @@ func (s *sessionPersistenceStore) markSessionExecution(sessionID, directory, exe
 	defer s.mu.Unlock()
 	if err := s.loadLocked(); err != nil {
 		return err
+	}
+	if s.sqliteMode {
+		return s.sqliteDeltaLocked(sessionID, directory, nil, nil, false, nil, func(session *sessionView) { session.Execution = execution; session.UpdatedAt = time.Now().UnixMilli() })
 	}
 	session := s.sessions[sessionID]
 	if session.ID == "" {

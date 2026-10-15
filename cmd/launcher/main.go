@@ -71,10 +71,21 @@ func main() {
 	var projectArg string
 	var noBrowser bool
 	var listenAddr string
+	var sessionBackup, sessionRestore string
+	var sessionReport bool
 	flag.StringVar(&projectArg, "project", "", "project directory to open")
 	flag.BoolVar(&noBrowser, "no-browser", false, "do not open the browser automatically")
 	flag.StringVar(&listenAddr, "listen", "127.0.0.1", "frontend listen address")
+	flag.StringVar(&sessionBackup, "session-backup", "", "write a new verified SQLite session backup and exit (opt-in backend only)")
+	flag.StringVar(&sessionRestore, "session-restore", "", "restore a verified SQLite backup into an empty state directory and exit")
+	flag.BoolVar(&sessionReport, "session-report", false, "print SQLite integrity/counts and migration report, then exit")
 	flag.Parse()
+	if sessionBackup != "" || sessionRestore != "" || sessionReport {
+		if err := runSessionMaintenance(sessionBackup, sessionRestore, sessionReport); err != nil {
+			log.Fatalf("session maintenance: %v", err)
+		}
+		return
+	}
 
 	if !isLoopbackHost(listenAddr) {
 		log.Fatalf("listen: %q is not a loopback address; this UI intentionally binds only to localhost", listenAddr)

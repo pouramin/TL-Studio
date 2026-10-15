@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,9 +26,13 @@ func (s *sessionPersistenceStore) sqliteLoadLocked() error {
 		if err != nil {
 			return fmt.Errorf("open SQLite session authority: %w", err)
 		}
-		if _, err = db.ImportLegacy(ctx, s.root); err != nil {
+		report, importErr := db.ImportLegacy(ctx, s.root)
+		if importErr != nil {
 			db.Close()
-			return fmt.Errorf("import legacy Session history: %w", err)
+			return fmt.Errorf("import legacy Session history: %w", importErr)
+		}
+		if !report.AlreadyMigrated && report.Sessions > 0 {
+			log.Printf("Session migration verified: sessions=%d messages=%d legacyBackup=%q possibleTruncation=%d", report.Sessions, report.Messages, report.BackupPath, len(report.PossibleTruncation))
 		}
 		s.sqlite = db
 	}
@@ -75,6 +80,7 @@ func (s *sessionPersistenceStore) sqliteSnapshotLocked(id string) (persistedSess
 		if err = json.Unmarshal(msg.Payload, &view); err != nil {
 			return persistedSessionSnapshot{}, fmt.Errorf("decode Session %s message %s: %w", id, msg.ID, err)
 		}
+		view.ID = msg.ID
 		snapshot.Messages = append(snapshot.Messages, view)
 	}
 	if len(changes) > 0 {

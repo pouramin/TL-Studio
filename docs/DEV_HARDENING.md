@@ -51,3 +51,8 @@ survives JSON and SQLite persistence. Live-model attachment interpretation still
 needs user retesting; the original missing-content answer was not reproduced
 with the local mock provider. Neither OpenRouter-backed JEV nor the separate
 JEV Direct plugin is enabled or reconfigured by these changes.
+
+The next development pass qualifies session storage with deterministic crash
+boundaries, verified backup/restore, stricter legacy import and incremental
+message persistence. See [SESSION_DURABILITY.md](SESSION_DURABILITY.md) for the
+commands, measured workloads and remaining release gates. SQLite stays opt-in.
