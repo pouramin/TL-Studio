@@ -241,7 +241,7 @@ Stable releases are published through **[GitHub Releases](https://github.com/pou
 Install Browser development dependencies:
 
 ```bash
-npm install --ignore-scripts --no-audit --no-fund
+npm ci --ignore-scripts --no-audit --no-fund
 ```
 
 Type-check and build the Browser:

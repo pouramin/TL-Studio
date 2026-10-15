@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,15 +14,15 @@ import (
 	"sync"
 	"time"
 
- "github.com/pouramin/TL-Studio/internal/sessiondb"
+	"github.com/pouramin/TL-Studio/internal/sessiondb"
 )
 
 const (
 	sessionPersistenceVersion = 1
 	// Listing limit only; stored session history is never automatically pruned.
-	maxPersistedSessions = 300
-	maxPersistedMessages       = 1200
-	maxSessionSnapshotBytes    = 32 << 20
+	maxPersistedSessions    = 300
+	maxPersistedMessages    = 1200
+	maxSessionSnapshotBytes = 32 << 20
 )
 
 type persistedSessionIndex struct {
@@ -30,28 +31,28 @@ type persistedSessionIndex struct {
 }
 
 type persistedSessionSnapshot struct {
-    // revision is a read-version token, not a JSON persistence field. Do not
-    // refresh it at commit time or concurrent launchers could overwrite newer
-    // Session history using a stale snapshot.
-    DBRevision int64 `json:"-"`
-	Version int                  `json:"version"`
-	Runtime string               `json:"runtime,omitempty"`
-	Session sessionView          `json:"session"`
-	Messages []sessionMessageView `json:"messages,omitempty"`
-	Changes []sessionChangeView  `json:"changes,omitempty"`
-	ArchivedBatches int `json:"archivedBatches,omitempty"`
-	PendingRun *persistedSessionPendingRun `json:"pendingRun,omitempty"`
-	SavedAt int64                `json:"savedAt"`
+	// revision is a read-version token, not a JSON persistence field. Do not
+	// refresh it at commit time or concurrent launchers could overwrite newer
+	// Session history using a stale snapshot.
+	DBRevision      int64                       `json:"-"`
+	Version         int                         `json:"version"`
+	Runtime         string                      `json:"runtime,omitempty"`
+	Session         sessionView                 `json:"session"`
+	Messages        []sessionMessageView        `json:"messages,omitempty"`
+	Changes         []sessionChangeView         `json:"changes,omitempty"`
+	ArchivedBatches int                         `json:"archivedBatches,omitempty"`
+	PendingRun      *persistedSessionPendingRun `json:"pendingRun,omitempty"`
+	SavedAt         int64                       `json:"savedAt"`
 }
 
 type sessionPersistenceStore struct {
-	mu       sync.Mutex
-	root     string
-	runtime  string
-	loaded   bool
-	sessions map[string]sessionView
- sqlite *sessiondb.Store
- sqliteMode bool
+	mu         sync.Mutex
+	root       string
+	runtime    string
+	loaded     bool
+	sessions   map[string]sessionView
+	sqlite     *sessiondb.Store
+	sqliteMode bool
 }
 
 func sessionPersistenceRoot() string {
@@ -60,10 +61,10 @@ func sessionPersistenceRoot() string {
 
 func newSessionPersistenceStore(root, runtimeID string) *sessionPersistenceStore {
 	return &sessionPersistenceStore{
-		root:     root,
-		runtime:  strings.TrimSpace(runtimeID),
-		sessions: map[string]sessionView{},
-  sqliteMode: strings.TrimSpace(os.Getenv("TL_STUDIO_SQLITE_SESSIONS"))=="1",
+		root:       root,
+		runtime:    strings.TrimSpace(runtimeID),
+		sessions:   map[string]sessionView{},
+		sqliteMode: strings.TrimSpace(os.Getenv("TL_STUDIO_SQLITE_SESSIONS")) == "1",
 	}
 }
 
@@ -146,7 +147,9 @@ func writePrivateBytesAtomicWithIO(path string, data []byte, ops privateJSONAtom
 }
 
 func (s *sessionPersistenceStore) loadLocked() error {
- if s.sqliteMode {return s.sqliteLoadLocked()}
+	if s.sqliteMode {
+		return s.sqliteLoadLocked()
+	}
 	if s.loaded {
 		return nil
 	}
@@ -188,7 +191,7 @@ func (s *sessionPersistenceStore) loadLocked() error {
 			// report the error, without blocking unrelated sessions.
 			continue
 		}
-		if snapshot.PendingRun == nil {
+		if snapshot.PendingRun == nil || processOwnerAlive(snapshot.PendingRun.OwnerPID) {
 			continue
 		}
 		started := snapshot.PendingRun.StartedAt
@@ -201,7 +204,7 @@ func (s *sessionPersistenceStore) loadLocked() error {
 				if activity.Kind == "tool" && activity.Status == "running" {
 					activity.Status = "failed"
 					activity.Error = &sessionErrorView{
-						Type: "interrupted",
+						Type:    "interrupted",
 						Message: "TL Studio stopped before the tool outcome was recorded. The operation may have completed; inspect the workspace before retrying.",
 					}
 				}
@@ -255,7 +258,9 @@ func sanitizePersistedMessages(messages []sessionMessageView) []sessionMessageVi
 }
 
 func (s *sessionPersistenceStore) loadSnapshotLocked(sessionID string) (persistedSessionSnapshot, error) {
- if s.sqliteMode {return s.sqliteSnapshotLocked(sessionID)}
+	if s.sqliteMode {
+		return s.sqliteSnapshotLocked(sessionID)
+	}
 	data, err := os.ReadFile(s.snapshotPath(sessionID))
 	if errors.Is(err, os.ErrNotExist) {
 		return persistedSessionSnapshot{}, os.ErrNotExist
@@ -291,7 +296,9 @@ func (s *sessionPersistenceStore) saveSnapshotLocked(snapshot persistedSessionSn
 // an unrelated later operation cannot accidentally commit rejected metadata.
 // The session store mutex must be held by the caller.
 func (s *sessionPersistenceStore) commitSessionSnapshotLocked(session sessionView, snapshot persistedSessionSnapshot) error {
- if s.sqliteMode {return s.sqliteCommitSnapshotLocked(session,snapshot)}
+	if s.sqliteMode {
+		return s.sqliteCommitSnapshotLocked(session, snapshot)
+	}
 	previous, previousErr := s.loadSnapshotLocked(session.ID)
 	if previousErr != nil && !errors.Is(previousErr, os.ErrNotExist) {
 		return previousErr
@@ -309,7 +316,9 @@ func (s *sessionPersistenceStore) commitSessionSnapshotLocked(session sessionVie
 		var rollbackErr error
 		if errors.Is(previousErr, os.ErrNotExist) {
 			rollbackErr = os.Remove(s.snapshotPath(session.ID))
-			if errors.Is(rollbackErr, os.ErrNotExist) { rollbackErr = nil }
+			if errors.Is(rollbackErr, os.ErrNotExist) {
+				rollbackErr = nil
+			}
 		} else {
 			rollbackErr = s.saveSnapshotLocked(previous)
 		}
@@ -495,7 +504,7 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 
 	session := s.sessions[sessionID]
 	if session.ID == "" {
-		session = sessionView{ID: sessionID, Directory: directory}
+		return os.ErrNotExist
 	}
 	now := time.Now().UnixMilli()
 	if session.CreatedAt == 0 {
@@ -516,26 +525,15 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 	snapshot.Session = session
 
 	text := strings.TrimSpace(input.Text)
-	attachments := []sessionAttachmentView{}
-	for _, part := range input.Parts {
-		partType := sessionString(part["type"])
-		if partType == "text" && text == "" {
-			if value := sessionString(part["text"]); value != "" {
-				if text != "" {
-					text += "\n"
-				}
-				text += value
-			}
-		}
-		if partType == "file" {
-			attachments = append(attachments, sessionAttachmentView{
-				Name: firstSessionString(part["filename"], part["name"]),
-				MIME: sessionString(part["mime"]),
-			})
-		}
+	attachments, err := nativeTextAttachments(input.Parts)
+	if err != nil {
+		return err
+	}
+	if text == "" {
+		text = nativeRoutingPrompt(input)
 	}
 
-	snapshot.PendingRun = &persistedSessionPendingRun{StartedAt: now, MessageID: input.MessageID}
+	snapshot.PendingRun = &persistedSessionPendingRun{StartedAt: now, MessageID: input.MessageID, OwnerPID: os.Getpid()}
 	snapshot.Messages = append(snapshot.Messages, sessionMessageView{
 		ID:          input.MessageID,
 		SessionID:   sessionID,
@@ -587,10 +585,14 @@ func (s *sessionPersistenceStore) remove(sessionID string) error {
 	if err := s.loadLocked(); err != nil {
 		return err
 	}
- if s.sqliteMode {return s.sqliteRemoveLocked(sessionID)}
+	if s.sqliteMode {
+		return s.sqliteRemoveLocked(sessionID)
+	}
 	next := make(map[string]sessionView, len(s.sessions))
 	for id, existing := range s.sessions {
-		if id != sessionID { next[id] = existing }
+		if id != sessionID {
+			next[id] = existing
+		}
 	}
 	if err := s.persistIndexForLocked(next); err != nil {
 		return err
@@ -600,4 +602,62 @@ func (s *sessionPersistenceStore) remove(sessionID string) error {
 	// longer references the session.
 	_ = os.Remove(s.snapshotPath(sessionID))
 	return s.removeSessionArchives(sessionID)
+}
+
+func (s *sessionPersistenceStore) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.sqlite != nil {
+		_ = s.sqlite.Close()
+		s.sqlite = nil
+	}
+}
+
+func (s *sessionPersistenceStore) getRecentMessages(sessionID string, limit int) ([]sessionMessageView, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return nil, false, err
+	}
+	if _, ok := s.sessions[sessionID]; !ok {
+		return nil, false, nil
+	}
+	if s.sqliteMode {
+		rows, err := s.sqlite.RecentMessages(context.Background(), sessionID, limit)
+		if err != nil {
+			return nil, false, err
+		}
+		result := make([]sessionMessageView, 0, len(rows))
+		for _, row := range rows {
+			var message sessionMessageView
+			if err := json.Unmarshal(row.Payload, &message); err != nil {
+				return nil, false, err
+			}
+			result = append(result, message)
+		}
+		return result, true, nil
+	}
+	snapshot, err := s.loadSnapshotLocked(sessionID)
+	if err != nil {
+		return nil, false, err
+	}
+	result := snapshot.Messages
+	for batch := snapshot.ArchivedBatches; len(result) < limit && batch > 0; batch-- {
+		data, err := os.ReadFile(s.archivePath(sessionID, batch))
+		if err != nil {
+			return nil, false, err
+		}
+		var archived persistedSessionArchive
+		if err = json.Unmarshal(data, &archived); err != nil {
+			return nil, false, err
+		}
+		if archived.SessionID != sessionID || archived.Version != sessionPersistenceVersion {
+			return nil, false, errors.New("session archive integrity mismatch")
+		}
+		result = append(archived.Messages, result...)
+	}
+	if len(result) > limit {
+		result = result[len(result)-limit:]
+	}
+	return result, true, nil
 }

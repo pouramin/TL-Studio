@@ -79,20 +79,20 @@ type mcpClient struct {
 	cwd    string
 	env    map[string]string
 
-	mu         sync.RWMutex
-	cmd        *exec.Cmd
-	stdin      io.WriteCloser
-	pending    map[int64]chan mcpRPCResponse
-	tools      []mcpTool
-	resources  []mcpResource
-	toolIDs    map[string]string
+	mu          sync.RWMutex
+	cmd         *exec.Cmd
+	stdin       io.WriteCloser
+	pending     map[int64]chan mcpRPCResponse
+	tools       []mcpTool
+	resources   []mcpResource
+	toolIDs     map[string]string
 	descriptors map[string]toolDescriptor
-	stderr     strings.Builder
-	healthy    bool
-	closed     bool
-	nextID     atomic.Int64
-	writeMu    sync.Mutex
-	done       chan struct{}
+	stderr      strings.Builder
+	healthy     bool
+	closed      bool
+	nextID      atomic.Int64
+	writeMu     sync.Mutex
+	done        chan struct{}
 }
 
 func newMCPClient(config pluginConfig, cwd string, env map[string]string) *mcpClient {
@@ -163,11 +163,17 @@ func (c *mcpClient) Start(ctx context.Context) error {
 		cmd.Env = append(cmd.Env, key+"="+value)
 	}
 	stdin, err := cmd.StdinPipe()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	stdout, err := cmd.StdoutPipe()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	stderr, err := cmd.StderrPipe()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	c.mu.Lock()
 	c.cmd = cmd
@@ -188,19 +194,23 @@ func (c *mcpClient) Start(ctx context.Context) error {
 	}
 	if err := c.request(startCtx, "initialize", map[string]any{
 		"protocolVersion": mcpProtocolVersion,
-		"capabilities": map[string]any{},
-		"clientInfo": map[string]any{"name": "TL Studio", "version": version},
+		"capabilities":    map[string]any{},
+		"clientInfo":      map[string]any{"name": "TL Studio", "version": version},
 	}, &initialized); err != nil {
 		return fmt.Errorf("MCP initialize: %w%s", err, c.stderrSuffix())
 	}
 	if err := c.notify("notifications/initialized", map[string]any{}); err != nil {
 		return fmt.Errorf("MCP initialized notification: %w", err)
 	}
-	var toolResult struct { Tools []mcpTool `json:"tools"` }
+	var toolResult struct {
+		Tools []mcpTool `json:"tools"`
+	}
 	if err := c.request(startCtx, "tools/list", map[string]any{}, &toolResult); err != nil {
 		return fmt.Errorf("MCP tools/list: %w%s", err, c.stderrSuffix())
 	}
-	var resourceResult struct { Resources []mcpResource `json:"resources"` }
+	var resourceResult struct {
+		Resources []mcpResource `json:"resources"`
+	}
 	if err := c.request(startCtx, "resources/list", map[string]any{}, &resourceResult); err != nil {
 		// Resources are optional. Method-not-found or unsupported resource capability
 		// must not prevent a tools-only MCP server from connecting.
@@ -218,8 +228,12 @@ func (c *mcpClient) Start(ctx context.Context) error {
 
 func (c *mcpClient) stderrSuffix() string {
 	text := c.stderrText()
-	if text == "" { return "" }
-	if len(text) > 1000 { text = text[len(text)-1000:] }
+	if text == "" {
+		return ""
+	}
+	if len(text) > 1000 {
+		text = text[len(text)-1000:]
+	}
 	return ": " + text
 }
 
@@ -227,7 +241,9 @@ func (c *mcpClient) waitLoop() {
 	c.mu.RLock()
 	cmd := c.cmd
 	c.mu.RUnlock()
-	if cmd == nil { return }
+	if cmd == nil {
+		return
+	}
 	err := cmd.Wait()
 	c.mu.Lock()
 	c.healthy = false
@@ -256,7 +272,9 @@ func (c *mcpClient) stderrLoop(reader io.Reader) {
 }
 
 func parseMCPResponseID(raw json.RawMessage) (int64, bool) {
-	if len(raw) == 0 { return 0, false }
+	if len(raw) == 0 {
+		return 0, false
+	}
 	var number json.Number
 	if err := json.Unmarshal(raw, &number); err == nil {
 		value, err := strconv.ParseInt(number.String(), 10, 64)
@@ -275,14 +293,18 @@ func (c *mcpClient) readLoop(reader io.Reader) {
 	scanner.Buffer(make([]byte, 4096), mcpMaxMessageBytes)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" { continue }
+		if line == "" {
+			continue
+		}
 		var response mcpRPCResponse
 		if err := json.Unmarshal([]byte(line), &response); err != nil {
 			c.appendStderr("[TL Studio] invalid MCP stdout JSON: " + err.Error() + "\n")
 			continue
 		}
 		id, ok := parseMCPResponseID(response.ID)
-		if !ok { continue }
+		if !ok {
+			continue
+		}
 		c.mu.Lock()
 		ch := c.pending[id]
 		delete(c.pending, id)
@@ -299,7 +321,9 @@ func (c *mcpClient) readLoop(reader io.Reader) {
 
 func (c *mcpClient) writeMessage(value any) error {
 	data, err := json.Marshal(value)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	data = append(data, '\n')
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
@@ -307,7 +331,9 @@ func (c *mcpClient) writeMessage(value any) error {
 	stdin := c.stdin
 	closed := c.closed
 	c.mu.RUnlock()
-	if stdin == nil || closed { return errors.New("MCP process is not available") }
+	if stdin == nil || closed {
+		return errors.New("MCP process is not available")
+	}
 	_, err = stdin.Write(data)
 	return err
 }
@@ -322,8 +348,10 @@ func (c *mcpClient) request(ctx context.Context, method string, params any, outp
 	}
 	c.pending[id] = ch
 	c.mu.Unlock()
-	if err := c.writeMessage(map[string]any{"jsonrpc":"2.0","id":id,"method":method,"params":params}); err != nil {
-		c.mu.Lock(); delete(c.pending, id); c.mu.Unlock()
+	if err := c.writeMessage(map[string]any{"jsonrpc": "2.0", "id": id, "method": method, "params": params}); err != nil {
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
 		return err
 	}
 	select {
@@ -341,17 +369,21 @@ func (c *mcpClient) request(ctx context.Context, method string, params any, outp
 		}
 		return nil
 	case <-ctx.Done():
-		c.mu.Lock(); delete(c.pending, id); c.mu.Unlock()
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
 		_ = c.notify("notifications/cancelled", map[string]any{"requestId": id, "reason": "request cancelled"})
 		return ctx.Err()
 	case <-c.done:
-		c.mu.Lock(); delete(c.pending, id); c.mu.Unlock()
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
 		return errors.New("MCP process exited")
 	}
 }
 
 func (c *mcpClient) notify(method string, params any) error {
-	return c.writeMessage(map[string]any{"jsonrpc":"2.0","method":method,"params":params})
+	return c.writeMessage(map[string]any{"jsonrpc": "2.0", "method": method, "params": params})
 }
 
 func normalizeMCPToolComponent(name string) string {
@@ -365,7 +397,9 @@ func normalizeMCPToolComponent(name string) string {
 		}
 	}
 	value := strings.Trim(b.String(), "_")
-	if value == "" { return "tool" }
+	if value == "" {
+		return "tool"
+	}
 	return value
 }
 
@@ -375,37 +409,15 @@ func boolAnnotation(annotations map[string]any, key string) bool {
 }
 
 func classifyMCPTool(config pluginConfig, tool mcpTool) toolDescriptor {
-	name := strings.ToLower(tool.Name)
+	// Tool names and server annotations are presentation hints, not proof of
+	// read-only behavior. Unknown external tools require explicit execution approval.
 	permissionClass := "unknown"
-	capabilities := toolCapabilities{Execute: true}
-	if boolAnnotation(tool.Annotations, "readOnlyHint") {
-		permissionClass = "read"
-		capabilities = toolCapabilities{Read: true}
-	} else if boolAnnotation(tool.Annotations, "destructiveHint") {
-		permissionClass = "write"
-		capabilities = toolCapabilities{Read: true, Write: true}
-	} else {
-		switch {
-		case strings.Contains(name, "exec"), strings.Contains(name, "command"), strings.Contains(name, "shell"), strings.Contains(name, "run_"), strings.HasPrefix(name, "run"), strings.Contains(name, "build"):
-			permissionClass = "execute"
-			capabilities = toolCapabilities{Read: true, Write: true, Execute: true}
-		case strings.Contains(name, "write"), strings.Contains(name, "delete"), strings.Contains(name, "remove"), strings.Contains(name, "update"), strings.Contains(name, "create"), strings.Contains(name, "edit"), strings.Contains(name, "apply"), strings.Contains(name, "set_"):
-			permissionClass = "write"
-			capabilities = toolCapabilities{Read: true, Write: true}
-		case strings.Contains(name, "get"), strings.Contains(name, "list"), strings.Contains(name, "query"), strings.Contains(name, "search"), strings.Contains(name, "read"), strings.Contains(name, "stats"), strings.Contains(name, "neighbor"), strings.Contains(name, "path"), strings.Contains(name, "node"), strings.Contains(name, "community"):
-			permissionClass = "read"
-			capabilities = toolCapabilities{Read: true}
-		}
-	}
-	if boolAnnotation(tool.Annotations, "openWorldHint") {
-		capabilities.Network = true
-		if permissionClass == "read" {
-			permissionClass = "network"
-		}
-	}
+	capabilities := toolCapabilities{Read: true, Write: true, Execute: true, Network: true}
 	id := "mcp." + config.ID + "." + normalizeMCPToolComponent(tool.Name)
 	description := strings.TrimSpace(tool.Description)
-	if description == "" { description = "Tool discovered from the " + config.Name + " MCP plugin." }
+	if description == "" {
+		description = "Tool discovered from the " + config.Name + " MCP plugin."
+	}
 	return toolDescriptor{
 		ID: id, RuntimeIDs: []string{id}, Name: firstSessionString(tool.Title, tool.Name),
 		Description: description, Category: "plugin", PermissionClass: permissionClass,
@@ -433,25 +445,33 @@ func (c *mcpClient) rebuildToolIndexLocked() {
 }
 
 func (c *mcpClient) Tools() []mcpTool {
-	c.mu.RLock(); defer c.mu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return append([]mcpTool(nil), c.tools...)
 }
 func (c *mcpClient) Resources() []mcpResource {
-	c.mu.RLock(); defer c.mu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return append([]mcpResource(nil), c.resources...)
 }
 func (c *mcpClient) ToolIDs() []string {
-	c.mu.RLock(); defer c.mu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	ids := make([]string, 0, len(c.toolIDs))
-	for id := range c.toolIDs { ids = append(ids, id) }
+	for id := range c.toolIDs {
+		ids = append(ids, id)
+	}
 	sort.Strings(ids)
 	return ids
 }
 func (c *mcpClient) ToolDescriptors() []toolDescriptor {
-	c.mu.RLock(); defer c.mu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	result := make([]toolDescriptor, 0, len(c.descriptors))
-	for _, descriptor := range c.descriptors { result = append(result, descriptor) }
-	sort.Slice(result, func(i,j int) bool { return result[i].ID < result[j].ID })
+	for _, descriptor := range c.descriptors {
+		result = append(result, descriptor)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
 	return result
 }
 func (c *mcpClient) ToolDefinitions() []nativeModelToolDefinition {
@@ -459,15 +479,20 @@ func (c *mcpClient) ToolDefinitions() []nativeModelToolDefinition {
 	result := make([]nativeModelToolDefinition, 0, len(descriptors))
 	for _, descriptor := range descriptors {
 		schema := descriptor.InputSchema
-		if schema == nil { schema = map[string]any{"type":"object"} }
-		result = append(result, nativeModelToolDefinition{ID:descriptor.ID, Name:descriptor.Name, Description:descriptor.Description, InputSchema:schema})
+		if schema == nil {
+			schema = map[string]any{"type": "object"}
+		}
+		result = append(result, nativeModelToolDefinition{ID: descriptor.ID, Name: descriptor.Name, Description: descriptor.Description, InputSchema: schema})
 	}
 	return result
 }
 func (c *mcpClient) ResolveTool(id string) (toolDescriptor, string, bool) {
-	c.mu.RLock(); defer c.mu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	name, ok := c.toolIDs[id]
-	if !ok { return toolDescriptor{}, "", false }
+	if !ok {
+		return toolDescriptor{}, "", false
+	}
 	return c.descriptors[id], name, true
 }
 
@@ -482,11 +507,13 @@ func (c *mcpClient) callToolWithTimeout(ctx context.Context, name string, argume
 		StructuredContent any              `json:"structuredContent,omitempty"`
 		IsError           bool             `json:"isError,omitempty"`
 	}
-	if err := c.request(callCtx, "tools/call", map[string]any{"name":name,"arguments":arguments}, &result); err != nil {
+	if err := c.request(callCtx, "tools/call", map[string]any{"name": name, "arguments": arguments}, &result); err != nil {
 		return nil, err
 	}
 	output := map[string]any{"content": result.Content}
-	if result.StructuredContent != nil { output["structuredContent"] = result.StructuredContent }
+	if result.StructuredContent != nil {
+		output["structuredContent"] = result.StructuredContent
+	}
 	if result.IsError {
 		return output, errors.New("MCP tool returned an error result")
 	}
@@ -508,7 +535,9 @@ func (c *mcpClient) Close() {
 	stdin := c.stdin
 	cmd := c.cmd
 	c.mu.Unlock()
-	if stdin != nil { _ = stdin.Close() }
+	if stdin != nil {
+		_ = stdin.Close()
+	}
 	if cmd == nil || cmd.Process == nil {
 		c.mu.Lock()
 		select {
@@ -524,12 +553,12 @@ func (c *mcpClient) Close() {
 	case <-c.done:
 	case <-time.After(2 * time.Second):
 		_ = cmd.Process.Kill()
-        // On Windows, Process.Kill may return before the OS releases the
-        // executable's image handle. Wait for cmd.Wait to reap it so users
-        // (and temp-directory cleanup) can safely replace or remove plugins.
-        select {
-        case <-c.done:
-        case <-time.After(3 * time.Second):
-        }
+		// On Windows, Process.Kill may return before the OS releases the
+		// executable's image handle. Wait for cmd.Wait to reap it so users
+		// (and temp-directory cleanup) can safely replace or remove plugins.
+		select {
+		case <-c.done:
+		case <-time.After(3 * time.Second):
+		}
 	}
 }

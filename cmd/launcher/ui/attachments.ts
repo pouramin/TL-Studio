@@ -6,8 +6,8 @@ import { K } from "./kernel";
   
   if (!K || K.__attachmentsInstalled) return;
 
-  const MAX_FILE_BYTES = 10 * 1024 * 1024;
-  const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+  const MAX_FILE_BYTES = 256 * 1024;
+  const MAX_TOTAL_BYTES = 1024 * 1024;
   const MAX_FILES = 8;
   const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
   const TEXT_MIMES = new Set([
@@ -61,7 +61,7 @@ import { K } from "./kernel";
   attachmentInput.multiple = true;
   attachmentInput.hidden = true;
   attachmentInput.accept = [
-    "image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "text/*",
+    "text/*",
     ".md", ".mdx", ".json", ".jsonl", ".yaml", ".yml", ".toml", ".xml", ".csv",
     ".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".rs", ".java", ".c", ".cpp", ".h",
     ".css", ".html", ".sql", ".sh", ".ps1", ".diff", ".patch", ".env",
@@ -173,8 +173,8 @@ import { K } from "./kernel";
         break;
       }
       const mime = normalizeMime(file);
-      if (!mime) {
-        errors.push(`${file.name}: unsupported file type. Use images, PDF, or text/code files.`);
+      if (!mime || mime === "application/pdf" || mime.startsWith("image/")) {
+        errors.push(`${file.name}: only text/code attachments are currently supported; images and PDFs are not sent to the model.`);
         continue;
       }
       if (file.size > MAX_FILE_BYTES) {
@@ -328,6 +328,7 @@ import { K } from "./kernel";
       K.startSessionPolling(startedAt);
     } catch (err) {
       K.state.sending = false;
+      if (!K.els.prompt.value) K.els.prompt.value = text;
       K.showError((err as any).message || String(err));
       K.renderMessages();
     } finally {

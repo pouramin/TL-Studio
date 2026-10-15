@@ -17,6 +17,7 @@ const (
 )
 
 type persistedSessionPendingRun struct {
+	OwnerPID  int    `json:"ownerPID,omitempty"`
 	MessageID string `json:"messageID,omitempty"`
 	StartedAt int64  `json:"startedAt"`
 }

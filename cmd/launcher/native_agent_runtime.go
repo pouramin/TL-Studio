@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 	"sync"
@@ -13,12 +14,12 @@ import (
 )
 
 const (
-	nativeAgentMaxIterations      = 32
-	nativeAgentMaxToolRounds      = 24
-	nativeAgentMaxToolsPerRound   = 16
-	nativeAgentMaxRepeatedCalls       = 4
-	nativeAgentModelTurnTimeout       = 4 * time.Minute
-	nativeAgentLayaModelTurnTimeout   = 6 * time.Minute
+	nativeAgentMaxIterations        = 32
+	nativeAgentMaxToolRounds        = 24
+	nativeAgentMaxToolsPerRound     = 16
+	nativeAgentMaxRepeatedCalls     = 4
+	nativeAgentModelTurnTimeout     = 4 * time.Minute
+	nativeAgentLayaModelTurnTimeout = 6 * time.Minute
 )
 
 type nativeModelResolver interface {
@@ -31,13 +32,16 @@ type nativeRunHandle struct {
 }
 
 type nativeAgentRuntime struct {
-	resolver          nativeModelResolver
-	model             nativeModelClient
-	tools             *nativeToolExecutor
-	store             *sessionPersistenceStore
-	events            *liveEventBus
-	requestRouter     nativeRequestRouter
-	modelTurnTimeout  time.Duration
+	appContext       context.Context
+	closed           bool
+	runWG            sync.WaitGroup
+	resolver         nativeModelResolver
+	model            nativeModelClient
+	tools            *nativeToolExecutor
+	store            *sessionPersistenceStore
+	events           *liveEventBus
+	requestRouter    nativeRequestRouter
+	modelTurnTimeout time.Duration
 
 	mu   sync.Mutex
 	runs map[string]nativeRunHandle
@@ -51,10 +55,10 @@ func newNativeAgentRuntime(
 	events *liveEventBus,
 ) *nativeAgentRuntime {
 	return &nativeAgentRuntime{
-		resolver: resolver,
-		model:    model,
-		tools:    tools,
-		store:    store,
+		resolver:         resolver,
+		model:            model,
+		tools:            tools,
+		store:            store,
 		events:           events,
 		modelTurnTimeout: nativeAgentModelTurnTimeout,
 		runs:             map[string]nativeRunHandle{},
@@ -100,11 +104,20 @@ func (r *nativeAgentRuntime) Start(directory, sessionID string, input sessionRun
 	}
 
 	r.mu.Lock()
+	if r.closed {
+		r.mu.Unlock()
+		return errors.New("native Agent is shutting down")
+	}
 	if _, running := r.runs[sessionID]; running {
 		r.mu.Unlock()
 		return errors.New("session already has an active native run")
 	}
-	runCtx, cancel := context.WithCancel(context.Background())
+	parent := r.appContext
+	if parent == nil {
+		parent = context.Background()
+	}
+	runCtx, cancel := context.WithCancel(parent)
+	r.runWG.Add(1)
 	r.runs[sessionID] = nativeRunHandle{cancel: cancel, directory: directory}
 	r.mu.Unlock()
 
@@ -141,6 +154,7 @@ func (r *nativeAgentRuntime) finishRun(sessionID string) {
 	}
 	r.mu.Lock()
 	delete(r.runs, strings.TrimSpace(sessionID))
+	r.runWG.Done()
 	r.mu.Unlock()
 }
 
@@ -194,6 +208,11 @@ func nativeConversationFromMessages(messages []sessionMessageView) []nativeConve
 			continue
 		}
 		text := strings.TrimSpace(message.Text)
+		for _, attachment := range message.Attachments {
+			if attachment.Text != "" {
+				text += "\n\nAttached text file: " + attachment.Name + "\n" + attachment.Text
+			}
+		}
 		if text == "" && message.Role == "assistant" && message.Error != nil {
 			errorType := strings.ToLower(strings.TrimSpace(message.Error.Type))
 			errorText := strings.ToLower(strings.TrimSpace(message.Error.Message))
@@ -266,24 +285,24 @@ func nativeRequestRouteActivity(selection nativeRouteSelection) sessionActivityV
 		Title:  "Routed by " + routerName,
 		Model:  &sessionModelRef{ProviderID: selection.ProviderID, ID: selection.ModelID},
 		Metadata: map[string]any{
-			"source":        source,
-			"routerName":     routerName,
+			"source":           source,
+			"routerName":       routerName,
 			"routerProviderID": selection.RouterProviderID,
-			"routerModelID": selection.RouterModelID,
-			"providerName":  selection.ProviderName,
-			"modelName":     selection.ModelName,
-			"profile":       selection.Profile,
-			"group":         selection.Group,
-			"quality":       selection.Quality,
-			"speed":         selection.Speed,
-			"reason":        selection.Reason,
-			"difficulty":    selection.Analysis.Difficulty,
-			"domain":        selection.Analysis.Domain,
-			"needsTools":    selection.Analysis.NeedsTools,
-			"sensitive":     selection.Analysis.Sensitive,
-			"layaCheckpoint": selection.Analysis.Checkpoint,
-			"layaReason":    selection.Analysis.LayaReason,
-			"routerLatencyMs": selection.Analysis.LatencyMS,
+			"routerModelID":    selection.RouterModelID,
+			"providerName":     selection.ProviderName,
+			"modelName":        selection.ModelName,
+			"profile":          selection.Profile,
+			"group":            selection.Group,
+			"quality":          selection.Quality,
+			"speed":            selection.Speed,
+			"reason":           selection.Reason,
+			"difficulty":       selection.Analysis.Difficulty,
+			"domain":           selection.Analysis.Domain,
+			"needsTools":       selection.Analysis.NeedsTools,
+			"sensitive":        selection.Analysis.Sensitive,
+			"layaCheckpoint":   selection.Analysis.Checkpoint,
+			"layaReason":       selection.Analysis.LayaReason,
+			"routerLatencyMs":  selection.Analysis.LatencyMS,
 		},
 	}
 }
@@ -321,11 +340,17 @@ func (e *nativeRoutedRunError) Unwrap() error {
 }
 
 func nativeErrorWithActivities(cause error, groups ...[]sessionActivityView) error {
-	if cause == nil { return nil }
+	if cause == nil {
+		return nil
+	}
 	var activities []sessionActivityView
-	for _, group := range groups { activities = append(activities, group...) }
-	if len(activities) == 0 { return cause }
-	return &nativeRoutedRunError{cause:cause,activities:activities}
+	for _, group := range groups {
+		activities = append(activities, group...)
+	}
+	if len(activities) == 0 {
+		return cause
+	}
+	return &nativeRoutedRunError{cause: cause, activities: activities}
 }
 
 func nativeRoutingPrompt(input sessionRunInput) string {
@@ -417,10 +442,10 @@ func nativeAgentTurnSystemPrompt(prompt string, retryExecution bool) string {
 
 func nativeToolResultMessage(result nativeToolResult) string {
 	payload := map[string]any{
-		"ok":      result.Error == "",
-		"toolID":  result.ToolID,
-		"callID":  result.CallID,
-		"output":  result.Output,
+		"ok":         result.Error == "",
+		"toolID":     result.ToolID,
+		"callID":     result.CallID,
+		"output":     result.Output,
 		"changes":    result.Changes,
 		"durationMs": result.Duration,
 	}
@@ -501,16 +526,18 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 	// checkpoint with no executable tools. Failure of that last request never
 	// discards earlier persisted tool results.
 	writeBudgetCheckpoint := func(reason string) error {
-		if err := ctx.Err(); err != nil { return err }
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		prompt := nativeRunBudgetReportPrompt(reason)
 		turnCtx, cancel := context.WithTimeout(ctx, nativeRunTurnTimeout(input, r.modelRequestTimeout(routeSelection != nil, executionRequired)))
 		defer cancel()
 		summary, summaryErr := r.model.Complete(turnCtx, nativeModelRequest{
-			System: "You are preparing a truthful checkpoint of unfinished work. Never claim success without verification. " + prompt,
+			System:   "You are preparing a truthful checkpoint of unfinished work. Never claim success without verification. " + prompt,
 			Provider: provider, Model: model, APIKey: apiKey,
 			CacheKey: "tlstudio-" + sessionID,
 			Messages: nativeCheckpointConversation(conversation, routingPrompt),
-			Tools: nil, ToolsDisabled: true,
+			Tools:    nil, ToolsDisabled: true,
 		}, nil)
 		text := fmt.Sprintf("TL Studio paused this Agent run: %s. The task is not verified complete. Earlier file changes are preserved.", reason)
 		if summaryErr == nil && len(summary.ToolCalls) == 0 && strings.TrimSpace(summary.Text) != "" {
@@ -559,20 +586,24 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				}
 			}
 			if contextPlan.OverBudget {
-				return nativeErrorWithActivities(fmt.Errorf("native Agent request exceeds model context (%d estimated tokens vs %d limit); narrow the task or shorten the latest tool result", contextPlan.EstimatedRequestTokens, contextPlan.ContextLimit),contextActivitiesPending,routeActivitiesPending)
+				return nativeErrorWithActivities(fmt.Errorf("native Agent request exceeds model context (%d estimated tokens vs %d limit); narrow the task or shorten the latest tool result", contextPlan.EstimatedRequestTokens, contextPlan.ContextLimit), contextActivitiesPending, routeActivitiesPending)
 			}
-			lastEstimatedInput = int64(nativeContextEstimatedInputTokens(contextPlan,model))
+			lastEstimatedInput = int64(nativeContextEstimatedInputTokens(contextPlan, model))
 			maxRunTokens := int64(nativeContextRunTokenBudget(model))
-			if input.MaxRunTokens > 0 && input.MaxRunTokens < maxRunTokens { maxRunTokens = input.MaxRunTokens }
+			if input.MaxRunTokens > 0 && input.MaxRunTokens < maxRunTokens {
+				maxRunTokens = input.MaxRunTokens
+			}
 			if runTokens > 0 && runTokens+lastEstimatedInput > maxRunTokens {
-				return writeBudgetCheckpoint(fmt.Sprintf("run token budget %d reached (estimated next turn %d)",maxRunTokens,lastEstimatedInput))
+				return writeBudgetCheckpoint(fmt.Sprintf("run token budget %d reached (estimated next turn %d)", maxRunTokens, lastEstimatedInput))
 			}
 			modelTurnTimeout := nativeRunTurnTimeout(input, r.modelRequestTimeout(routeSelection != nil, executionRequired))
 			modelCtx, cancelModel := context.WithTimeout(ctx, modelTurnTimeout)
 			var idleExceeded atomic.Bool
 			var idleTimer *time.Timer
 			pingIdle := func() {
-				if idleTimer != nil { idleTimer.Reset(nativeRunIdleTimeout(input)) }
+				if idleTimer != nil {
+					idleTimer.Reset(nativeRunIdleTimeout(input))
+				}
 			}
 			// Idle watchdog is meaningful only for streamed protocols.
 			if idle := nativeRunIdleTimeout(input); idle > 0 &&
@@ -580,20 +611,15 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 				idleTimer = time.AfterFunc(idle, func() { idleExceeded.Store(true); cancelModel() })
 			}
 			response, err = r.model.Complete(modelCtx, nativeModelRequest{
-				System: systemPrompt,
+				System:   systemPrompt,
 				Provider: provider, Model: model, APIKey: apiKey,
 				CacheKey: "tlstudio-" + sessionID,
 				Messages: contextPlan.Messages,
-				Tools: tools, OnStreamActivity: pingIdle,
-			}, func(delta string) {
-				pingIdle()
-				if delta != "" {
-					r.publish(liveEventView{
-						Type: "message.changed", Action: "content", SessionID: sessionID,
-					})
-				}
-			})
-			if idleTimer != nil { idleTimer.Stop() }
+				Tools:    tools, OnStreamActivity: pingIdle,
+			}, func(delta string) { pingIdle() })
+			if idleTimer != nil {
+				idleTimer.Stop()
+			}
 			cancelModel()
 			if idleExceeded.Load() && ctx.Err() == nil {
 				err = fmt.Errorf("model stream idle for more than %s", nativeRunIdleTimeout(input))
@@ -657,7 +683,7 @@ func (r *nativeAgentRuntime) runLoop(ctx context.Context, directory, sessionID s
 		if turnTokens == 0 {
 			// Some bridges omit usage. Conservative fallback prevents a
 			// disabled accounting path from bypassing the run safety cap.
-			turnTokens = lastEstimatedInput + int64(nativeEstimateConversationMessageTokens(nativeConversationMessage{Role:"assistant",Text:response.Text,ToolCalls:response.ToolCalls}))
+			turnTokens = lastEstimatedInput + int64(nativeEstimateConversationMessageTokens(nativeConversationMessage{Role: "assistant", Text: response.Text, ToolCalls: response.ToolCalls}))
 		}
 		runTokens += turnTokens
 		if len(response.ToolCalls) == 0 {
@@ -757,7 +783,7 @@ func (r *nativeAgentRuntime) persistFailure(directory, sessionID string, input s
 	if errors.As(runErr, &routedErr) && routedErr != nil {
 		activities = append(activities, routedErr.activities...)
 	}
-	_ = r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
+	if persistErr := r.store.putNativeFinalMessage(sessionID, directory, sessionMessageView{
 		ID:          "tlsm_" + messageID,
 		SessionID:   sessionID,
 		Role:        "assistant",
@@ -770,6 +796,25 @@ func (r *nativeAgentRuntime) persistFailure(directory, sessionID string, input s
 		Attachments: []sessionAttachmentView{},
 		Usage:       sessionUsage{},
 		Changes:     []sessionChangeView{},
-	})
+	}); persistErr != nil {
+		log.Printf("session failure persistence failed session=%q error=%v", sessionID, persistErr)
+		r.publish(liveEventView{Type: "storage.error", SessionID: sessionID, Action: "failed"})
+		return
+	}
 	r.publish(liveEventView{Type: "message.changed", Action: "changed", SessionID: sessionID})
+}
+
+func (r *nativeAgentRuntime) Close() {
+	r.mu.Lock()
+	r.closed = true
+	for _, run := range r.runs {
+		run.cancel()
+	}
+	r.mu.Unlock()
+	done := make(chan struct{})
+	go func() { r.runWG.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+	}
 }

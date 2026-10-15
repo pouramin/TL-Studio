@@ -30,6 +30,15 @@ func TestDurableSessionRecoversInterruptedRunOnceWithoutReplaying(t *testing.T) 
 	}); err != nil {
 		t.Fatal(err)
 	}
+	// Model a dead owner explicitly; another store in this process is not a crash.
+	snapshot, err := s.loadSnapshotLocked(session.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot.PendingRun.OwnerPID = -1
+	if err := s.saveSnapshotLocked(snapshot); err != nil {
+		t.Fatal(err)
+	}
 	// A new store simulates a fresh process with no surviving in-memory run.
 	restored := newSessionPersistenceStore(dir, "test")
 	messages, ok, err := restored.getMessages(session.ID)

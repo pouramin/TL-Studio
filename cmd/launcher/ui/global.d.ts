@@ -463,7 +463,7 @@ interface TLStudioProductAPI {
       onEvent?: (event: TLStudioLiveEvent) => void;
       onOpen?: (event: Event) => void;
       onError?: (event: Event) => void;
-    }): EventSource;
+    }): { close(): void; readyState: number };
   };
 }
 
@@ -534,7 +534,7 @@ interface TLStudioState {
   providerDefaults: Record<string, string>;
   connectedProviders: Set<string>;
   providerAccounts: TLStudioProviderAccount[];
-  eventSource: EventSource | null;
+  eventSource: { close(): void; readyState: number } | null;
   fallbackPolling: TLStudioTimer;
   sessionPolling: TLStudioTimer;
   sending: boolean;
@@ -578,6 +578,7 @@ interface TLStudioKernel {
   api: TLStudioProductAPI;
 
   ensureLocalAuth(): Promise<void>;
+  localFetch(path: string, options?: RequestInit): Promise<Response>;
   request<T = any>(path: string, options?: RequestInit): Promise<T>;
   basename(path?: string): string;
   formatTime(input?: string | number | Date): string;

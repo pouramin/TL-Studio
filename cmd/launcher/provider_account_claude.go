@@ -117,8 +117,8 @@ func claudeWindowsNodeBackedCommand(path, source string) (claudeCommand, bool) {
 	if info, err := os.Stat(script); err == nil && !info.IsDir() {
 		return claudeCommand{
 			Executable: node,
-			PrefixArgs: []string{script, "--yes", "@anthropic-ai/claude-code"},
-			Source: source + "-node",
+			PrefixArgs: []string{script, "--yes", "@anthropic-ai/claude-code@2.1.300"},
+			Source:     source + "-node",
 		}, true
 	}
 	return claudeCommand{}, false
@@ -142,13 +142,13 @@ func claudeCredentialSafeEnvironment() ([]string, error) {
 		return nil, fmt.Errorf("create isolated Claude config directory: %w", err)
 	}
 	blocked := map[string]bool{
-		"ANTHROPIC_API_KEY": true,
-		"ANTHROPIC_AUTH_TOKEN": true,
-		"ANTHROPIC_BASE_URL": true,
-		"ANTHROPIC_PROFILE": true,
+		"ANTHROPIC_API_KEY":       true,
+		"ANTHROPIC_AUTH_TOKEN":    true,
+		"ANTHROPIC_BASE_URL":      true,
+		"ANTHROPIC_PROFILE":       true,
 		"CLAUDE_CODE_OAUTH_TOKEN": true,
 		"CLAUDE_CODE_USE_BEDROCK": true,
-		"CLAUDE_CODE_USE_VERTEX": true,
+		"CLAUDE_CODE_USE_VERTEX":  true,
 		"CLAUDE_CODE_USE_FOUNDRY": true,
 	}
 	env := make([]string, 0, len(os.Environ())+2)
@@ -211,15 +211,15 @@ type claudeAccountAdapter struct {
 
 func newClaudeAccountAdapter(state *appState, manager *providerManager) *claudeAccountAdapter {
 	return &claudeAccountAdapter{
-		state: state,
+		state:   state,
 		manager: manager,
-		logins: map[string]*claudeLoginTransaction{},
+		logins:  map[string]*claudeLoginTransaction{},
 	}
 }
 
-func (a *claudeAccountAdapter) ID() string { return claudeAccountProviderID }
+func (a *claudeAccountAdapter) ID() string                { return claudeAccountProviderID }
 func (a *claudeAccountAdapter) RuntimeProviderID() string { return claudeAccountRuntimeProviderID }
-func (a *claudeAccountAdapter) Protocol() string { return claudeAccountProviderProtocol }
+func (a *claudeAccountAdapter) Protocol() string          { return claudeAccountProviderProtocol }
 
 func (a *claudeAccountAdapter) resolveCommand() (claudeCommand, error) {
 	if override := strings.TrimSpace(os.Getenv("TL_STUDIO_CLAUDE_EXECUTABLE")); override != "" {
@@ -247,8 +247,8 @@ func (a *claudeAccountAdapter) resolveCommand() (claudeCommand, error) {
 		}
 		return claudeCommand{
 			Executable: path,
-			PrefixArgs: []string{"--yes", "@anthropic-ai/claude-code"},
-			Source: "npx",
+			PrefixArgs: []string{"--yes", "@anthropic-ai/claude-code@2.1.300"},
+			Source:     "npx",
 		}, nil
 	}
 	return claudeCommand{}, errors.New("official Claude Code CLI is not installed; install Claude Code or configure its executable path")
@@ -258,23 +258,23 @@ func (a *claudeAccountAdapter) setupSummary() *providerAccountSetupSummary {
 	_, commandErr := a.resolveCommand()
 	return &providerAccountSetupSummary{
 		Configurable: true,
-		Configured: commandErr == nil,
-		Label: "Claude Code setup",
+		Configured:   commandErr == nil,
+		Label:        "Claude Code setup",
 	}
 }
 
 func (a *claudeAccountAdapter) baseStatus() providerAccountStatus {
 	_, commandErr := a.resolveCommand()
 	status := providerAccountStatus{
-		ID: claudeAccountProviderID,
-		Name: "Claude Code (Pro/Max)",
-		Description: "Connect a Claude Pro, Max, Team, or Enterprise account through Anthropic's official Claude Code browser login.",
-		Available: commandErr == nil,
-		State: providerAccountDisconnected,
-		AuthModes: []string{"claudeai"},
+		ID:           claudeAccountProviderID,
+		Name:         "Claude Code (Pro/Max)",
+		Description:  "Connect a Claude Pro, Max, Team, or Enterprise account through Anthropic's official Claude Code browser login.",
+		Available:    commandErr == nil,
+		State:        providerAccountDisconnected,
+		AuthModes:    []string{"claudeai"},
 		Capabilities: []string{"models", "inference"},
-		BillingNote: "Account-backed usage follows the connected Claude subscription. Anthropic API-key billing remains a separate optional connection.",
-		Setup: a.setupSummary(),
+		BillingNote:  "Account-backed usage follows the connected Claude subscription. Anthropic API-key billing remains a separate optional connection.",
+		Setup:        a.setupSummary(),
 	}
 	if commandErr != nil {
 		status.Error = commandErr.Error()
@@ -344,12 +344,12 @@ func (a *claudeAccountAdapter) syncProvider(payload claudeAuthStatusPayload) ([]
 	}
 	models := claudeSubscriptionModels()
 	definition := tlProviderDefinition{
-		ID: claudeAccountRuntimeProviderID,
-		Name: "Claude / Account",
-		Protocol: claudeAccountProviderProtocol,
-		BaseURL: claudeAccountBaseURL,
+		ID:        claudeAccountRuntimeProviderID,
+		Name:      "Claude / Account",
+		Protocol:  claudeAccountProviderProtocol,
+		BaseURL:   claudeAccountBaseURL,
 		ManagedBy: "account",
-		Models: models,
+		Models:    models,
 	}
 	if existing, found, err := a.manager.store.get(claudeAccountRuntimeProviderID); err != nil {
 		return nil, err
@@ -440,15 +440,15 @@ func (a *claudeAccountAdapter) Setup(context.Context, string) (providerAccountSe
 		value = override
 	}
 	return providerAccountSetup{
-		Title: "Claude Code setup",
+		Title:       "Claude Code setup",
 		Description: "TL Studio uses Anthropic's official Claude Code CLI for browser sign-in and subscription-backed model access. If claude is already on PATH, or npx is available, no custom path is required.",
 		Fields: []providerAccountSetupField{{
-			ID: "claudeExecutable",
-			Label: "Claude Code executable",
+			ID:          "claudeExecutable",
+			Label:       "Claude Code executable",
 			Description: "Optional path or command for the official Claude Code CLI. Leave empty to auto-detect claude or use npx @anthropic-ai/claude-code.",
 			Placeholder: "claude",
-			Value: value,
-			ReadOnly: readOnly,
+			Value:       value,
+			ReadOnly:    readOnly,
 		}},
 	}, nil
 }
@@ -498,9 +498,9 @@ func (a *claudeAccountAdapter) BeginLogin(context.Context, string) (providerAcco
 	cmd.Stdout = output
 	cmd.Stderr = output
 	transaction := &claudeLoginTransaction{
-		LoginID: loginID,
-		Command: cmd,
-		Output: output,
+		LoginID:   loginID,
+		Command:   cmd,
+		Output:    output,
 		ExpiresAt: expiresAt,
 	}
 	if err := cmd.Start(); err != nil {
@@ -521,10 +521,10 @@ func (a *claudeAccountAdapter) BeginLogin(context.Context, string) (providerAcco
 		a.mu.Unlock()
 	}()
 	return providerAccountLogin{
-		LoginID: loginID,
-		Flow: "claude_browser",
-		Instructions: "Claude Code opened the Anthropic sign-in page in your browser. Complete the Claude.ai authorization there; TL Studio will detect the connected account automatically.",
-		ExpiresAt: expiresAt.Format(time.RFC3339),
+		LoginID:             loginID,
+		Flow:                "claude_browser",
+		Instructions:        "Claude Code opened the Anthropic sign-in page in your browser. Complete the Claude.ai authorization there; TL Studio will detect the connected account automatically.",
+		ExpiresAt:           expiresAt.Format(time.RFC3339),
 		PollIntervalSeconds: 2,
 	}, nil
 }

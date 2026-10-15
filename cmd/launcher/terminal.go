@@ -19,6 +19,7 @@ const (
 )
 
 type processManager struct {
+	closed    bool
 	mu        sync.RWMutex
 	projectFn func() string
 	processes map[string]*managedProcess
@@ -94,10 +95,15 @@ func (m *processManager) startInDirectory(command, cwd string) (*managedProcess,
 	cmd.Stdout = processOutputWriter{process: p}
 	cmd.Stderr = processOutputWriter{process: p}
 	p.cmd = cmd
+	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return nil, errors.New("process manager is shutting down")
+	}
 	if err := cmd.Start(); err != nil {
+		m.mu.Unlock()
 		return nil, fmt.Errorf("start command: %w", err)
 	}
-	m.mu.Lock()
 	m.processes[id] = p
 	m.mu.Unlock()
 	go func() {
@@ -239,4 +245,25 @@ func registerLocalProcessRoutesWithManager(mux *http.ServeMux, state *appState, 
 		w.WriteHeader(http.StatusNoContent)
 	})
 	registerLivePreviewRoutes(mux, state)
+}
+
+func (m *processManager) Close() {
+	m.mu.Lock()
+	m.closed = true
+	processes := make([]*managedProcess, 0, len(m.processes))
+	for _, process := range m.processes {
+		processes = append(processes, process)
+	}
+	m.mu.Unlock()
+	for _, process := range processes {
+		_ = m.stop(process.id)
+	}
+	deadline := time.After(4 * time.Second)
+	for _, process := range processes {
+		select {
+		case <-process.done:
+		case <-deadline:
+			return
+		}
+	}
 }

@@ -8,3 +8,5 @@ Thumbs.db
 /cmd/launcher/web/monaco-editor.css
 /cmd/launcher/web/monaco-*-worker.js
 /cmd/launcher/web/monaco-*.ttf
+
+/node_modules/

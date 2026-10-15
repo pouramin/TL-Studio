@@ -3,6 +3,13 @@
 **Status:** architecture decision / IMPLEMENTATION NOT DONE. Blocking PR #178 acceptance.
 **Baseline:** dev `05efaaaf7965b39a834a1d12861d885cb6234275`; working PR #178 `hardening/foundation-acceptance-070`. No feature work and no changes to `main`.
 
+**Development update:** The SQLite candidate now exists behind
+`TL_STUDIO_SQLITE_SESSIONS=1`. A lifetime OS lock prevents two launcher processes
+from owning the same state directory, and live pending-run owners are excluded
+from crash recovery. These mitigate concurrent launchers; they do not make the
+legacy JSON snapshot/index pair crash-atomic or complete SQLite qualification.
+See [DEV_HARDENING.md](DEV_HARDENING.md) for the current scope and follow-ups.
+
 ## Incident and current invariants
 
 An independent isolated audit reproduced failures despite the PR #178 staged snapshot + index + compensating rollback:

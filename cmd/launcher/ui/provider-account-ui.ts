@@ -775,7 +775,7 @@ import { K } from "./kernel";
   };
 
   const claudeWebRelayFetch = async (path: string, init?: RequestInit) => {
-    const response = await fetch(path, {
+    const response = await K.localFetch(path, {
       cache: "no-store",
       credentials: "same-origin",
       ...init,

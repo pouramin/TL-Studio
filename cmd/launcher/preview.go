@@ -1,16 +1,16 @@
 package main
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"mime"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	pathpkg "path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -53,7 +53,11 @@ type previewManager struct {
 var previewURLPattern = regexp.MustCompile(`https?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):[0-9]+`)
 
 func newPreviewManager(state *appState) *previewManager {
-	return &previewManager{state: state, processes: newProcessManager(state.projectPath)}
+	manager := &previewManager{state: state, processes: newProcessManager(state.projectPath)}
+	if state.ctx != nil {
+		go func() { <-state.ctx.Done(); manager.stop(); manager.processes.Close() }()
+	}
+	return manager
 }
 
 func projectDevCommand(project string) string {

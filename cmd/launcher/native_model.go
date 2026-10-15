@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha256"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,17 +39,16 @@ type nativeConversationMessage struct {
 }
 
 type nativeModelRequest struct {
-	System   string
-	Provider tlProviderDefinition
-	Model    tlProviderModel
-	APIKey   string
-	CacheKey string
-	Messages []nativeConversationMessage
-	Tools    []nativeModelToolDefinition
-	ToolsDisabled bool
+	System           string
+	Provider         tlProviderDefinition
+	Model            tlProviderModel
+	APIKey           string
+	CacheKey         string
+	Messages         []nativeConversationMessage
+	Tools            []nativeModelToolDefinition
+	ToolsDisabled    bool
 	OnStreamActivity func()
 }
-
 
 type nativeModelResponse struct {
 	Text         string
@@ -76,7 +75,7 @@ type nativeHTTPModelClient struct {
 func newNativeModelClient(bridges ...nativeModelBridge) nativeModelClient {
 	client := &nativeHTTPModelClient{
 		httpClient: &http.Client{Timeout: 0},
-		bridges: map[string]nativeModelBridge{},
+		bridges:    map[string]nativeModelBridge{},
 	}
 	for _, bridge := range bridges {
 		if bridge == nil {
@@ -248,7 +247,9 @@ func modelHTTPError(response *http.Response, request nativeModelRequest) error {
 		}
 		return errors.New("Model provider rate limit reached (429). Retry later or select another available model.")
 	}
-	if len(detail) > 768 { detail = detail[:768] + "…" }
+	if len(detail) > 768 {
+		detail = detail[:768] + "…"
+	}
 	return fmt.Errorf("model request failed with status %d: %s", response.StatusCode, detail)
 }
 
@@ -324,6 +325,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 		"model":    request.Model.ID,
 		"messages": openAIChatMessages(request),
 		"stream":   true,
+		nativeChatOutputParameter(request.Provider): nativeModelOutputLimit(request.Model),
 	}
 	if isOfficialMistralBaseURL(request.Provider.BaseURL) {
 		if cacheKey := strings.TrimSpace(request.CacheKey); cacheKey != "" {
@@ -349,17 +351,25 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 	}
 
 	var result nativeModelResponse
+	var answer strings.Builder
+	completed := false
 	toolParts := map[int]*openAIStreamToolAccumulator{}
-	scanner := bufio.NewScanner(response.Body)
+	scanner := bufio.NewScanner(&boundedModelStream{reader: response.Body})
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	for scanner.Scan() {
-		if request.OnStreamActivity != nil { request.OnStreamActivity() }
+		if request.OnStreamActivity != nil {
+			request.OnStreamActivity()
+		}
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
 		}
 		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "" || data == "[DONE]" {
+		if data == "[DONE]" {
+			completed = true
+			break
+		}
+		if data == "" {
 			continue
 		}
 		var event struct {
@@ -379,15 +389,15 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 				FinishReason string `json:"finish_reason"`
 			} `json:"choices"`
 			Usage struct {
-				PromptTokens     int64 `json:"prompt_tokens"`
-				CompletionTokens int64 `json:"completion_tokens"`
+				PromptTokens        int64 `json:"prompt_tokens"`
+				CompletionTokens    int64 `json:"completion_tokens"`
 				PromptTokensDetails struct {
 					CachedTokens int64 `json:"cached_tokens"`
 				} `json:"prompt_tokens_details"`
 			} `json:"usage"`
 		}
-		if json.Unmarshal([]byte(data), &event) != nil {
-			continue
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			return nativeModelResponse{}, fmt.Errorf("invalid model stream JSON: %w", err)
 		}
 		if event.Usage.PromptTokens > 0 {
 			cached := event.Usage.PromptTokensDetails.CachedTokens
@@ -405,7 +415,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 		}
 		for _, choice := range event.Choices {
 			if choice.Delta.Content != "" {
-				result.Text += choice.Delta.Content
+				answer.WriteString(choice.Delta.Content)
 				if onTextDelta != nil {
 					onTextDelta(choice.Delta.Content)
 				}
@@ -426,11 +436,18 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 			}
 			if choice.FinishReason != "" {
 				result.FinishReason = choice.FinishReason
+				completed = true
 			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nativeModelResponse{}, err
+	}
+	if !completed {
+		return nativeModelResponse{}, errors.New("model stream ended before completion")
+	}
+	if result.FinishReason == "length" {
+		return nativeModelResponse{}, errors.New("model output token limit reached before completion")
 	}
 	for index := 0; index < len(toolParts); index++ {
 		part := toolParts[index]
@@ -447,6 +464,7 @@ func (c *nativeHTTPModelClient) completeOpenAIChat(ctx context.Context, request 
 			Arguments: json.RawMessage(part.Arguments.String()),
 		})
 	}
+	result.Text = answer.String()
 	return result, nil
 }
 
@@ -471,8 +489,8 @@ func parseOpenAIChatJSON(reader io.Reader, request nativeModelRequest, onTextDel
 			FinishReason string `json:"finish_reason"`
 		} `json:"choices"`
 		Usage struct {
-			PromptTokens     int64 `json:"prompt_tokens"`
-			CompletionTokens int64 `json:"completion_tokens"`
+			PromptTokens        int64 `json:"prompt_tokens"`
+			CompletionTokens    int64 `json:"completion_tokens"`
 			PromptTokensDetails struct {
 				CachedTokens int64 `json:"cached_tokens"`
 			} `json:"prompt_tokens_details"`
@@ -488,8 +506,8 @@ func parseOpenAIChatJSON(reader io.Reader, request nativeModelRequest, onTextDel
 	result := nativeModelResponse{
 		RoutedModel: strings.TrimSpace(payload.Model),
 		Usage: sessionUsage{
-			Input: payload.Usage.PromptTokens - cachedPromptTokens,
-			Output: payload.Usage.CompletionTokens,
+			Input:     payload.Usage.PromptTokens - cachedPromptTokens,
+			Output:    payload.Usage.CompletionTokens,
 			CacheRead: cachedPromptTokens,
 		},
 	}
@@ -508,8 +526,8 @@ func parseOpenAIChatJSON(reader io.Reader, request nativeModelRequest, onTextDel
 			callID = normalizeMistralToolCallID(callID, fmt.Sprintf("%d\x00%s\x00%s", index, call.Function.Name, call.Function.Arguments))
 		}
 		result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
-			ID: callID,
-			Name: nativeToolIDFromWire(call.Function.Name, request.Tools),
+			ID:        callID,
+			Name:      nativeToolIDFromWire(call.Function.Name, request.Tools),
 			Arguments: json.RawMessage(call.Function.Arguments),
 		})
 	}
@@ -608,9 +626,10 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 		return nativeModelResponse{}, err
 	}
 	payload := map[string]any{
-		"model":  request.Model.ID,
-		"input":  responseInput(request),
-		"stream": true,
+		"model":             request.Model.ID,
+		"input":             responseInput(request),
+		"stream":            true,
+		"max_output_tokens": nativeModelOutputLimit(request.Model),
 	}
 	if request.ToolsDisabled {
 		payload["tool_choice"] = "none"
@@ -630,16 +649,21 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 	}
 
 	var result nativeModelResponse
+	var answer strings.Builder
 	type callAccumulator struct {
 		ID, Name string
-		Args strings.Builder
+		Args     strings.Builder
 	}
 	calls := map[string]*callAccumulator{}
 	order := []string{}
-	scanner := bufio.NewScanner(response.Body)
+	scanner := bufio.NewScanner(&boundedModelStream{reader: response.Body})
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
+	completed := false
+	finalCalls := false
 	for scanner.Scan() {
-		if request.OnStreamActivity != nil { request.OnStreamActivity() }
+		if request.OnStreamActivity != nil {
+			request.OnStreamActivity()
+		}
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -649,76 +673,99 @@ func (c *nativeHTTPModelClient) completeOpenAIResponses(ctx context.Context, req
 			continue
 		}
 		var event map[string]any
-		if json.Unmarshal([]byte(data), &event) != nil {
-			continue
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			return nativeModelResponse{}, fmt.Errorf("invalid Responses stream JSON: %w", err)
 		}
-		eventType, _ := event["type"].(string)
-		switch eventType {
+		switch sessionString(event["type"]) {
 		case "response.output_text.delta":
-			delta, _ := event["delta"].(string)
-			if delta != "" {
-				result.Text += delta
-				if onTextDelta != nil {
-					onTextDelta(delta)
-				}
+			delta := sessionString(event["delta"])
+			answer.WriteString(delta)
+			if delta != "" && onTextDelta != nil {
+				onTextDelta(delta)
 			}
 		case "response.output_item.added":
-			item, _ := event["item"].(map[string]any)
+			item := sessionMap(event["item"])
 			if item == nil || item["type"] != "function_call" {
 				continue
 			}
-			id, _ := item["call_id"].(string)
-			if id == "" {
-				id, _ = item["id"].(string)
+			itemID := firstSessionString(item["id"], item["call_id"])
+			if itemID == "" {
+				return nativeModelResponse{}, errors.New("Responses tool item is missing its ID")
 			}
-			name, _ := item["name"].(string)
-			if id != "" {
-				calls[id] = &callAccumulator{ID: id, Name: name}
-				order = append(order, id)
+			if calls[itemID] != nil {
+				return nativeModelResponse{}, errors.New("duplicate Responses tool item")
 			}
+			calls[itemID] = &callAccumulator{ID: firstSessionString(item["call_id"], item["id"]), Name: sessionString(item["name"])}
+			calls[itemID].Args.WriteString(sessionString(item["arguments"]))
+			order = append(order, itemID)
 		case "response.function_call_arguments.delta":
-			id, _ := event["call_id"].(string)
-			if id == "" {
-				id, _ = event["item_id"].(string)
+			itemID := firstSessionString(event["item_id"], event["call_id"])
+			accumulator := calls[itemID]
+			if accumulator == nil {
+				for _, candidate := range calls {
+					if candidate.ID == itemID {
+						accumulator = candidate
+						break
+					}
+				}
 			}
-			delta, _ := event["delta"].(string)
-			if accumulator := calls[id]; accumulator != nil {
-				accumulator.Args.WriteString(delta)
+			if accumulator == nil {
+				return nativeModelResponse{}, errors.New("Responses arguments refer to an unknown tool item")
 			}
+			accumulator.Args.WriteString(sessionString(event["delta"]))
 		case "response.completed":
-			responseValue, _ := event["response"].(map[string]any)
-			result.FinishReason = "completed"
-			final := normalizeOpenAIResponsesPayload(responseValue, request.Tools)
+			value := sessionMap(event["response"])
+			if status := sessionString(value["status"]); status != "" && status != "completed" {
+				return nativeModelResponse{}, errors.New("Responses result was not completed")
+			}
+			final := normalizeOpenAIResponsesPayload(value, request.Tools)
 			if final.RoutedModel != "" {
 				result.RoutedModel = final.RoutedModel
 			}
-			if result.Text == "" && final.Text != "" {
-				result.Text = final.Text
+			if answer.Len() == 0 && final.Text != "" {
+				answer.WriteString(final.Text)
 				if onTextDelta != nil {
 					onTextDelta(final.Text)
 				}
 			}
-			if len(result.ToolCalls) == 0 && len(final.ToolCalls) > 0 {
-				result.ToolCalls = append(result.ToolCalls, final.ToolCalls...)
+			if len(final.ToolCalls) > 0 {
+				result.ToolCalls = final.ToolCalls
+				finalCalls = true
 			}
-			if final.Usage.Input > 0 || final.Usage.Output > 0 {
-				result.Usage = final.Usage
-			}
-		case "response.failed":
-			return nativeModelResponse{}, errors.New("OpenAI Responses request failed")
+			result.Usage = final.Usage
+			result.FinishReason = "completed"
+			completed = true
+		case "response.failed", "response.incomplete", "error":
+			return nativeModelResponse{}, errors.New("Responses stream did not complete successfully")
+		}
+		if completed {
+			break
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nativeModelResponse{}, err
 	}
-	for _, id := range order {
-		accumulator := calls[id]
-		result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
-			ID: accumulator.ID,
-			Name: nativeToolIDFromWire(accumulator.Name, request.Tools),
-			Arguments: json.RawMessage(accumulator.Args.String()),
-		})
+	if !completed {
+		return nativeModelResponse{}, errors.New("Responses stream ended before completion")
 	}
+	if !finalCalls {
+		for _, itemID := range order {
+			acc := calls[itemID]
+			result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{ID: acc.ID, Name: nativeToolIDFromWire(acc.Name, request.Tools), Arguments: json.RawMessage(acc.Args.String())})
+		}
+	}
+	seen := map[string]bool{}
+	for _, call := range result.ToolCalls {
+		if call.ID == "" || seen[call.ID] {
+			return nativeModelResponse{}, errors.New("duplicate or missing Responses tool call ID")
+		}
+		seen[call.ID] = true
+		var args map[string]any
+		if err := json.Unmarshal(call.Arguments, &args); err != nil || args == nil {
+			return nativeModelResponse{}, errors.New("Responses tool arguments must be a complete JSON object")
+		}
+	}
+	result.Text = answer.String()
 	return result, nil
 }
 
@@ -807,7 +854,7 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 		payload["system"] = request.System
 	}
 	if request.ToolsDisabled {
-		payload["tool_choice"] = map[string]string{"type":"none"}
+		payload["tool_choice"] = map[string]string{"type": "none"}
 	} else if len(request.Tools) > 0 {
 		payload["tools"] = anthropicTools(request.Tools)
 	}
@@ -827,16 +874,20 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 	}
 
 	var result nativeModelResponse
+	var answer strings.Builder
+	completed := false
 	type anthropicToolAccumulator struct {
 		ID, Name string
-		Args strings.Builder
+		Args     strings.Builder
 	}
 	blocks := map[int]*anthropicToolAccumulator{}
-	scanner := bufio.NewScanner(response.Body)
+	scanner := bufio.NewScanner(&boundedModelStream{reader: response.Body})
 	scanner.Buffer(make([]byte, 64*1024), nativeModelMaxResponseBytes)
 	var eventName string
 	for scanner.Scan() {
-		if request.OnStreamActivity != nil { request.OnStreamActivity() }
+		if request.OnStreamActivity != nil {
+			request.OnStreamActivity()
+		}
 		line := scanner.Text()
 		if strings.HasPrefix(line, "event:") {
 			eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
@@ -847,14 +898,16 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 		}
 		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 		var event map[string]any
-		if json.Unmarshal([]byte(data), &event) != nil {
-			continue
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			return nativeModelResponse{}, fmt.Errorf("invalid Anthropic stream JSON: %w", err)
 		}
 		eventType := sessionString(event["type"])
 		if eventType == "" {
 			eventType = eventName
 		}
 		switch eventType {
+		case "message_stop":
+			completed = true
 		case "message_start":
 			message := sessionMap(event["message"])
 			if usage := sessionMap(message["usage"]); usage != nil {
@@ -865,7 +918,7 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 			block := sessionMap(event["content_block"])
 			if block != nil && sessionString(block["type"]) == "tool_use" {
 				blocks[index] = &anthropicToolAccumulator{
-					ID: sessionString(block["id"]),
+					ID:   sessionString(block["id"]),
 					Name: sessionString(block["name"]),
 				}
 				if input := block["input"]; input != nil {
@@ -881,7 +934,7 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 			case "text_delta":
 				text := sessionString(delta["text"])
 				if text != "" {
-					result.Text += text
+					answer.WriteString(text)
 					if onTextDelta != nil {
 						onTextDelta(text)
 					}
@@ -901,9 +954,18 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 			errorValue := sessionMap(event["error"])
 			return nativeModelResponse{}, fmt.Errorf("Anthropic stream error: %s", firstSessionString(errorValue["message"], errorValue["type"]))
 		}
+		if completed {
+			break
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nativeModelResponse{}, err
+	}
+	if !completed {
+		return nativeModelResponse{}, errors.New("Anthropic stream ended before completion")
+	}
+	if result.FinishReason == "max_tokens" {
+		return nativeModelResponse{}, errors.New("Anthropic output token limit reached before completion")
 	}
 	indices := make([]int, 0, len(blocks))
 	for index := range blocks {
@@ -923,11 +985,12 @@ func (c *nativeHTTPModelClient) completeAnthropic(ctx context.Context, request n
 			args = "{}"
 		}
 		result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
-			ID: block.ID,
-			Name: nativeToolIDFromWire(block.Name, request.Tools),
+			ID:        block.ID,
+			Name:      nativeToolIDFromWire(block.Name, request.Tools),
 			Arguments: json.RawMessage(args),
 		})
 	}
+	result.Text = answer.String()
 	return result, nil
 }
 
@@ -953,8 +1016,8 @@ func parseAnthropicJSON(reader io.Reader, tools []nativeModelToolDefinition, onT
 		case "tool_use":
 			encoded, _ := json.Marshal(block["input"])
 			result.ToolCalls = append(result.ToolCalls, nativeModelToolCall{
-				ID: sessionString(block["id"]),
-				Name: nativeToolIDFromWire(sessionString(block["name"]), tools),
+				ID:        sessionString(block["id"]),
+				Name:      nativeToolIDFromWire(sessionString(block["name"]), tools),
 				Arguments: json.RawMessage(encoded),
 			})
 		}

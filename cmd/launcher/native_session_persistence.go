@@ -56,7 +56,7 @@ func (s *sessionPersistenceStore) putNativeMessageWithCompletion(sessionID, dire
 
 	session := s.sessions[sessionID]
 	if session.ID == "" {
-		session = sessionView{ID: sessionID, Directory: directory, CreatedAt: time.Now().UnixMilli()}
+		return os.ErrNotExist
 	}
 	if session.Directory == "" {
 		session.Directory = directory
@@ -125,7 +125,7 @@ func (s *sessionPersistenceStore) markSessionExecution(sessionID, directory, exe
 	}
 	session := s.sessions[sessionID]
 	if session.ID == "" {
-		session = sessionView{ID: sessionID, Directory: directory, CreatedAt: time.Now().UnixMilli()}
+		return os.ErrNotExist
 	}
 	if session.Directory == "" {
 		session.Directory = directory

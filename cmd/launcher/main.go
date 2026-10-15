@@ -34,7 +34,7 @@ type appState struct {
 	mu          sync.RWMutex
 	project     string
 	frontendURL string
- authSecret string
+	authSecret  string
 	ctx         context.Context
 }
 
@@ -91,18 +91,26 @@ func main() {
 		log.Fatalf("find frontend port: %v", err)
 	}
 	frontendURL := "http://" + net.JoinHostPort(listenAddr, fmt.Sprint(frontendPort))
- launchSecret,err:=randomSecret(32)
- if err!=nil{log.Fatalf("initialize local API authentication: %v",err)}
-	state := &appState{project: project, frontendURL: frontendURL,authSecret:launchSecret}
+	launchSecret, err := randomSecret(32)
+	if err != nil {
+		log.Fatalf("initialize local API authentication: %v", err)
+	}
+	state := &appState{project: project, frontendURL: frontendURL, authSecret: launchSecret}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	state.ctx = ctx
 
-	server, err := newServer(state)
+	stateLock, err := acquireStateDirectoryLock(tlStudioStateDirectory())
+	if err != nil {
+		log.Fatalf("state ownership: %v", err)
+	}
+	defer stateLock.Close()
+	server, closeServices, err := newServerWithLifecycle(state)
 	if err != nil {
 		log.Fatalf("create local server: %v", err)
 	}
+	defer closeServices()
 	httpServer := &http.Server{
 		Addr:              net.JoinHostPort(listenAddr, fmt.Sprint(frontendPort)),
 		Handler:           server,
@@ -110,6 +118,7 @@ func main() {
 	}
 	go func() {
 		<-ctx.Done()
+		closeServices()
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 4*time.Second)
 		defer shutdownCancel()
 		_ = httpServer.Shutdown(shutdownCtx)
@@ -118,19 +127,19 @@ func main() {
 	fmt.Printf("TL Studio %s\n", version)
 	fmt.Printf("  Project: %s\n", project)
 	fmt.Printf("  Local:   %s\n", frontendURL)
- if noBrowser||runtime.GOOS!="windows" {
-  // A non-browser CLI launch needs a credential for its own local API calls.
-  // Do not expose a bootstrap URL in Unix process arguments.
-  fmt.Printf("  Auth:    %s\n",launchSecret)
- }
+	if noBrowser || runtime.GOOS != "windows" {
+		// A non-browser CLI launch needs a credential for its own local API calls.
+		// Do not expose a bootstrap URL in Unix process arguments.
+		fmt.Printf("  Auth:    %s\n", launchSecret)
+	}
 
 	if !noBrowser {
 		go func() {
 			time.Sleep(250 * time.Millisecond)
-			address:=frontendURL
-   if runtime.GOOS=="windows" {
-    address=frontendURL+"/#tl_auth="+launchSecret
-   }
+			address := frontendURL
+			if runtime.GOOS == "windows" {
+				address = frontendURL + "/#tl_auth=" + launchSecret
+			}
 			if err := openBrowser(address); err != nil {
 				log.Printf("open browser: %v", err)
 			}
@@ -143,6 +152,11 @@ func main() {
 }
 
 func newServer(state *appState) (http.Handler, error) {
+	handler, _, err := newServerWithLifecycle(state)
+	return handler, err
+}
+
+func newServerWithLifecycle(state *appState) (http.Handler, func(), error) {
 	providerManager := newProviderManager(state)
 	openRouterAccount := newOpenRouterAccountAdapter(state, providerManager)
 	huggingFaceAccount := newHuggingFaceAccountAdapter(state, providerManager)
@@ -189,9 +203,34 @@ func newServer(state *appState) (http.Handler, error) {
 
 	sessionRead := newSessionReadContract(state)
 	nativeAgent := newNativeAgentRuntime(providerManager, newNativeModelClient(chatGPTAccount, claudeAccount, claudeWebAccount), nativeTools, sessionRead.store, liveEvents.bus)
+	nativeAgent.appContext = state.ctx
 	nativeAgent.setRequestRouter(newNativeRequestRouterMux(layaRouter, jevDirectRouter))
 	sessionRead.setNativeStatusProvider(nativeAgent)
 	sessionCommands := newSessionCommandContract(state, sessionRead, nativeAgent)
+	var cleanupOnce sync.Once
+	closeServices := func() {
+		cleanupOnce.Do(func() {
+			nativeAgent.Close()
+			processes.Close()
+			plugins.Close()
+			chatGPTAccount.resetBridgeServer()
+			chatGPTAccount.mu.Lock()
+			for _, login := range chatGPTAccount.logins {
+				if login.Server != nil {
+					login.Server.Close()
+				}
+			}
+			chatGPTAccount.mu.Unlock()
+			claudeAccount.mu.Lock()
+			for _, login := range claudeAccount.logins {
+				if login.Command != nil {
+					_ = terminateManagedProcess(login.Command)
+				}
+			}
+			claudeAccount.mu.Unlock()
+			sessionRead.store.Close()
+		})
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /local/status", func(w http.ResponseWriter, _ *http.Request) {
@@ -211,22 +250,37 @@ func newServer(state *appState) (http.Handler, error) {
 		}})
 	})
 	mux.HandleFunc("POST /local/project", func(w http.ResponseWriter, r *http.Request) {
-		var body struct { Path string `json:"path"` }
+		var body struct {
+			Path string `json:"path"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeJSON(w, http.StatusBadRequest, jsonError{Error: "invalid JSON body"}); return
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: "invalid JSON body"})
+			return
 		}
 		project, err := normalizeProject(body.Path)
-		if err != nil { writeJSON(w, http.StatusBadRequest, jsonError{Error: err.Error()}); return }
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: err.Error()})
+			return
+		}
 		state.setProject(project)
 		plugins.SwitchProject(project)
 		writeJSON(w, http.StatusOK, state.snapshot())
 	})
 	mux.HandleFunc("POST /local/pick-directory", func(w http.ResponseWriter, _ *http.Request) {
 		path, err := pickDirectory(state.projectPath())
-		if err != nil { writeJSON(w, http.StatusNotImplemented, jsonError{Error: err.Error()}); return }
-		if path == "" { writeJSON(w, http.StatusOK, state.snapshot()); return }
+		if err != nil {
+			writeJSON(w, http.StatusNotImplemented, jsonError{Error: err.Error()})
+			return
+		}
+		if path == "" {
+			writeJSON(w, http.StatusOK, state.snapshot())
+			return
+		}
 		project, err := normalizeProject(path)
-		if err != nil { writeJSON(w, http.StatusBadRequest, jsonError{Error: err.Error()}); return }
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, jsonError{Error: err.Error()})
+			return
+		}
 		state.setProject(project)
 		plugins.SwitchProject(project)
 		writeJSON(w, http.StatusOK, state.snapshot())
@@ -251,32 +305,45 @@ func newServer(state *appState) (http.Handler, error) {
 	registerPermissionRoutes(mux, permissionEngine)
 
 	assets, err := fs.Sub(webFS, "web")
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, closeServices, err
+	}
 	indexHTML, err := fs.ReadFile(assets, "index.html")
-	if err != nil { return nil, fmt.Errorf("read embedded index.html: %w", err) }
+	if err != nil {
+		return nil, closeServices, fmt.Errorf("read embedded index.html: %w", err)
+	}
 	fileServer := http.FileServer(http.FS(assets))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodHead { http.NotFound(w, r); return }
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			http.NotFound(w, r)
+			return
+		}
 		if r.URL.Path == "/" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
 			w.WriteHeader(http.StatusOK)
-			if r.Method == http.MethodGet { _, _ = w.Write(indexHTML) }
+			if r.Method == http.MethodGet {
+				_, _ = w.Write(indexHTML)
+			}
 			return
 		}
 		fileServer.ServeHTTP(w, r)
 	})
-	var handler http.Handler=mux
- if state.authSecret!="" {
-  gate,err:=newLocalAPIGate(state.authSecret)
-  if err!=nil{return nil,fmt.Errorf("initialize local API gate: %w",err)}
-  handler=gate.handler(handler)
- }
-	return localOnly(securityHeaders(handler)), nil
+	var handler http.Handler = mux
+	if state.authSecret != "" {
+		gate, err := newLocalAPIGate(state.authSecret)
+		if err != nil {
+			return nil, closeServices, fmt.Errorf("initialize local API gate: %w", err)
+		}
+		handler = gate.handler(handler)
+	}
+	return localOnly(securityHeaders(handler)), closeServices, nil
 }
 
 func isLoopbackHost(host string) bool {
-	if strings.EqualFold(host, "localhost") { return true }
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
 	ip := net.ParseIP(strings.Trim(host, "[]"))
 	return ip != nil && ip.IsLoopback()
 }
@@ -284,12 +351,18 @@ func isLoopbackHost(host string) bool {
 func localOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.Host)
-		if err != nil { host = r.Host }
-		if !isLoopbackHost(host) { http.Error(w, "localhost only", http.StatusForbidden); return }
+		if err != nil {
+			host = r.Host
+		}
+		if !isLoopbackHost(host) {
+			http.Error(w, "localhost only", http.StatusForbidden)
+			return
+		}
 		if origin := r.Header.Get("Origin"); origin != "" {
 			u, err := url.Parse(origin)
 			if err != nil || !isLoopbackHost(u.Hostname()) || !strings.EqualFold(u.Host, r.Host) {
-				http.Error(w, "cross-origin request blocked", http.StatusForbidden); return
+				http.Error(w, "cross-origin request blocked", http.StatusForbidden)
+				return
 			}
 		}
 		next.ServeHTTP(w, r)
@@ -315,27 +388,39 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 func normalizeProject(input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		cwd, err := os.Getwd()
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		input = cwd
 	}
 	abs, err := filepath.Abs(input)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	info, err := os.Stat(abs)
-	if err != nil { return "", fmt.Errorf("%s: %w", abs, err) }
-	if !info.IsDir() { return "", fmt.Errorf("%s is not a directory", abs) }
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", abs, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%s is not a directory", abs)
+	}
 	return filepath.Clean(abs), nil
 }
 
 func freePort(host string) (int, error) {
 	ln, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	defer ln.Close()
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
 func randomSecret(bytes int) (string, error) {
 	buf := make([]byte, bytes)
-	if _, err := rand.Read(buf); err != nil { return "", err }
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
 	return hex.EncodeToString(buf), nil
 }
 

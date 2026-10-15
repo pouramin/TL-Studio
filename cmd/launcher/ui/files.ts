@@ -25,7 +25,7 @@ import { K } from "./kernel";
     return bits.join("/");
   };
   const joinPath = (parent: any, name: any) => [normalizePath(parent), String(name || "").trim()].filter(Boolean).join("/");
-  const pathKey = (value: any) => normalizePath(value).toLowerCase();
+  const pathKey = (value: any) => normalizePath(value);
 
   const makeButton = (id: any, label: any, title = label) => {
     const button = document.createElement("button");
@@ -169,7 +169,7 @@ import { K } from "./kernel";
   const tabFor = (path: any) => K.state.editorTabs.find((tab) => pathKey(tab.path) === pathKey(path)) || null;
 
   const localRequest = async (path: string, options: RequestInit = {}) => {
-    const response = await fetch(path, {
+    const response = await K.localFetch(path, {
       cache: "no-store",
       ...options,
       headers: { "X-TL-Studio-Request": "1", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
@@ -665,12 +665,12 @@ import { K } from "./kernel";
       const sourcePrefix = `${normalizePath(source)}/`;
       for (const tab of K.state.editorTabs) {
         if (pathKey(tab.path) === pathKey(source)) tab.path = renamed?.path || target;
-        else if (selected.type === "directory" && normalizePath(tab.path).toLowerCase().startsWith(sourcePrefix.toLowerCase())) {
+        else if (selected.type === "directory" && normalizePath(tab.path).startsWith(sourcePrefix)) {
           tab.path = `${normalizePath(renamed?.path || target)}${normalizePath(tab.path).slice(normalizePath(source).length)}`;
         }
       }
       if (pathKey(K.state.activeEditorPath) === pathKey(source)) K.state.activeEditorPath = renamed?.path || target;
-      else if (selected.type === "directory" && normalizePath(K.state.activeEditorPath).toLowerCase().startsWith(sourcePrefix.toLowerCase())) {
+      else if (selected.type === "directory" && normalizePath(K.state.activeEditorPath).startsWith(sourcePrefix)) {
         K.state.activeEditorPath = `${normalizePath(renamed?.path || target)}${normalizePath(K.state.activeEditorPath).slice(normalizePath(source).length)}`;
       }
       await loadDirectory(K.state.filesPath || "");
@@ -686,7 +686,7 @@ import { K } from "./kernel";
   const deleteSelected = async () => {
     const selected = K.state.selectedFileEntry;
     if (!selected) return;
-    const affectedTabs = K.state.editorTabs.filter((tab) => pathKey(tab.path) === pathKey(selected.path) || (selected.type === "directory" && normalizePath(tab.path).toLowerCase().startsWith(`${normalizePath(selected.path).toLowerCase()}/`)));
+    const affectedTabs = K.state.editorTabs.filter((tab) => pathKey(tab.path) === pathKey(selected.path) || (selected.type === "directory" && normalizePath(tab.path).startsWith(`${normalizePath(selected.path)}/`)));
     const dirty = affectedTabs.some(isDirty);
     const detail = dirty ? " Unsaved editor changes inside it will also be discarded." : "";
     if (!window.confirm(`Delete ${selected.type === "directory" ? "folder" : "file"} “${selected.name || basename(selected.path)}”?${detail}`)) return;
@@ -695,9 +695,9 @@ import { K } from "./kernel";
       const params = new URLSearchParams({ path: selected.path });
       if (selected.type === "directory") params.set("recursive", "true");
       await localRequest(`/local/entry?${params}`, { method: "DELETE" });
-      const deleted = normalizePath(selected.path).toLowerCase();
+      const deleted = normalizePath(selected.path);
       K.state.editorTabs = K.state.editorTabs.filter((tab) => {
-        const path = normalizePath(tab.path).toLowerCase();
+        const path = normalizePath(tab.path);
         return path !== deleted && !(selected.type === "directory" && path.startsWith(`${deleted}/`));
       });
       if (!tabFor(K.state.activeEditorPath)) K.state.activeEditorPath = K.state.editorTabs[K.state.editorTabs.length - 1]?.path || "";

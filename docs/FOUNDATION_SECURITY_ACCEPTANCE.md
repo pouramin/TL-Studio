@@ -2,6 +2,12 @@
 
 This is a **release gate**, not an announcement of an implemented defense. Baseline: `dev` at `05efaaaf7965b39a834a1d12861d885cb6234275`. Stabilization work stays in PR #178.
 
+**Development update:** See [DEV_HARDENING.md](DEV_HARDENING.md) for the
+subsequent mitigation and remaining acceptance work. The current Browser uses
+explicit bearer headers through `fetch`, including SSE; it does not use the
+cookie/EventSource design considered below. The original release criteria remain
+historical context, not a claim that every release gate has passed.
+
 ## Threat boundaries
 
 TL Studio binds the Go server to loopback and validates Host and browser Origin. This blocks many browser-originated cross-site requests, **but is not client authentication**: a native program belonging to another OS user on the same host can reach the listener, omit Origin, call API routes and interact with pending approvals. This was demonstrated by the independent reviewer's isolated local probe. Do not describe loopback or CSP as a complete multi-user security boundary.

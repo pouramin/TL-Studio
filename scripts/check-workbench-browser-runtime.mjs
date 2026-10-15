@@ -225,7 +225,7 @@ await evaluate('document.getElementById("settingsButton")?.click()');
 await waitFor('document.getElementById("settingsDialog")?.open === true', "Settings did not open from Activity Rail");
 await evaluate('document.querySelector(\'[data-settings-section="providers"]\')?.click()');
 await waitFor('document.querySelector(\'[data-settings-panel="providers"]\')?.classList.contains("hidden") === false', "Providers settings did not activate");
-const providerAccountState = await evaluate('(async () => { const accounts=await fetch("/local/provider-accounts").then(r=>r.json()); return {isArray:Array.isArray(accounts),hasKilo:Array.isArray(accounts)&&accounts.some(a=>a?.id==="kilo"),emptyText:document.getElementById("providerAccountList")?.textContent||""}; })()');
+const providerAccountState = await evaluate('(async () => { const accounts=await fetch("/local/provider-accounts", {headers:{Authorization:"Bearer "+sessionStorage.getItem("tl-studio-local-capability")}}).then(r=>r.json()); return {isArray:Array.isArray(accounts),hasKilo:Array.isArray(accounts)&&accounts.some(a=>a?.id==="kilo"),emptyText:document.getElementById("providerAccountList")?.textContent||""}; })()');
 assert(providerAccountState?.isArray === true, "Provider account state was unavailable");
 assert(providerAccountState.hasKilo === false, "Unavailable Kilo account adapter rendered in native TL Studio");
 if (await evaluate('document.querySelectorAll("[data-provider-account-id]").length === 0')) {

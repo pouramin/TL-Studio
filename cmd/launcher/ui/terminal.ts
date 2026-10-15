@@ -15,7 +15,7 @@ import { K } from "./kernel";
   };
 
   const request = async (path: string, options: RequestInit = {}) => {
-    const response = await fetch(path, {
+    const response = await K.localFetch(path, {
       cache: "no-store",
       ...options,
       headers: { "X-TL-Studio-Request": "1", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },

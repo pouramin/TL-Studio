@@ -79,25 +79,26 @@ type sessionActivityView struct {
 }
 
 type sessionAttachmentView struct {
+	Text string `json:"text,omitempty"`
 	Name string `json:"name"`
 	MIME string `json:"mime,omitempty"`
 	URL  string `json:"url,omitempty"`
 }
 
 type sessionMessageView struct {
-	ID          string                `json:"id,omitempty"`
-	SessionID   string                `json:"sessionID,omitempty"`
-	Role        string                `json:"role"`
-	Agent       string                `json:"agent,omitempty"`
-	Model       *sessionModelRef      `json:"model,omitempty"`
-	CreatedAt   int64                 `json:"createdAt,omitempty"`
-	CompletedAt int64                 `json:"completedAt,omitempty"`
-	Text        string                `json:"text,omitempty"`
-	Error       *sessionErrorView     `json:"error,omitempty"`
-	Activities  []sessionActivityView `json:"activities"`
+	ID          string                  `json:"id,omitempty"`
+	SessionID   string                  `json:"sessionID,omitempty"`
+	Role        string                  `json:"role"`
+	Agent       string                  `json:"agent,omitempty"`
+	Model       *sessionModelRef        `json:"model,omitempty"`
+	CreatedAt   int64                   `json:"createdAt,omitempty"`
+	CompletedAt int64                   `json:"completedAt,omitempty"`
+	Text        string                  `json:"text,omitempty"`
+	Error       *sessionErrorView       `json:"error,omitempty"`
+	Activities  []sessionActivityView   `json:"activities"`
 	Attachments []sessionAttachmentView `json:"attachments"`
-	Usage       sessionUsage          `json:"usage"`
-	Changes     []sessionChangeView   `json:"changes"`
+	Usage       sessionUsage            `json:"usage"`
+	Changes     []sessionChangeView     `json:"changes"`
 }
 
 type sessionStatusView struct {
@@ -713,7 +714,7 @@ func (c *sessionReadContract) getMessages(_ context.Context, sessionID, director
 	if limit <= 0 || limit > 2000 {
 		limit = 200
 	}
-	messages, ok, err := c.store.getMessages(strings.TrimSpace(sessionID))
+	messages, ok, err := c.store.getRecentMessages(strings.TrimSpace(sessionID), limit)
 	if err != nil {
 		return nil, err
 	}

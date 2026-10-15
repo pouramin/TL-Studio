@@ -277,6 +277,7 @@ import { K } from "./kernel";
 
   K.handleLiveEvent = (event) => {
     const type = event?.type || "";
+    if (type === "storage.error") { K.showError("TL Studio could not save session state. Check available disk space and permissions before continuing."); return; }
     const selectedID = K.state.session?.id;
     const sessionID = event?.sessionID || "";
 
@@ -299,7 +300,7 @@ import { K } from "./kernel";
     if (K.state.fallbackPolling) window.clearInterval(K.state.fallbackPolling);
     K.state.fallbackPolling = null;
 
-    if (typeof globalThis.EventSource === "undefined") {
+    if (typeof globalThis.ReadableStream === "undefined") {
       K.state.fallbackPolling = window.setInterval(() => scheduleSelectedRefresh(0), 1200);
       return;
     }

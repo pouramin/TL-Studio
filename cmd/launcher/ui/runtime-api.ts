@@ -37,11 +37,50 @@ import { K } from "./kernel";
     }
   };
 
-  const openLocalEventSource = (path: string, { onEvent, onOpen, onError }: { onEvent?: (event: TLStudioLiveEvent) => void; onOpen?: (event: Event) => void; onError?: (event: Event) => void } = {}) => {
-    const source = new EventSource(path);
-    if (onOpen) source.addEventListener("open", onOpen);
-    if (onError) source.addEventListener("error", onError);
-    if (onEvent) source.addEventListener("message", parseSSE(onEvent));
+  // Fetch streams accept explicit authorization headers; EventSource cookies
+  // would share authority with every preview server on the same host.
+  const openLocalEventSource = (path: string, { onEvent, onOpen, onError }: {
+    onEvent?: (event: TLStudioLiveEvent) => void; onOpen?: (event: Event) => void; onError?: (event: Event) => void;
+  } = {}): { close(): void; readyState: number } => {
+    let stopped = false;
+    let controller: AbortController | null = null;
+    let retry: number | null = null;
+    const source = { readyState: 0, close() { stopped = true; source.readyState = 2; controller?.abort(); if (retry !== null) window.clearTimeout(retry); } };
+    const connect = async () => {
+      controller = new AbortController();
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      try {
+        const response = await K.localFetch(path, { signal: controller.signal });
+        if (!response.ok || !response.body) throw new Error("Local event stream unavailable");
+        reader = response.body.getReader();
+        source.readyState = 1;
+        onOpen?.(new Event("open"));
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (!stopped) {
+          const { done, value } = await reader.read();
+          if (done) throw new Error("Local event stream closed");
+          buffer += decoder.decode(value, { stream: true });
+          if (buffer.length > 1024 * 1024) throw new Error("Local event frame too large");
+          let newline: number;
+          while ((newline = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, newline).trimEnd();
+            buffer = buffer.slice(newline + 1);
+            if (line.startsWith("data:")) {
+              const payload = JSON.parse(line.slice(5).trim());
+              onEvent?.(payload?.payload || payload);
+            }
+          }
+        }
+      } catch {
+        if (!stopped) source.readyState = 0;
+        if (!stopped) onError?.(new Event("error"));
+      } finally {
+        await reader?.cancel().catch(() => {});
+        if (!stopped) retry = window.setTimeout(() => { void connect(); }, 2000);
+      }
+    };
+    void connect();
     return source;
   };
 
