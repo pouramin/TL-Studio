@@ -101,6 +101,13 @@ message including attachment content, continues the history and restores a
 verified backup without losing the oldest or newest entries. Native platform CI
 records benchmark output; race CI also exercises the crash/migration tests.
 
+Windows qualification also exposed a terminal shutdown race: a running shell
+could spawn a child between the `taskkill` process-tree snapshot and termination.
+Terminal commands now enter a kill-on-close Windows Job Object while suspended,
+then resume. Descendants remain owned even if the parent exits. Immediate-close
+stress coverage and an inherited-output-pipe regression exercise that cleanup;
+other provider/MCP helper launch paths are unchanged.
+
 ## Remaining release gates
 
 This covers deterministic process termination, not sudden physical power loss,
