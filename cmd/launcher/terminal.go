@@ -36,6 +36,8 @@ type managedProcess struct {
 	running   bool
 	output    []byte
 	cmd       *exec.Cmd
+	terminate func() error
+	release   func()
 	done      chan struct{}
 }
 
@@ -100,10 +102,12 @@ func (m *processManager) startInDirectory(command, cwd string) (*managedProcess,
 		m.mu.Unlock()
 		return nil, errors.New("process manager is shutting down")
 	}
-	if err := cmd.Start(); err != nil {
+	terminate, release, err := startOwnedCommand(cmd)
+	if err != nil {
 		m.mu.Unlock()
 		return nil, fmt.Errorf("start command: %w", err)
 	}
+	p.terminate, p.release = terminate, release
 	m.processes[id] = p
 	m.mu.Unlock()
 	go func() {
@@ -156,6 +160,7 @@ func (p *managedProcess) appendOutput(data []byte) {
 
 func (p *managedProcess) wait() {
 	err := p.cmd.Wait()
+	p.release()
 	code := 0
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -195,10 +200,10 @@ func (m *processManager) stop(id string) error {
 	}
 	p.mu.RLock()
 	running := p.running
-	cmd := p.cmd
+	terminate := p.terminate
 	p.mu.RUnlock()
 	if running {
-		if err := terminateManagedProcess(cmd); err != nil {
+		if err := terminate(); err != nil {
 			return fmt.Errorf("stop process: %w", err)
 		}
 	}

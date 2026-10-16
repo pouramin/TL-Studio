@@ -10,6 +10,12 @@ from crash recovery. These mitigate concurrent launchers; they do not make the
 legacy JSON snapshot/index pair crash-atomic or complete SQLite qualification.
 See [DEV_HARDENING.md](DEV_HARDENING.md) for the current scope and follow-ups.
 
+The subsequent durability pass adds process-kill boundaries, source-preserving
+migration verification, backup/restore commands and 10,000-message measurements;
+current evidence and limitations are in [SESSION_DURABILITY.md](SESSION_DURABILITY.md).
+The historical gate list below remains a release checklist, not a statement
+that those later implementations are absent or that SQLite is now the default.
+
 ## Incident and current invariants
 
 An independent isolated audit reproduced failures despite the PR #178 staged snapshot + index + compensating rollback:

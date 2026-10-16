@@ -112,6 +112,15 @@ jobs:
         run: go test ./... -count=1
       - name: Vet native Go packages
         run: go vet ./...
+      - name: Measure native SQLite history reads and writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./cmd/launcher -run '^$' -bench BenchmarkSQLiteNativeHistory -benchtime=5x -count=1 | tee session-history-${{ runner.os }}.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: session-history-${{ runner.os }}
+          path: session-history-${{ runner.os }}.txt
 
   windows-codex-app-server:
     runs-on: windows-latest
@@ -315,6 +324,7 @@ jobs:
           mkdir -p staging/package
           go build -trimpath -ldflags "-s -w -X main.version=${REVIEW_TAG}" -o staging/package/tl-studio.exe ./cmd/launcher
           cp LICENSE THIRD_PARTY_NOTICES.md staging/package/
+          cp docs/SESSION_DURABILITY.md staging/package/SESSION-DURABILITY.md
           mkdir -p staging/package/third_party
           cp -R third_party/. staging/package/third_party/
           python3 scripts/stage-bundled-plugins.py --target windows-x64 --package-dir staging/package
@@ -331,7 +341,7 @@ jobs:
             '@echo off' \
             'setlocal' \
             'set "TL_STUDIO_SQLITE_SESSIONS=1"' \
-            'set "TL_STUDIO_STATE_DIR=%LOCALAPPDATA%\\TL-Studio-Foundation-Review-SQLite"' \
+            'set "TL_STUDIO_STATE_DIR=%~dp0test-state-sqlite"' \
             '"%~dp0tl-studio.exe" --project "%~dp0foundation-test-project"' \
             'endlocal' > staging/package/SQLITE-FOUNDATION-TEST.bat
           printf '%s\n' \
@@ -339,6 +349,7 @@ jobs:
             'Run SQLITE-FOUNDATION-TEST.bat. It uses a dedicated test project and state folder.' \
             'Do not point it at important work. The SQLite adapter is not the shipping default.' \
             'Closing and reopening should preserve notes and native Session history.' \
+            'Verified backup/restore commands and remaining limits: SESSION-DURABILITY.md.' \
             'Please report exact errors and CI run link, without credentials.' \
             > staging/package/FOUNDATION-TEST-README.txt
       - name: Assert review package contains no Kilo runtime

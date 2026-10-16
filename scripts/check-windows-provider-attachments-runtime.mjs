@@ -14,7 +14,7 @@ if (process.platform !== "win32" || !executable || !fs.existsSync(executable)) {
 }
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "tl-provider-acceptance-"));
 const project = path.join(temp, "project");
-const stateDir = path.join(temp, "state");
+let stateDir = path.join(temp, "state");
 fs.mkdirSync(project);
 fs.mkdirSync(stateDir);
 const filePath = path.join(project, "note.txt");
@@ -216,6 +216,33 @@ try {
   const button = await evaluate('({signedIn:document.getElementById("accountButton").classList.contains("signed-in"),title:document.getElementById("accountButton").title})');
   assert(button.signedIn && button.title.includes("1 provider"), "Header ignores API-key connections: " + JSON.stringify(button));
   outcomes.push("provider card and header agree with persisted API credential after process restart");
+  if (process.argv.includes("--sqlite")) {
+    const before = await evaluate('(async () => { const headers={Authorization:"Bearer "+sessionStorage.getItem("tl-studio-local-capability")}; const sessions=await fetch("/local/sessions",{headers}).then(r=>r.json()); const id=sessions[0].id; const messages=await fetch("/local/sessions/"+encodeURIComponent(id)+"/messages",{headers}).then(r=>r.json()); return {id,messages}; })()');
+    const stoppedForBackup = new Promise(resolve => native.once("exit", resolve));
+    native.kill();
+    await Promise.race([stoppedForBackup, delay(5000).then(() => { throw Error("Launcher did not stop before backup"); })]);
+    const maintenance = (args, state) => new Promise((resolve, reject) => {
+      const child = spawn(executable, args, {cwd:temp,env:{...process.env,TL_STUDIO_STATE_DIR:state,TL_STUDIO_SQLITE_SESSIONS:"1"},stdio:["ignore","pipe","pipe"],windowsHide:true});
+      let output="", errors="";
+      child.stdout.on("data",data=>output+=String(data)); child.stderr.on("data",data=>errors+=String(data));
+      child.once("error",reject);child.once("exit",code=>{if(code!==0)reject(Error("Maintenance failed: "+errors));else {try {resolve(JSON.parse(output));}catch(error){reject(error);}}});
+    });
+    const backupPath=path.join(temp,"verified-session-backup.sqlite");
+    const saved=await maintenance(["--session-backup",backupPath],stateDir);
+    assert(saved.sessions===1 && saved.messages===2 && saved.pendingRuns===0, "Backup counts differ from actual chat");
+    const restoredState=path.join(temp,"restored-state");
+    const restored=await maintenance(["--session-restore",backupPath],restoredState);
+    assert(restored.sha256===saved.sha256, "Restored database differs from verified backup bytes");
+    const report=await maintenance(["--session-report"],restoredState);
+    assert(report.integrity==="ok" && report.current.messages===2, "Restored history failed integrity/count check");
+    stateDir=restoredState;
+    authenticatedURL=await startNative();
+    await cdp("Page.navigate",{url:authenticatedURL});
+    await waitFor('document.querySelector("#app.workspace-v2") !== null && Array.from(document.querySelectorAll(".file-row.file-file")).some(e=>e.textContent.includes("note.txt"))', "restored application startup");
+    const after=await evaluate('(async () => { const r=await fetch("/local/sessions/"+'+JSON.stringify(before.id)+'+"/messages",{headers:{Authorization:"Bearer "+sessionStorage.getItem("tl-studio-local-capability")}}); return {status:r.status,messages:await r.json()}; })()');
+    assert(after.status===200 && JSON.stringify(after.messages)===JSON.stringify(before.messages), "Native HTTP history/attachments changed after CLI restore");
+    outcomes.push("actual CLI backup/restore/report preserves Browser chat and uploads in a fresh state directory");
+  }
   console.log(JSON.stringify({ok:true,platform:process.platform,backend:process.argv.includes("--sqlite")?"sqlite":"json",native:true,realBrowser:true,scenarios:outcomes},null,2));
 } catch (error) {
   console.error("WINDOWS PROVIDER/ATTACHMENT ACCEPTANCE FAILED:", error.stack || error);

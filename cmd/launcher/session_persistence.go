@@ -150,6 +150,11 @@ func (s *sessionPersistenceStore) loadLocked() error {
 	if s.sqliteMode {
 		return s.sqliteLoadLocked()
 	}
+	if _, err := os.Lstat(filepath.Join(s.root, "sessions.sqlite")); err == nil {
+		return errors.New("SQLite session authority exists; enable TL_STUDIO_SQLITE_SESSIONS=1 instead of writing stale JSON history")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	if s.loaded {
 		return nil
 	}
@@ -501,6 +506,9 @@ func (s *sessionPersistenceStore) recordAcceptedRun(sessionID, directory string,
 	if err := s.loadLocked(); err != nil {
 		return err
 	}
+	if s.sqliteMode {
+		return s.sqliteAcceptRunLocked(sessionID, directory, input)
+	}
 
 	session := s.sessions[sessionID]
 	if session.ID == "" {
@@ -633,6 +641,7 @@ func (s *sessionPersistenceStore) getRecentMessages(sessionID string, limit int)
 			if err := json.Unmarshal(row.Payload, &message); err != nil {
 				return nil, false, err
 			}
+			message.ID = row.ID // includes stable keys assigned to legacy duplicates
 			result = append(result, message)
 		}
 		return result, true, nil

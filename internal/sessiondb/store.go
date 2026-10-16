@@ -9,8 +9,10 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +24,27 @@ import (
 var ErrConflict = errors.New("session revision conflict")
 var ErrAlreadyCommitted = errors.New("operation already committed")
 
-type Store struct{ db *sql.DB }
+type Store struct {
+	db *sql.DB
+	// A package-private seam for deterministic child-process crash tests.
+	// Production stores never install a hook.
+	testHook func(string)
+}
+
+func (s *Store) phase(name string) {
+	if s.testHook != nil {
+		s.testHook(name)
+	}
+}
+
+func databaseURI(path string) string {
+	abs, _ := filepath.Abs(path)
+	name := filepath.ToSlash(abs)
+	// Preserve the driver's native drive-path form on Windows, while escaping
+	// #, % and ? so filenames cannot become URI fragments or query options.
+	return "file:" + (&url.URL{Path: name}).EscapedPath()
+}
+
 type Session struct {
 	ID        string
 	Directory string
@@ -83,7 +105,7 @@ func Open(path string) (*Store, error) {
 	}
 	// The immediate transaction mode avoids failed deferred read-to-write
 	// upgrades under concurrent launchers.
-	dsn := "file:" + filepath.ToSlash(path) + "?_txlock=immediate&_pragma=busy_timeout(10000)"
+	dsn := databaseURI(path) + "?_txlock=immediate&_pragma=busy_timeout(10000)&_pragma=foreign_keys(1)&_pragma=synchronous(FULL)"
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
@@ -91,6 +113,20 @@ func Open(path string) (*Store, error) {
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	cleanup := func(e error) (*Store, error) { _ = db.Close(); return nil, e }
+	var applicationID int
+	if err = db.QueryRow("PRAGMA application_id").Scan(&applicationID); err != nil {
+		return cleanup(err)
+	}
+	if applicationID != 0 && applicationID != sessionApplicationID {
+		return cleanup(errors.New("not a TL Studio session database"))
+	}
+	var formatVersion int
+	if err = db.QueryRow("PRAGMA user_version").Scan(&formatVersion); err != nil {
+		return cleanup(err)
+	}
+	if formatVersion > 1 {
+		return cleanup(errors.New("session database format is newer than this application"))
+	}
 	for _, statement := range []string{
 		"PRAGMA busy_timeout=10000",
 		"PRAGMA journal_mode=WAL",
@@ -133,6 +169,8 @@ func Open(path string) (*Store, error) {
      operation_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL,
      session_id TEXT NOT NULL, revision INTEGER NOT NULL)`,
 		"CREATE INDEX IF NOT EXISTS sessions_recent ON sessions(changed_at DESC,id)",
+		fmt.Sprintf("PRAGMA application_id=%d", sessionApplicationID),
+		"PRAGMA user_version=1",
 	} {
 		if _, err = tx.ExecContext(ctx, statement); err != nil {
 			_ = tx.Rollback()
@@ -156,6 +194,15 @@ func (s *Store) IntegrityCheck(ctx context.Context) error {
 	return nil
 }
 func fingerprint(m Mutation) string {
+	m.OperationID = ""
+	// JSON framing distinguishes absent/empty bytes and arbitrary embedded
+	// separators. Mutation contains only types that json.Marshal supports.
+	payload, _ := json.Marshal(m)
+	sum := sha256.Sum256(append([]byte("tlstudio-session-mutation-v2\x00"), payload...))
+	return "v2:" + hex.EncodeToString(sum[:])
+}
+
+func legacyFingerprint(m Mutation) string {
 	h := sha256.New()
 	// Versioned domain separator makes idempotency fingerprints unambiguous.
 	h.Write([]byte("tlstudio-session-mutation-v1\x00"))
@@ -193,11 +240,12 @@ func (s *Store) Apply(ctx context.Context, m Mutation) (Commit, error) {
 		return Commit{}, err
 	}
 	defer tx.Rollback()
+	s.phase("apply.begin")
 	var committedFingerprint string
 	var committedRevision int64
 	err = tx.QueryRowContext(ctx, "SELECT fingerprint,revision FROM commits WHERE operation_id=?", m.OperationID).Scan(&committedFingerprint, &committedRevision)
 	if err == nil {
-		if committedFingerprint != fp {
+		if committedFingerprint != fp && (strings.HasPrefix(committedFingerprint, "v2:") || committedFingerprint != legacyFingerprint(m)) {
 			return Commit{}, fmt.Errorf("operation ID reused with different data")
 		}
 		return Commit{Revision: committedRevision, PreviouslyCommitted: true}, nil
@@ -230,6 +278,7 @@ func (s *Store) Apply(ctx context.Context, m Mutation) (Commit, error) {
 			m.SessionID, m.Directory, m.Metadata, next, time.Now().UnixMilli()); err != nil {
 			return Commit{}, err
 		}
+		s.phase("apply.metadata")
 		if m.ReplaceMessages {
 			if err = replaceMessagesTx(ctx, tx, m.SessionID, m.Messages); err != nil {
 				return Commit{}, err
@@ -252,6 +301,7 @@ func (s *Store) Apply(ctx context.Context, m Mutation) (Commit, error) {
 				}
 			}
 		}
+		s.phase("apply.messages")
 		if m.ChangeData != nil {
 			if _, err = tx.ExecContext(ctx, `INSERT INTO session_changes(session_id,payload) VALUES(?,?)
       ON CONFLICT(session_id) DO UPDATE SET payload=excluded.payload`, m.SessionID, m.ChangeData); err != nil {
@@ -272,9 +322,11 @@ func (s *Store) Apply(ctx context.Context, m Mutation) (Commit, error) {
 	if _, err = tx.ExecContext(ctx, "INSERT INTO commits(operation_id,fingerprint,session_id,revision) VALUES(?,?,?,?)", m.OperationID, fp, m.SessionID, next); err != nil {
 		return Commit{}, err
 	}
+	s.phase("apply.before_commit")
 	if err = tx.Commit(); err != nil {
 		return Commit{}, err
 	}
+	s.phase("apply.after_commit")
 	return Commit{Revision: next}, nil
 }
 func (s *Store) Get(ctx context.Context, id string) (Session, bool, error) {
